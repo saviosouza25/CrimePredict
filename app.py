@@ -14,6 +14,7 @@ import time
 # Import custom modules
 from config.settings import *
 from config.languages import get_text
+from config.help_content import get_help_content, get_help_title
 from services.data_service import DataService
 from services.sentiment_service import SentimentService
 from services.indicators import TechnicalIndicators
@@ -272,49 +273,87 @@ def main():
     with st.sidebar:
         st.markdown("## 📊 Análise de Trading")
         
+        # Tutorial button
+        if st.button("📚 Tutorial Completo", help="Abrir guia detalhado de todas as funções"):
+            st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
+        
         # Add logout button
         if st.button("🚪 Sair", help="Sair da plataforma"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
         
-        # Currency pair selection
+        # Currency pair selection with detailed help
         pair = st.selectbox(
             get_text("sidebar_currency_pair"),
             PAIRS,
-            help="Selecione o par de moedas para analisar"
+            help=get_help_content("currency_pair")
         )
         
-        # Time interval
+        # Show detailed help for currency pair
+        with st.expander("❓ O que é Par de Moedas?"):
+            st.markdown(get_help_content("currency_pair", detailed=True), unsafe_allow_html=True)
+        
+        # Time interval with detailed help
         interval = st.selectbox(
             get_text("sidebar_time_interval"),
             list(INTERVALS.keys()),
             index=4,  # Default to 60min
-            help="Período do gráfico"
+            help=get_help_content("time_interval")
         )
         
-        # Prediction horizon  
+        # Show detailed help for time interval
+        with st.expander("❓ Como escolher Intervalo de Tempo?"):
+            st.markdown(get_help_content("time_interval", detailed=True), unsafe_allow_html=True)
+        
+        # Prediction horizon with detailed help
         horizon = st.selectbox(
             "Período de Previsão",
             HORIZONS,
-            help="Tempo de previsão"
+            help=get_help_content("prediction_horizon")
+        )
+        
+        # Show detailed help for prediction horizon
+        with st.expander("❓ Período de Previsão - Como funciona?"):
+            st.markdown(get_help_content("prediction_horizon", detailed=True), unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Analysis buttons with detailed help
+        st.markdown("---")
+        
+        # Show detailed help for trading signal
+        with st.expander("❓ Como funciona o Sinal de Trading?"):
+            st.markdown(get_help_content("get_trading_signal", detailed=True), unsafe_allow_html=True)
+        
+        analyze_button = st.button(
+            "🎯 Obter Sinal de Trading", 
+            type="primary", 
+            help=get_help_content("get_trading_signal")
+        )
+        
+        # Show detailed help for quick check
+        with st.expander("❓ O que é Verificação Rápida?"):
+            st.markdown(get_help_content("quick_check", detailed=True), unsafe_allow_html=True)
+        
+        quick_analysis = st.button(
+            "⚡ Verificação Rápida",
+            help=get_help_content("quick_check")
         )
         
         st.markdown("---")
         
-        # Analysis buttons - simplified
-        analyze_button = st.button("🎯 Obter Sinal de Trading", type="primary", help="Executar análise completa com previsão IA")
-        quick_analysis = st.button("⚡ Verificação Rápida", help="Análise rápida com sinais básicos")
-        
-        st.markdown("---")
-        
-        # Risk settings - simplified
+        # Risk settings with detailed help
         risk_level = st.selectbox(
             get_text("sidebar_risk_level"),
             list(RISK_LEVELS.keys()),
             index=1,  # Default to Moderate
-            help="Sua tolerância ao risco para dimensionamento de posição"
+            help=get_help_content("risk_level")
         )
+        
+        # Show detailed help for risk level
+        with st.expander("❓ Como escolher Nível de Risco?"):
+            st.markdown(get_help_content("risk_level", detailed=True), unsafe_allow_html=True)
         
         # Advanced settings - collapsed by default
         with st.expander("Opções Avançadas"):
@@ -351,6 +390,79 @@ def main():
         cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
         if cache_count > 0:
             st.info(f"💾 {cache_count} análises em cache disponíveis")
+    
+    # Tutorial section
+    if st.session_state.get('show_tutorial', False):
+        st.markdown("---")
+        st.markdown("# 📚 Tutorial Completo da Plataforma")
+        
+        tab1, tab2, tab3, tab4 = st.tabs([
+            "🔧 Configurações Básicas", 
+            "📊 Análises Disponíveis", 
+            "📈 Indicadores Técnicos", 
+            "⚖️ Gestão de Risco"
+        ])
+        
+        with tab1:
+            st.markdown("## 🔧 Configurações Básicas")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("### " + get_help_title("currency_pair"))
+                st.markdown(get_help_content("currency_pair", detailed=True), unsafe_allow_html=True)
+                
+                st.markdown("### " + get_help_title("time_interval"))
+                st.markdown(get_help_content("time_interval", detailed=True), unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown("### " + get_help_title("prediction_horizon"))
+                st.markdown(get_help_content("prediction_horizon", detailed=True), unsafe_allow_html=True)
+                
+                st.markdown("### " + get_help_title("risk_level"))
+                st.markdown(get_help_content("risk_level", detailed=True), unsafe_allow_html=True)
+        
+        with tab2:
+            st.markdown("## 📊 Tipos de Análise")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("### " + get_help_title("get_trading_signal"))
+                st.markdown(get_help_content("get_trading_signal", detailed=True), unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown("### " + get_help_title("quick_check"))
+                st.markdown(get_help_content("quick_check", detailed=True), unsafe_allow_html=True)
+        
+        with tab3:
+            st.markdown("## 📈 Indicadores e Sentimento")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("### " + get_help_title("technical_indicators"))
+                st.markdown(get_help_content("technical_indicators", detailed=True), unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown("### " + get_help_title("sentiment_analysis"))
+                st.markdown(get_help_content("sentiment_analysis", detailed=True), unsafe_allow_html=True)
+        
+        with tab4:
+            st.markdown("## ⚖️ Gestão e Análise de Risco")
+            st.markdown("### " + get_help_title("risk_analysis"))
+            st.markdown(get_help_content("risk_analysis", detailed=True), unsafe_allow_html=True)
+            
+            st.markdown("""
+            <div class="warning-alert">
+                <h4>⚠️ Aviso Importante sobre Riscos</h4>
+                <p><strong>O trading forex envolve riscos significativos:</strong></p>
+                <ul>
+                    <li>Você pode perder mais do que investiu</li>
+                    <li>Mercados são imprevisíveis, mesmo com IA</li>
+                    <li>Use sempre stop loss e gestão de risco</li>
+                    <li>Nunca invista dinheiro que não pode perder</li>
+                    <li>Esta plataforma é apenas educacional</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
     
     # Main content area
     if analyze_button or quick_analysis:
