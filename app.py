@@ -318,22 +318,26 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
         # Calculate price variation range against the expected trend
         uncertainty = uncertainties[-1] if uncertainties and len(uncertainties) > 0 else 0.0
         
-        # Calculate support and resistance levels based on prediction and uncertainty
-        if price_change > 0:  # Bullish trend
-            # For bullish trend, show resistance levels (upward targets)
-            resistance_level = predicted_price + uncertainty
-            support_level = current_price - (uncertainty * 0.5)  # Minor pullback possibility
-        else:  # Bearish trend
-            # For bearish trend, show support levels (downward targets)
-            support_level = predicted_price - uncertainty
-            resistance_level = current_price + (uncertainty * 0.5)  # Minor bounce possibility
+        # Calculate counter-trend risk levels (opposite direction price targets)
+        risk_multiplier = 1.5  # How far opposite the trend could go
+        
+        if price_change > 0:  # Bullish prediction - show bearish risk
+            # If we predict UP, show where price could go DOWN (bearish risk)
+            counter_trend_target = current_price - (abs(price_change) * risk_multiplier)
+            risk_direction = "Downside"
+            risk_level = counter_trend_target
+        else:  # Bearish prediction - show bullish risk
+            # If we predict DOWN, show where price could go UP (bullish risk)
+            counter_trend_target = current_price + (abs(price_change) * risk_multiplier)
+            risk_direction = "Upside"
+            risk_level = counter_trend_target
         
         # Debug logging (temporary)
         print(f"DEBUG - Current Price: {current_price:.5f}")
         print(f"DEBUG - Raw Predicted Price: {predictions[-1] if predictions else 'None'}")
         print(f"DEBUG - Final Predicted Price: {predicted_price:.5f}")
         print(f"DEBUG - Price Change: {price_change_pct:.2f}%")
-        print(f"DEBUG - Support: {support_level:.5f}, Resistance: {resistance_level:.5f}")
+        print(f"DEBUG - Counter-trend Risk: {risk_direction} to {risk_level:.5f}")
         
         # Risk assessment
         risk_tolerance = RISK_LEVELS[risk_level]
@@ -365,10 +369,10 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
                 'stop_loss': current_price * (1 - risk_tolerance),
                 'take_profit': current_price * (1 + risk_tolerance * 2)
             },
-            'price_levels': {
-                'support': support_level,
-                'resistance': resistance_level,
-                'uncertainty': uncertainty
+            'counter_trend_risk': {
+                'direction': risk_direction,
+                'target_price': risk_level,
+                'risk_percentage': abs(risk_level - current_price) / current_price * 100
             }
         }
         
@@ -572,23 +576,24 @@ def display_analysis_results():
             """)
             
         with col2:
-            st.markdown("#### Expected Price Levels")
+            st.markdown("#### Risk Analysis")
             trend_direction = "Bullish" if results['price_change'] > 0 else "Bearish"
+            counter_risk = results['counter_trend_risk']
             
-            # Show key price levels based on trend direction
-            if results['price_change'] > 0:  # Bullish
+            # Show risk of analysis being wrong (opposite direction)
+            if results['price_change'] > 0:  # Bullish prediction
                 st.markdown(f"""
-                - **Trend:** 📈 {trend_direction}
-                - **Target:** {results['predicted_price']:.5f}
-                - **Resistance:** {results['price_levels']['resistance']:.5f}
-                - **Support:** {results['price_levels']['support']:.5f}
+                - **Prediction:** 📈 {trend_direction} to {results['predicted_price']:.5f}
+                - **Risk if Wrong:** 📉 {counter_risk['direction']} risk
+                - **Counter-trend Target:** {counter_risk['target_price']:.5f}
+                - **Risk Exposure:** -{counter_risk['risk_percentage']:.1f}%
                 """)
-            else:  # Bearish
+            else:  # Bearish prediction
                 st.markdown(f"""
-                - **Trend:** 📉 {trend_direction}
-                - **Target:** {results['predicted_price']:.5f}
-                - **Support:** {results['price_levels']['support']:.5f}
-                - **Resistance:** {results['price_levels']['resistance']:.5f}
+                - **Prediction:** 📉 {trend_direction} to {results['predicted_price']:.5f}
+                - **Risk if Wrong:** 📈 {counter_risk['direction']} risk
+                - **Counter-trend Target:** {counter_risk['target_price']:.5f}
+                - **Risk Exposure:** +{counter_risk['risk_percentage']:.1f}%
                 """)
         
         # Market sentiment section
@@ -606,19 +611,16 @@ def display_analysis_results():
             """)
         
         with col2:
-            # Show price variation against expected trend
-            if results['price_change'] > 0:  # Bullish trend
-                st.markdown(f"""
-                **Counter-trend Risk (Bearish Reversal):**
-                - Potential resistance at: {results['price_levels']['resistance']:.5f}
-                - Counter-trend target: {results['price_levels']['support']:.5f}
-                """)
-            else:  # Bearish trend
-                st.markdown(f"""
-                **Counter-trend Risk (Bullish Reversal):**
-                - Potential support at: {results['price_levels']['support']:.5f}
-                - Counter-trend target: {results['price_levels']['resistance']:.5f}
-                """)
+            # Show what happens if the analysis is completely wrong
+            counter_risk = results['counter_trend_risk']
+            
+            st.markdown(f"""
+            **If Analysis is Wrong:**
+            - Price could move {counter_risk['direction'].lower()}
+            - Target if opposite: {counter_risk['target_price']:.5f}
+            - Potential loss: {counter_risk['risk_percentage']:.1f}%
+            - Risk level: {'HIGH' if counter_risk['risk_percentage'] > 2 else 'MODERATE' if counter_risk['risk_percentage'] > 1 else 'LOW'}
+            """)
         
         # Prediction chart
         prediction_chart = services['visualizer'].create_prediction_chart(
@@ -644,15 +646,18 @@ def display_analysis_results():
             - **Take Profit:** {risk_data['take_profit']:.5f}
             """)
             
-            # Market variation warning
-            variation_pct = abs(results['price_levels']['uncertainty'] / results['current_price'] * 100)
-            if variation_pct > 0.5:
-                st.warning(f"High volatility expected: ±{variation_pct:.1f}%")
+            # Market variation warning based on counter-trend risk
+            counter_risk = results['counter_trend_risk']
+            if counter_risk['risk_percentage'] > 2.0:
+                st.warning(f"High risk exposure: {counter_risk['risk_percentage']:.1f}%")
             
+            # Show the risk forecast
+            counter_risk = results['counter_trend_risk']
             st.markdown(f"""
-            **Expected Price Variation:**
-            - Against trend: {results['price_levels']['resistance' if results['price_change'] < 0 else 'support']:.5f}
-            - Uncertainty: ±{variation_pct:.1f}%
+            **Risk Forecast (If Wrong):**
+            - Counter-trend direction: {counter_risk['direction']}
+            - Price target if opposite: {counter_risk['target_price']:.5f}
+            - Maximum risk exposure: {counter_risk['risk_percentage']:.1f}%
             """)
             
             # Simple risk warnings
