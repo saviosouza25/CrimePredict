@@ -315,11 +315,25 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
         price_change = predicted_price - current_price
         price_change_pct = (price_change / current_price) * 100
         
+        # Calculate price variation range against the expected trend
+        uncertainty = uncertainties[-1] if uncertainties and len(uncertainties) > 0 else 0.0
+        
+        # Calculate support and resistance levels based on prediction and uncertainty
+        if price_change > 0:  # Bullish trend
+            # For bullish trend, show resistance levels (upward targets)
+            resistance_level = predicted_price + uncertainty
+            support_level = current_price - (uncertainty * 0.5)  # Minor pullback possibility
+        else:  # Bearish trend
+            # For bearish trend, show support levels (downward targets)
+            support_level = predicted_price - uncertainty
+            resistance_level = current_price + (uncertainty * 0.5)  # Minor bounce possibility
+        
         # Debug logging (temporary)
         print(f"DEBUG - Current Price: {current_price:.5f}")
         print(f"DEBUG - Raw Predicted Price: {predictions[-1] if predictions else 'None'}")
         print(f"DEBUG - Final Predicted Price: {predicted_price:.5f}")
         print(f"DEBUG - Price Change: {price_change_pct:.2f}%")
+        print(f"DEBUG - Support: {support_level:.5f}, Resistance: {resistance_level:.5f}")
         
         # Risk assessment
         risk_tolerance = RISK_LEVELS[risk_level]
@@ -350,6 +364,11 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
                 'position_size': position_size,
                 'stop_loss': current_price * (1 - risk_tolerance),
                 'take_profit': current_price * (1 + risk_tolerance * 2)
+            },
+            'price_levels': {
+                'support': support_level,
+                'resistance': resistance_level,
+                'uncertainty': uncertainty
             }
         }
         
@@ -465,6 +484,7 @@ def display_analysis_results():
         </h2>
         <p style="color: #666; font-size: 1.2em; margin: 0;">
             Expected Price Change: <strong>{results['price_change_pct']:+.2f}%</strong> | 
+            Target Range: <strong>{results['predicted_price']:.5f}</strong> | 
             Confidence: <strong>{results['model_confidence']:.0%}</strong>
         </p>
     </div>
@@ -552,7 +572,30 @@ def display_analysis_results():
             """)
             
         with col2:
-            st.markdown("#### Market Sentiment")
+            st.markdown("#### Expected Price Levels")
+            trend_direction = "Bullish" if results['price_change'] > 0 else "Bearish"
+            
+            # Show key price levels based on trend direction
+            if results['price_change'] > 0:  # Bullish
+                st.markdown(f"""
+                - **Trend:** 📈 {trend_direction}
+                - **Target:** {results['predicted_price']:.5f}
+                - **Resistance:** {results['price_levels']['resistance']:.5f}
+                - **Support:** {results['price_levels']['support']:.5f}
+                """)
+            else:  # Bearish
+                st.markdown(f"""
+                - **Trend:** 📉 {trend_direction}
+                - **Target:** {results['predicted_price']:.5f}
+                - **Support:** {results['price_levels']['support']:.5f}
+                - **Resistance:** {results['price_levels']['resistance']:.5f}
+                """)
+        
+        # Market sentiment section
+        st.markdown("#### Market Sentiment Analysis")
+        col1, col2 = st.columns(2)
+        
+        with col1:
             sentiment_direction = "Positive" if results['sentiment']['score'] > 0 else "Negative" if results['sentiment']['score'] < 0 else "Neutral"
             sentiment_icon = "😊" if results['sentiment']['score'] > 0 else "😟" if results['sentiment']['score'] < 0 else "😐"
             
@@ -560,8 +603,22 @@ def display_analysis_results():
             - **Sentiment:** {sentiment_icon} {sentiment_direction}
             - **Score:** {results['sentiment']['score']:.2f}
             - **Strength:** {results['sentiment']['strength']}
-            - **Signal:** {results['sentiment']['signal']}
             """)
+        
+        with col2:
+            # Show price variation against expected trend
+            if results['price_change'] > 0:  # Bullish trend
+                st.markdown(f"""
+                **Counter-trend Risk (Bearish Reversal):**
+                - Potential resistance at: {results['price_levels']['resistance']:.5f}
+                - Counter-trend target: {results['price_levels']['support']:.5f}
+                """)
+            else:  # Bearish trend
+                st.markdown(f"""
+                **Counter-trend Risk (Bullish Reversal):**
+                - Potential support at: {results['price_levels']['support']:.5f}
+                - Counter-trend target: {results['price_levels']['resistance']:.5f}
+                """)
         
         # Prediction chart
         prediction_chart = services['visualizer'].create_prediction_chart(
@@ -585,6 +642,17 @@ def display_analysis_results():
             - **Position Size:** {risk_data['position_size']:.1%} of portfolio
             - **Stop Loss:** {risk_data['stop_loss']:.5f}
             - **Take Profit:** {risk_data['take_profit']:.5f}
+            """)
+            
+            # Market variation warning
+            variation_pct = abs(results['price_levels']['uncertainty'] / results['current_price'] * 100)
+            if variation_pct > 0.5:
+                st.warning(f"High volatility expected: ±{variation_pct:.1f}%")
+            
+            st.markdown(f"""
+            **Expected Price Variation:**
+            - Against trend: {results['price_levels']['resistance' if results['price_change'] < 0 else 'support']:.5f}
+            - Uncertainty: ±{variation_pct:.1f}%
             """)
             
             # Simple risk warnings
