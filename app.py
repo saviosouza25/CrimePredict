@@ -13,6 +13,7 @@ import time
 
 # Import custom modules
 from config.settings import *
+from config.languages import get_text
 from services.data_service import DataService
 from services.sentiment_service import SentimentService
 from services.indicators import TechnicalIndicators
@@ -64,23 +65,23 @@ def check_password():
             <div style="margin-bottom: 1.5rem;">
                 <img src="data:image/png;base64,{logo_base64}" style="max-width: 120px; height: auto;" />
             </div>
-            <h2 style="color: #333; margin-bottom: 2rem;">Advanced Forex Analysis Platform</h2>
-            <p style="color: #666; margin-bottom: 2rem;">Please enter your credentials to access the platform</p>
+            <h2 style="color: #333; margin-bottom: 2rem;">{get_text("login_title")}</h2>
+            <p style="color: #666; margin-bottom: 2rem;">{get_text("login_subtitle")}</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.text_input("Username", key="username", placeholder="Enter username")
-        st.text_input("Password", type="password", key="password", placeholder="Enter password", on_change=password_entered)
+        st.text_input(get_text("username_placeholder"), key="username", placeholder=get_text("username_placeholder"))
+        st.text_input(get_text("password_placeholder"), type="password", key="password", placeholder=get_text("password_placeholder"), on_change=password_entered)
         
         if "password_correct" in st.session_state and not st.session_state["password_correct"]:
-            st.error("😞 Invalid username or password")
+            st.error(get_text("invalid_credentials"))
             
         st.markdown("""
         <div style="text-align: center; margin-top: 2rem; color: #888; font-size: 0.9em;">
-            <p>Secure access to professional forex analysis tools</p>
+            <p>{get_text("login_secure_text")}</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -88,7 +89,7 @@ def check_password():
 
 # Page configuration
 st.set_page_config(
-    page_title="Advanced Forex Analysis Platform",
+    page_title=get_text("login_title"),
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -189,9 +190,9 @@ def main():
         <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
             <img src="data:image/png;base64,{logo_base64}" style="max-width: 60px; height: auto;" />
             <div>
-                <h1 style="margin: 0;">Advanced Forex Analysis Platform</h1>
+                <h1 style="margin: 0;">{get_text("main_title")}</h1>
                 <p style="color: white; text-align: center; margin: 0; font-size: 1.1rem;">
-                    AI-Powered Forex Predictions with Real-Time Analysis
+                    Previsões Forex com IA e Análise em Tempo Real
                 </p>
             </div>
         </div>
@@ -200,87 +201,87 @@ def main():
     
     # Simplified sidebar configuration
     with st.sidebar:
-        st.markdown("## 📊 Trading Analysis")
+        st.markdown("## 📊 Análise de Trading")
         
         # Add logout button
-        if st.button("🚪 Logout", help="Logout from the platform"):
+        if st.button("🚪 Sair", help="Sair da plataforma"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
         
         # Currency pair selection
         pair = st.selectbox(
-            "Currency Pair",
+            get_text("sidebar_currency_pair"),
             PAIRS,
-            help="Select the currency pair to analyze"
+            help="Selecione o par de moedas para analisar"
         )
         
         # Time interval
         interval = st.selectbox(
-            "Timeframe",
+            get_text("sidebar_time_interval"),
             list(INTERVALS.keys()),
             index=4,  # Default to 60min
-            help="Chart timeframe"
+            help="Período do gráfico"
         )
         
         # Prediction horizon  
         horizon = st.selectbox(
-            "Forecast Period",
+            "Período de Previsão",
             HORIZONS,
-            help="How far to predict"
+            help="Tempo de previsão"
         )
         
         st.markdown("---")
         
         # Analysis buttons - simplified
-        analyze_button = st.button("🎯 Get Trading Signal", type="primary", help="Run complete analysis with AI prediction")
-        quick_analysis = st.button("⚡ Quick Check", help="Fast analysis with basic signals")
+        analyze_button = st.button("🎯 Obter Sinal de Trading", type="primary", help="Executar análise completa com previsão IA")
+        quick_analysis = st.button("⚡ Verificação Rápida", help="Análise rápida com sinais básicos")
         
         st.markdown("---")
         
         # Risk settings - simplified
         risk_level = st.selectbox(
-            "Risk Level",
+            get_text("sidebar_risk_level"),
             list(RISK_LEVELS.keys()),
             index=1,  # Default to Moderate
-            help="Your risk tolerance for position sizing"
+            help="Sua tolerância ao risco para dimensionamento de posição"
         )
         
         # Advanced settings - collapsed by default
-        with st.expander("Advanced Options"):
+        with st.expander("Opções Avançadas"):
             lookback_period = st.slider(
-                "History Length",
+                "Histórico de Dados",
                 min_value=30,
                 max_value=120,
                 value=LOOKBACK_PERIOD,
-                help="Historical periods for AI training"
+                help="Períodos históricos para treinamento da IA"
             )
             
             epochs = st.slider(
-                "AI Training Intensity",
+                "Intensidade do Treinamento IA",
                 min_value=5,
                 max_value=20,
                 value=EPOCHS,
-                help="More epochs = better accuracy but slower"
+                help="Mais épocas = melhor precisão mas mais lento"
             )
             
             mc_samples = st.slider(
-                "Prediction Samples",
+                "Amostras de Previsão",
                 min_value=10,
                 max_value=50,
                 value=MC_SAMPLES,
-                help="Samples for uncertainty estimation"
+                help="Amostras para estimativa de incerteza"
             )
             
-            if st.button("Clear Cache"):
+            if st.button("Limpar Cache"):
                 CacheManager.clear_cache()
-                st.success("Cache cleared!")
+                st.success("Cache limpo!")
                 st.rerun()
         
         # Simple status
         cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
         if cache_count > 0:
-            st.info(f"💾 {cache_count} cached analysis available")
+            st.info(f"💾 {cache_count} análises em cache disponíveis")
     
     # Main content area
     if analyze_button or quick_analysis:
@@ -297,11 +298,11 @@ def main():
     st.markdown("---")
     st.markdown("""
     <div style="text-align: center; color: #666; padding: 1rem;">
-        <p>⚠️ <strong>Disclaimer:</strong> This platform is for educational purposes only. 
-        Trading forex involves substantial risk and may not be suitable for all investors.</p>
-        <p>Built with ❤️ using Streamlit • Last updated: {}</p>
+        <p>⚠️ <strong>Aviso Legal:</strong> Esta plataforma é apenas para fins educacionais. 
+        Trading forex envolve riscos substanciais e pode não ser adequado para todos os investidores.</p>
+        <p>Desenvolvido com ❤️ usando Streamlit • Última atualização: {}</p>
     </div>
-    """.format(datetime.now().strftime("%Y-%m-%d %H:%M")), unsafe_allow_html=True)
+    """.format(datetime.now().strftime("%d-%m-%Y %H:%M")), unsafe_allow_html=True)
 
 def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_samples, epochs, is_quick=False):
     """Run the complete forex analysis"""
@@ -311,7 +312,7 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
     
     try:
         # Step 1: Fetch data
-        status_text.text("📥 Fetching forex data...")
+        status_text.text("📥 Buscando dados forex...")
         progress_bar.progress(10)
         
         df = services['data_service'].fetch_forex_data(
@@ -321,13 +322,13 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
         )
         
         if not services['data_service'].validate_data(df):
-            st.error("❌ Insufficient or invalid data received")
+            st.error("❌ Dados insuficientes ou inválidos recebidos")
             return
         
         progress_bar.progress(25)
         
         # Step 2: Fetch sentiment
-        status_text.text("📰 Analyzing market sentiment...")
+        status_text.text("📰 Analisando sentimento do mercado...")
         sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
         sentiment_signal = services['sentiment_service'].get_sentiment_signal(sentiment_score)
         sentiment_strength = services['sentiment_service'].get_sentiment_strength(sentiment_score)
@@ -335,7 +336,7 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
         progress_bar.progress(40)
         
         # Step 3: Add technical indicators
-        status_text.text("📊 Calculating technical indicators...")
+        status_text.text("📊 Calculando indicadores técnicos...")
         df_with_indicators = TechnicalIndicators.add_all_indicators(df)
         trading_signals = TechnicalIndicators.get_trading_signals(df_with_indicators)
         
