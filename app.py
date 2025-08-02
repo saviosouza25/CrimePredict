@@ -60,12 +60,12 @@ def check_password():
     
     st.markdown(f"""
     <div style="display: flex; justify-content: center; align-items: center; height: 60vh; background: #000000;">
-        <div style="text-align: center; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(255, 255, 255, 0.1); background: #1a1a1a; min-width: 400px; border: 1px solid #444444;">
-            <div style="margin-bottom: 1.5rem;">
-                <img src="data:image/png;base64,{logo_base64}" style="max-width: 120px; height: auto;" />
+        <div style="text-align: center; padding: 2.5rem; border-radius: 16px; box-shadow: 0 8px 32px rgba(58, 127, 199, 0.15); background: linear-gradient(135deg, #0d1421 0%, #1a2842 100%); min-width: 450px; border: 2px solid #2a5f8f;">
+            <div style="margin-bottom: 2rem;">
+                <img src="data:image/png;base64,{logo_base64}" style="max-width: 140px; height: auto; filter: drop-shadow(0 4px 8px rgba(58, 127, 199, 0.3));" />
             </div>
-            <h2 style="color: #ffffff; margin-bottom: 2rem;">Advanced Forex Analysis Platform</h2>
-            <p style="color: #cccccc; margin-bottom: 2rem;">Please enter your credentials to access the platform</p>
+            <h2 style="color: #ffffff; margin-bottom: 1rem; font-size: 1.8rem; font-weight: 600;">Advanced Forex Analysis Platform</h2>
+            <p style="color: #b8c8e0; margin-bottom: 2rem; font-size: 1.1rem;">Please enter your credentials to access the platform</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -79,7 +79,7 @@ def check_password():
             st.error("😞 Invalid username or password")
             
         st.markdown("""
-        <div style="text-align: center; margin-top: 2rem; color: #cccccc; font-size: 0.9em;">
+        <div style="text-align: center; margin-top: 2rem; color: #b8c8e0; font-size: 1rem; font-weight: 300;">
             <p>Secure access to professional forex analysis tools</p>
         </div>
         """, unsafe_allow_html=True)
@@ -111,11 +111,12 @@ st.markdown("""
     
     /* Header styling */
     .main-header {
-        background: linear-gradient(90deg, #1a1a1a 0%, #333333 100%);
-        padding: 1rem;
-        border-radius: 10px;
+        background: linear-gradient(135deg, #0d1421 0%, #1a2842 50%, #2a3f63 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
         margin-bottom: 2rem;
-        border: 1px solid #444444;
+        border: 1px solid #3a5f8f;
+        box-shadow: 0 4px 20px rgba(26, 40, 66, 0.4);
     }
     .main-header h1 {
         color: white;
@@ -126,84 +127,122 @@ st.markdown("""
     
     /* Metric cards with dark theme */
     .metric-card {
-        background: #1a1a1a !important;
-        padding: 1rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(255,255,255,0.1);
-        border-left: 4px solid #667eea;
-        color: #ffffff !important;
+        background: linear-gradient(135deg, #0f1419 0%, #1a2533 100%) !important;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(26, 37, 51, 0.3);
+        border-left: 4px solid #3a7fc7;
+        border: 1px solid #2a3f63;
+        color: #e8f0ff !important;
     }
     
     /* Alert boxes */
     .success-alert {
-        background-color: #1a3d1a !important;
+        background: linear-gradient(135deg, #0d2818 0%, #1a4d2e 100%) !important;
         border: 1px solid #28a745;
-        color: #ffffff !important;
-        padding: 0.75rem;
-        border-radius: 0.25rem;
+        color: #a8f5c4 !important;
+        padding: 1rem;
+        border-radius: 8px;
         margin: 1rem 0;
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
     }
     .error-alert {
-        background-color: #3d1a1a !important;
+        background: linear-gradient(135deg, #2d0d0d 0%, #4d1a1a 100%) !important;
         border: 1px solid #dc3545;
-        color: #ffffff !important;
-        padding: 0.75rem;
-        border-radius: 0.25rem;
+        color: #ffb3ba !important;
+        padding: 1rem;
+        border-radius: 8px;
         margin: 1rem 0;
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.2);
     }
     .warning-alert {
-        background-color: #3d3d1a !important;
+        background: linear-gradient(135deg, #2d2a0d 0%, #4d441a 100%) !important;
         border: 1px solid #ffc107;
-        color: #ffffff !important;
-        padding: 0.75rem;
-        border-radius: 0.25rem;
+        color: #fff3a0 !important;
+        padding: 1rem;
+        border-radius: 8px;
         margin: 1rem 0;
+        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
     }
     
     /* Sidebar styling */
-    .css-1d391kg, .css-1cypcdb {
-        background-color: #1a1a1a !important;
+    .css-1d391kg, .css-1cypcdb, .css-1lcbmhc {
+        background: linear-gradient(180deg, #0d1421 0%, #1a2842 100%) !important;
+        border-right: 2px solid #2a3f63 !important;
     }
-    .sidebar .stSelectbox label {
+    .sidebar .stSelectbox label, .stSelectbox label {
         font-weight: bold;
-        color: #ffffff !important;
+        color: #e8f0ff !important;
+        font-size: 0.95rem !important;
     }
     
     /* Button styling */
     .stButton > button {
-        background: linear-gradient(90deg, #333333 0%, #555555 100%) !important;
-        color: white !important;
-        border: 1px solid #666666 !important;
-        border-radius: 5px;
-        padding: 0.5rem 1rem;
+        background: linear-gradient(90deg, #1a4a6b 0%, #2a5f8f 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #3a7fc7 !important;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
         font-weight: bold;
         width: 100%;
+        transition: all 0.3s ease;
     }
     .stButton > button:hover {
-        background: linear-gradient(90deg, #444444 0%, #666666 100%) !important;
-        box-shadow: 0 4px 8px rgba(255,255,255,0.1);
+        background: linear-gradient(90deg, #2a5f8f 0%, #3a7fc7 100%) !important;
+        box-shadow: 0 6px 12px rgba(58, 127, 199, 0.3);
         transform: translateY(-2px);
+        border-color: #4a8fd7 !important;
     }
     
     /* Text inputs and selects */
     .stTextInput > div > div > input, .stSelectbox > div > div > select {
-        background-color: #1a1a1a !important;
-        color: #ffffff !important;
-        border: 1px solid #444444 !important;
+        background-color: #0f1419 !important;
+        color: #e8f0ff !important;
+        border: 2px solid #2a3f63 !important;
+        border-radius: 8px !important;
+        padding: 0.75rem !important;
+        transition: all 0.3s ease !important;
+    }
+    .stTextInput > div > div > input:focus, .stSelectbox > div > div > select:focus {
+        border-color: #3a7fc7 !important;
+        box-shadow: 0 0 0 3px rgba(58, 127, 199, 0.2) !important;
     }
     
     /* Tab styling */
     .stTabs [data-baseweb="tab-list"] {
-        background-color: #1a1a1a !important;
+        background: linear-gradient(90deg, #0f1419 0%, #1a2533 100%) !important;
+        border-radius: 8px !important;
+        padding: 0.25rem !important;
     }
     .stTabs [data-baseweb="tab"] {
-        background-color: #1a1a1a !important;
+        background-color: transparent !important;
+        color: #b8c8e0 !important;
+        border-radius: 6px !important;
+        padding: 0.75rem 1.5rem !important;
+        transition: all 0.3s ease !important;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: #2a3f63 !important;
+        color: #e8f0ff !important;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(90deg, #1a4a6b 0%, #2a5f8f 100%) !important;
         color: #ffffff !important;
     }
     
     /* General text */
     .stMarkdown, p, div, span, h1, h2, h3, h4 {
+        color: #e8f0ff !important;
+    }
+    
+    /* Metric displays */
+    .metric h1, .metric h2, .metric h3 {
         color: #ffffff !important;
+    }
+    
+    /* Progress bars */
+    .stProgress > div > div > div {
+        background: linear-gradient(90deg, #1a4a6b 0%, #3a7fc7 100%) !important;
     }
     
     /* Plotly charts dark theme */
