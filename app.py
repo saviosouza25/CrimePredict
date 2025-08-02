@@ -372,11 +372,12 @@ def main():
         st.markdown("---")
         st.markdown("# 📚 Tutorial Completo da Plataforma")
         
-        tab1, tab2, tab3, tab4 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "🔧 Configurações Básicas", 
             "📊 Análises Disponíveis", 
             "📈 Indicadores Técnicos", 
-            "⚖️ Gestão de Risco"
+            "⚖️ Gestão de Risco",
+            "⚙️ Opções Avançadas"
         ])
         
         with tab1:
@@ -437,6 +438,35 @@ def main():
                     <li>Nunca invista dinheiro que não pode perder</li>
                     <li>Esta plataforma é apenas educacional</li>
                 </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with tab5:
+            st.markdown("## ⚙️ Opções Avançadas")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("### " + get_help_title("advanced_options"))
+                st.markdown(get_help_content("advanced_options", detailed=True), unsafe_allow_html=True)
+                
+                st.markdown("### " + get_help_title("cache_management"))
+                st.markdown(get_help_content("cache_management", detailed=True), unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown("### " + get_help_title("model_architecture"))
+                st.markdown(get_help_content("model_architecture", detailed=True), unsafe_allow_html=True)
+            
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 10px; margin: 1rem 0;">
+                <h4>🚀 Dicas de Otimização Avançada</h4>
+                <ul>
+                    <li><strong>Para Scalping (5-15min):</strong> Lookback=30, MC=15, Épocas=8</li>
+                    <li><strong>Para Day Trading (1h):</strong> Lookback=60, MC=20, Épocas=10</li>
+                    <li><strong>Para Swing Trading (4h+):</strong> Lookback=120, MC=30, Épocas=15</li>
+                    <li><strong>Para Análise Crítica:</strong> Lookback=100, MC=50, Épocas=20</li>
+                </ul>
+                <p><strong>Lembre-se:</strong> Configurações mais altas = maior precisão, mas tempo de processamento mais longo.</p>
             </div>
             """, unsafe_allow_html=True)
     

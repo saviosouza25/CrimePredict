@@ -309,6 +309,166 @@ HELP_CONTENT = {
             <li><strong>Razão R/R:</strong> 2:1 (ganhar R$ 200 vs perder R$ 100)</li>
         </ul>
         """
+    },
+    
+    "advanced_options": {
+        "title": "Opções Avançadas",
+        "short": "Configurações avançadas da plataforma",
+        "detailed": """
+        <h4>⚙️ Opções Avançadas - Controle Total da Análise</h4>
+        <p>Estas configurações permitem personalizar profundamente o comportamento da IA e dos algoritmos de análise.</p>
+        
+        <h5>🧠 Parâmetros de Machine Learning:</h5>
+        <ul>
+            <li><strong>Lookback Period (Período de Observação):</strong> Quantos pontos históricos a IA analisa</li>
+            <li><strong>Monte Carlo Samples:</strong> Número de simulações para calcular incerteza</li>
+            <li><strong>Épocas de Treinamento:</strong> Quantas vezes a IA treina com os dados</li>
+        </ul>
+        
+        <h5>📊 Lookback Period (Padrão: 60):</h5>
+        <ul>
+            <li><strong>30-50:</strong> Análise mais rápida, foco em padrões recentes</li>
+            <li><strong>60-100:</strong> Equilibrio entre velocidade e precisão (recomendado)</li>
+            <li><strong>120-200:</strong> Análise mais lenta, considera mais histórico</li>
+        </ul>
+        
+        <h5>🎲 Monte Carlo Samples (Padrão: 20):</h5>
+        <ul>
+            <li><strong>10-15:</strong> Estimativa rápida de incerteza</li>
+            <li><strong>20-30:</strong> Boa precisão na incerteza (recomendado)</li>
+            <li><strong>50-100:</strong> Máxima precisão, processamento mais lento</li>
+        </ul>
+        
+        <h5>🔄 Épocas de Treinamento (Padrão: 10):</h5>
+        <ul>
+            <li><strong>5-8:</strong> Treinamento rápido, pode subajustar</li>
+            <li><strong>10-15:</strong> Treinamento equilibrado (recomendado)</li>
+            <li><strong>20-50:</strong> Treinamento intensivo, risco de sobreajuste</li>
+        </ul>
+        
+        <h5>⚡ Impacto no Desempenho:</h5>
+        <ul>
+            <li><strong>Configuração Rápida:</strong> Lookback=30, MC=10, Épocas=5 (30s)</li>
+            <li><strong>Configuração Padrão:</strong> Lookback=60, MC=20, Épocas=10 (2-3min)</li>
+            <li><strong>Configuração Precisa:</strong> Lookback=120, MC=50, Épocas=20 (5-8min)</li>
+        </ul>
+        
+        <h5>🎯 Quando Ajustar:</h5>
+        <ul>
+            <li><strong>Mercado Volátil:</strong> Reduzir lookback, aumentar MC samples</li>
+            <li><strong>Mercado Estável:</strong> Aumentar lookback, manter MC padrão</li>
+            <li><strong>Análise Rápida:</strong> Reduzir todos os parâmetros</li>
+            <li><strong>Análise Crítica:</strong> Aumentar épocas e MC samples</li>
+        </ul>
+        """
+    },
+    
+    "cache_management": {
+        "title": "Gerenciamento de Cache",
+        "short": "Sistema de cache da plataforma",
+        "detailed": """
+        <h4>💾 Gerenciamento de Cache - Otimização de Performance</h4>
+        <p>O sistema de cache armazena análises e dados para acelerar operações futuras.</p>
+        
+        <h5>📁 Tipos de Cache:</h5>
+        <ul>
+            <li><strong>Cache de Dados:</strong> Preços históricos (15 min TTL)</li>
+            <li><strong>Cache de Notícias:</strong> Sentimento de mercado (30 min TTL)</li>
+            <li><strong>Cache de Análises:</strong> Resultados completos (5 min TTL)</li>
+            <li><strong>Cache de Modelos:</strong> Modelos LSTM treinados (sessão)</li>
+        </ul>
+        
+        <h5>🔄 Ciclo de Vida do Cache:</h5>
+        <ol>
+            <li><strong>Primeira Execução:</strong> Busca dados da API, treina modelo</li>
+            <li><strong>Cache Hit:</strong> Usa dados armazenados, acelera análise</li>
+            <li><strong>Expiração TTL:</strong> Cache expira, busca dados atualizados</li>
+            <li><strong>Limpeza Manual:</strong> Usuário força atualização</li>
+        </ol>
+        
+        <h5>⚡ Benefícios do Cache:</h5>
+        <ul>
+            <li><strong>Velocidade:</strong> Análises subsequentes 10x mais rápidas</li>
+            <li><strong>Economia de API:</strong> Reduz chamadas desnecessárias</li>
+            <li><strong>Consistência:</strong> Mesmos dados para comparações</li>
+            <li><strong>Experiência:</strong> Interface mais responsiva</li>
+        </ul>
+        
+        <h5>🗑️ Quando Limpar Cache:</h5>
+        <ul>
+            <li><strong>Dados Desatualizados:</strong> Após eventos de mercado importantes</li>
+            <li><strong>Mudança de Estratégia:</strong> Quando alterar parâmetros avançados</li>
+            <li><strong>Problemas de API:</strong> Se dados parecem incorretos</li>
+            <li><strong>Nova Sessão:</strong> Para começar com dados frescos</li>
+        </ul>
+        
+        <h5>📊 Indicadores de Cache:</h5>
+        <ul>
+            <li><strong>"X análises em cache":</strong> Quantidade de resultados armazenados</li>
+            <li><strong>Velocidade de Carregamento:</strong> Cache ativo = carregamento rápido</li>
+            <li><strong>Timestamp:</strong> Mostra quando dados foram atualizados</li>
+        </ul>
+        """
+    },
+    
+    "model_architecture": {
+        "title": "Arquitetura do Modelo",
+        "short": "Detalhes técnicos da IA",
+        "detailed": """
+        <h4>🏗️ Arquitetura do Modelo LSTM - Tecnologia por Trás da IA</h4>
+        <p>Nossa plataforma usa redes neurais LSTM (Long Short-Term Memory) especializadas em séries temporais.</p>
+        
+        <h5>🧠 Componentes da Rede Neural:</h5>
+        <ul>
+            <li><strong>Camadas LSTM:</strong> 2 camadas com 64 neurônios cada</li>
+            <li><strong>Dropout:</strong> 30% para prevenir sobreajuste</li>
+            <li><strong>Attention Mechanism:</strong> Foca nos padrões mais importantes</li>
+            <li><strong>Dense Layer:</strong> Camada final para previsão de preços</li>
+        </ul>
+        
+        <h5>📊 Entrada de Dados (Features):</h5>
+        <ul>
+            <li><strong>Preços OHLC:</strong> Open, High, Low, Close</li>
+            <li><strong>Volume:</strong> Volume de negociação</li>
+            <li><strong>Indicadores Técnicos:</strong> RSI, MACD, Médias Móveis</li>
+            <li><strong>Sentimento:</strong> Score de análise de notícias</li>
+            <li><strong>Volatilidade:</strong> Bandas de Bollinger e ATR</li>
+        </ul>
+        
+        <h5>🔄 Processo de Treinamento:</h5>
+        <ol>
+            <li><strong>Normalização:</strong> MinMaxScaler padroniza os dados</li>
+            <li><strong>Sequenciamento:</strong> Cria janelas temporais (lookback)</li>
+            <li><strong>Treinamento:</strong> Adam optimizer com learning rate 0.001</li>
+            <li><strong>Validação:</strong> Cross-validation temporal</li>
+            <li><strong>Fine-tuning:</strong> Ajuste com dados mais recentes</li>
+        </ol>
+        
+        <h5>🎯 Saídas do Modelo:</h5>
+        <ul>
+            <li><strong>Previsão de Preço:</strong> Valor futuro esperado</li>
+            <li><strong>Intervalos de Confiança:</strong> Via Monte Carlo Dropout</li>
+            <li><strong>Probabilidade de Direção:</strong> Chance de alta/baixa</li>
+            <li><strong>Score de Confiança:</strong> Certeza do modelo (0-100%)</li>
+        </ul>
+        
+        <h5>⚙️ Hiperparâmetros Técnicos:</h5>
+        <ul>
+            <li><strong>Hidden Size:</strong> 64 neurônios por camada LSTM</li>
+            <li><strong>Layers:</strong> 2 camadas LSTM empilhadas</li>
+            <li><strong>Dropout Rate:</strong> 0.3 (30%)</li>
+            <li><strong>Learning Rate:</strong> 0.001 (Adam)</li>
+            <li><strong>Batch Size:</strong> 32 amostras por batch</li>
+        </ul>
+        
+        <h5>🔍 Validação e Métricas:</h5>
+        <ul>
+            <li><strong>MSE (Mean Squared Error):</strong> Erro quadrático médio</li>
+            <li><strong>MAE (Mean Absolute Error):</strong> Erro absoluto médio</li>
+            <li><strong>Directional Accuracy:</strong> % de acerto na direção</li>
+            <li><strong>Sharpe Ratio:</strong> Retorno ajustado ao risco</li>
+        </ul>
+        """
     }
 }
 
