@@ -59,13 +59,13 @@ def check_password():
     logo_base64 = get_logo_base64()
     
     st.markdown(f"""
-    <div style="display: flex; justify-content: center; align-items: center; height: 60vh;">
-        <div style="text-align: center; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); background: white; min-width: 400px;">
+    <div style="display: flex; justify-content: center; align-items: center; height: 60vh; background: #000000;">
+        <div style="text-align: center; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(255, 255, 255, 0.1); background: #1a1a1a; min-width: 400px; border: 1px solid #444444;">
             <div style="margin-bottom: 1.5rem;">
                 <img src="data:image/png;base64,{logo_base64}" style="max-width: 120px; height: auto;" />
             </div>
-            <h2 style="color: #333; margin-bottom: 2rem;">Advanced Forex Analysis Platform</h2>
-            <p style="color: #666; margin-bottom: 2rem;">Please enter your credentials to access the platform</p>
+            <h2 style="color: #ffffff; margin-bottom: 2rem;">Advanced Forex Analysis Platform</h2>
+            <p style="color: #cccccc; margin-bottom: 2rem;">Please enter your credentials to access the platform</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -79,7 +79,7 @@ def check_password():
             st.error("😞 Invalid username or password")
             
         st.markdown("""
-        <div style="text-align: center; margin-top: 2rem; color: #888; font-size: 0.9em;">
+        <div style="text-align: center; margin-top: 2rem; color: #cccccc; font-size: 0.9em;">
             <p>Secure access to professional forex analysis tools</p>
         </div>
         """, unsafe_allow_html=True)
@@ -94,14 +94,28 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for professional styling
+# Custom CSS for dark theme styling
 st.markdown("""
 <style>
+    /* Global dark theme */
+    .stApp {
+        background-color: #000000 !important;
+        color: #ffffff !important;
+    }
+    
+    /* Main content area */
+    .main .block-container {
+        background-color: #000000 !important;
+        color: #ffffff !important;
+    }
+    
+    /* Header styling */
     .main-header {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(90deg, #1a1a1a 0%, #333333 100%);
         padding: 1rem;
         border-radius: 10px;
         margin-bottom: 2rem;
+        border: 1px solid #444444;
     }
     .main-header h1 {
         color: white;
@@ -109,53 +123,92 @@ st.markdown("""
         margin: 0;
         font-size: 2.5rem;
     }
+    
+    /* Metric cards with dark theme */
     .metric-card {
-        background: white;
+        background: #1a1a1a !important;
         padding: 1rem;
         border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(255,255,255,0.1);
         border-left: 4px solid #667eea;
+        color: #ffffff !important;
     }
+    
+    /* Alert boxes */
     .success-alert {
-        background-color: #d4edda;
-        border: 1px solid #c3e6cb;
-        color: #155724;
+        background-color: #1a3d1a !important;
+        border: 1px solid #28a745;
+        color: #ffffff !important;
         padding: 0.75rem;
         border-radius: 0.25rem;
         margin: 1rem 0;
     }
     .error-alert {
-        background-color: #f8d7da;
-        border: 1px solid #f5c6cb;
-        color: #721c24;
+        background-color: #3d1a1a !important;
+        border: 1px solid #dc3545;
+        color: #ffffff !important;
         padding: 0.75rem;
         border-radius: 0.25rem;
         margin: 1rem 0;
     }
     .warning-alert {
-        background-color: #fff3cd;
-        border: 1px solid #ffeaa7;
-        color: #856404;
+        background-color: #3d3d1a !important;
+        border: 1px solid #ffc107;
+        color: #ffffff !important;
         padding: 0.75rem;
         border-radius: 0.25rem;
         margin: 1rem 0;
     }
+    
+    /* Sidebar styling */
+    .css-1d391kg, .css-1cypcdb {
+        background-color: #1a1a1a !important;
+    }
     .sidebar .stSelectbox label {
         font-weight: bold;
-        color: #333;
+        color: #ffffff !important;
     }
+    
+    /* Button styling */
     .stButton > button {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
+        background: linear-gradient(90deg, #333333 0%, #555555 100%) !important;
+        color: white !important;
+        border: 1px solid #666666 !important;
         border-radius: 5px;
         padding: 0.5rem 1rem;
         font-weight: bold;
         width: 100%;
     }
     .stButton > button:hover {
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        background: linear-gradient(90deg, #444444 0%, #666666 100%) !important;
+        box-shadow: 0 4px 8px rgba(255,255,255,0.1);
         transform: translateY(-2px);
+    }
+    
+    /* Text inputs and selects */
+    .stTextInput > div > div > input, .stSelectbox > div > div > select {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        border: 1px solid #444444 !important;
+    }
+    
+    /* Tab styling */
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: #1a1a1a !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+    }
+    
+    /* General text */
+    .stMarkdown, p, div, span, h1, h2, h3, h4 {
+        color: #ffffff !important;
+    }
+    
+    /* Plotly charts dark theme */
+    .js-plotly-plot {
+        background-color: #000000 !important;
     }
 </style>
 """, unsafe_allow_html=True)
