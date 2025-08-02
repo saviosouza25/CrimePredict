@@ -158,24 +158,41 @@ st.markdown("""
         transform: translateY(-2px);
     }
     
-    /* Custom loading spinner - hide default Streamlit spinners */
-    .stSpinner > div {
+    /* Hide Streamlit's default loading indicators completely */
+    .stSpinner, .stAlert, .stSpinner > div {
         display: none !important;
     }
     
-    /* Replace with custom circular spinner */
-    .stSpinner::before {
-        content: '';
-        width: 40px;
-        height: 40px;
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #667eea;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        display: block;
-        margin: 20px auto;
+    /* Hide the running indicator in top right corner */
+    .stApp > header,
+    [data-testid="stToolbar"],
+    .stApp > div[data-testid="stHeader"],
+    .streamlit-container .element-container:has(.stSpinner),
+    .stApp .stSpinner,
+    [data-testid="stStatusWidget"],
+    .StatusWidget,
+    .streamlit-container .stAlert {
+        display: none !important;
+        visibility: hidden !important;
     }
     
+    /* Hide the menu button (3 dots) and running status */
+    .css-14xtw13.e8zbici0,
+    .css-h5rgaw.egzxvld1,
+    button[title="View fullscreen"],
+    [data-testid="stDecoration"],
+    .decoration,
+    .css-1rs6os.edgvbvh3,
+    .css-1vbkxwb.e1nzilvr5,
+    .css-1vbkxwb,
+    [aria-label="Running..."],
+    [data-testid="stAppViewContainer"] > .stSpinner {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+    
+    /* Animation for custom spinner */
     @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
@@ -187,6 +204,7 @@ st.markdown("""
         justify-content: center;
         align-items: center;
         height: 60px;
+        margin: 20px 0;
     }
     
     .spinner {
@@ -196,6 +214,17 @@ st.markdown("""
         border-left: 4px solid #667eea;
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
+    }
+    
+    /* Additional cleanup - hide any remaining Streamlit status elements */
+    .stApp [data-testid="stHeader"],
+    .stApp .stSpinner,
+    .css-1outpf7,
+    .css-164nlkn,
+    .css-12oz5g7,
+    .css-1n76uvr,
+    [data-baseweb="notification"] {
+        display: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
