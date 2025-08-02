@@ -89,7 +89,6 @@ def check_password():
 # Page configuration
 st.set_page_config(
     page_title="Advanced Forex Analysis Platform",
-    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
