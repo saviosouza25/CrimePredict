@@ -481,7 +481,7 @@ def main():
     <div style="text-align: center; color: #666; padding: 1rem;">
         <p>⚠️ <strong>Aviso Legal:</strong> Esta plataforma é apenas para fins educacionais. 
         Trading forex envolve riscos substanciais e pode não ser adequado para todos os investidores.</p>
-        <p>Desenvolvido pela Artec Tecnologia • Última atualização: {}</p>
+        <p>Desenvolvido pela Artecinvesting • Última atualização: {}</p>
     </div>
     """.format(datetime.now().strftime("%d-%m-%Y %H:%M")), unsafe_allow_html=True)
 
