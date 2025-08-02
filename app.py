@@ -43,11 +43,11 @@ def check_password():
     
     def password_entered():
         """Checks whether a password entered by the user is correct."""
-        username = st.session_state["username"]
-        password = st.session_state["password"]
+        username = st.session_state.get("username", "")
+        password = st.session_state.get("password", "")
         remember_me = st.session_state.get("remember_me", False)
         
-        if username in VALID_CREDENTIALS and VALID_CREDENTIALS[username] == hashlib.md5(password.encode()).hexdigest():
+        if username and password and username in VALID_CREDENTIALS and VALID_CREDENTIALS[username] == hashlib.md5(password.encode()).hexdigest():
             st.session_state["password_correct"] = True
             
             # Save credentials if remember me is checked
@@ -56,8 +56,11 @@ def check_password():
                 st.session_state["saved_password"] = password
                 st.session_state["credentials_saved"] = True
             
-            del st.session_state["password"]  # Don't store the password in current session
-            del st.session_state["username"]  # Don't store the username in current session
+            # Clear the input fields
+            if "password" in st.session_state:
+                del st.session_state["password"]
+            if "username" in st.session_state:
+                del st.session_state["username"]
         else:
             st.session_state["password_correct"] = False
 
@@ -124,7 +127,7 @@ def check_password():
         
         # Manual login form
         st.text_input(get_text("username_placeholder"), key="username", placeholder=get_text("username_placeholder"))
-        st.text_input(get_text("password_placeholder"), type="password", key="password", placeholder=get_text("password_placeholder"), on_change=password_entered)
+        st.text_input(get_text("password_placeholder"), type="password", key="password", placeholder=get_text("password_placeholder"))
         
         # Remember me checkbox
         st.checkbox("🔒 Lembrar credenciais", key="remember_me", help="Salva suas credenciais para login automático futuro")
@@ -351,6 +354,18 @@ def apply_theme_css():
             }
         </style>
         """, unsafe_allow_html=True)
+
+# Initialize services
+@st.cache_resource
+def initialize_services():
+    """Initialize all services once and cache them."""
+    return {
+        'data_service': DataService(),
+        'sentiment_service': SentimentService(),
+        'visualizer': ForexVisualizer()
+    }
+
+services = initialize_services()
 
 # Apply theme CSS
 apply_theme_css()
