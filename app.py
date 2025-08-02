@@ -122,89 +122,83 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Sidebar configuration
+    # Simplified sidebar configuration
     with st.sidebar:
-        st.markdown("## 📊 Analysis Configuration")
+        st.markdown("## 📊 Trading Analysis")
         
         # Currency pair selection
         pair = st.selectbox(
-            "Select Currency Pair",
+            "Currency Pair",
             PAIRS,
-            help="Choose the currency pair to analyze"
+            help="Select the currency pair to analyze"
         )
         
         # Time interval
         interval = st.selectbox(
-            "Select Time Interval",
+            "Timeframe",
             list(INTERVALS.keys()),
             index=4,  # Default to 60min
-            help="Choose the data interval for analysis"
+            help="Chart timeframe"
         )
         
-        # Prediction horizon
+        # Prediction horizon  
         horizon = st.selectbox(
-            "Prediction Horizon",
+            "Forecast Period",
             HORIZONS,
-            help="Select how far into the future to predict"
-        )
-        
-        # Risk tolerance
-        risk_level = st.selectbox(
-            "Risk Tolerance",
-            list(RISK_LEVELS.keys()),
-            index=1,  # Default to Moderate
-            help="Your risk tolerance level"
+            help="How far to predict"
         )
         
         st.markdown("---")
         
-        # Advanced settings
-        with st.expander("⚙️ Advanced Settings"):
+        # Analysis buttons - simplified
+        analyze_button = st.button("🎯 Get Trading Signal", type="primary", help="Run complete analysis with AI prediction")
+        quick_analysis = st.button("⚡ Quick Check", help="Fast analysis with basic signals")
+        
+        st.markdown("---")
+        
+        # Risk settings - simplified
+        risk_level = st.selectbox(
+            "Risk Level",
+            list(RISK_LEVELS.keys()),
+            index=1,  # Default to Moderate
+            help="Your risk tolerance for position sizing"
+        )
+        
+        # Advanced settings - collapsed by default
+        with st.expander("Advanced Options"):
             lookback_period = st.slider(
-                "Lookback Period",
+                "History Length",
                 min_value=30,
                 max_value=120,
                 value=LOOKBACK_PERIOD,
-                help="Number of historical periods to use for prediction"
-            )
-            
-            mc_samples = st.slider(
-                "Monte Carlo Samples",
-                min_value=10,
-                max_value=50,
-                value=MC_SAMPLES,
-                help="Number of samples for uncertainty estimation"
+                help="Historical periods for AI training"
             )
             
             epochs = st.slider(
-                "Training Epochs",
+                "AI Training Intensity",
                 min_value=5,
                 max_value=20,
                 value=EPOCHS,
-                help="Number of training epochs for the model"
+                help="More epochs = better accuracy but slower"
             )
+            
+            mc_samples = st.slider(
+                "Prediction Samples",
+                min_value=10,
+                max_value=50,
+                value=MC_SAMPLES,
+                help="Samples for uncertainty estimation"
+            )
+            
+            if st.button("Clear Cache"):
+                CacheManager.clear_cache()
+                st.success("Cache cleared!")
+                st.rerun()
         
-        st.markdown("---")
-        
-        # Action buttons
-        analyze_button = st.button("🔍 Run Complete Analysis", type="primary")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            quick_analysis = st.button("⚡ Quick Analysis")
-        with col2:
-            clear_cache = st.button("🗑️ Clear Cache")
-        
-        if clear_cache:
-            CacheManager.clear_cache()
-            st.success("Cache cleared!")
-            st.rerun()
-        
-        # Display cache info
-        st.markdown("---")
-        st.markdown("### 💾 Cache Status")
+        # Simple status
         cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
-        st.info(f"Cached items: {cache_count}")
+        if cache_count > 0:
+            st.info(f"💾 {cache_count} cached analysis available")
     
     # Main content area
     if analyze_button or quick_analysis:
@@ -368,14 +362,93 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
         progress_bar.empty()
         status_text.empty()
 
+def get_trading_recommendation(results):
+    """Calculate overall trading recommendation based on all signals"""
+    
+    # Get individual signals
+    price_signal = 1 if results['price_change'] > 0 else -1
+    sentiment_signal = 1 if results['sentiment']['score'] > 0 else -1 if results['sentiment']['score'] < 0 else 0
+    
+    # Get technical signals from the most recent data
+    signals = results['trading_signals'].tail(1).iloc[0]
+    
+    # Count bullish/bearish technical signals
+    tech_signals = 0
+    if signals.get('SMA_Bullish', False):
+        tech_signals += 1
+    elif signals.get('SMA_Bearish', False):
+        tech_signals -= 1
+        
+    if signals.get('MACD_Bullish', False):
+        tech_signals += 1
+    elif signals.get('MACD_Bearish', False):
+        tech_signals -= 1
+        
+    if signals.get('RSI_Oversold', False):
+        tech_signals += 1
+    elif signals.get('RSI_Overbought', False):
+        tech_signals -= 1
+    
+    # Calculate overall score
+    overall_score = price_signal + sentiment_signal + (tech_signals / 2)
+    
+    # Determine recommendation
+    if overall_score >= 1.5:
+        return "STRONG BUY", "success", "📈"
+    elif overall_score >= 0.5:
+        return "BUY", "success", "📈"
+    elif overall_score <= -1.5:
+        return "STRONG SELL", "error", "📉"
+    elif overall_score <= -0.5:
+        return "SELL", "error", "📉"
+    else:
+        return "HOLD", "warning", "➡️"
+
 def display_analysis_results():
-    """Display comprehensive analysis results"""
+    """Display simplified analysis results with prominent trading recommendation"""
     results = st.session_state.analysis_results
     
-    # Key metrics header
-    st.markdown("## 📈 Analysis Results")
+    # Get trading recommendation
+    recommendation, rec_type, rec_icon = get_trading_recommendation(results)
     
-    col1, col2, col3, col4, col5 = st.columns(5)
+    # Prominent Trading Recommendation Section
+    st.markdown("---")
+    
+    # Large recommendation display
+    if rec_type == "success":
+        bg_color = "#d4edda"
+        border_color = "#28a745"
+    elif rec_type == "error":
+        bg_color = "#f8d7da"
+        border_color = "#dc3545"
+    else:
+        bg_color = "#fff3cd"
+        border_color = "#ffc107"
+    
+    st.markdown(f"""
+    <div style="
+        background: {bg_color};
+        border: 3px solid {border_color};
+        border-radius: 15px;
+        padding: 30px;
+        text-align: center;
+        margin: 20px 0;
+    ">
+        <h1 style="color: {border_color}; margin: 0; font-size: 3em;">
+            {rec_icon} {recommendation}
+        </h1>
+        <h2 style="color: #333; margin: 10px 0; font-size: 1.5em;">
+            {results['pair']} - {results['horizon']} Outlook
+        </h2>
+        <p style="color: #666; font-size: 1.2em; margin: 0;">
+            Expected Price Change: <strong>{results['price_change_pct']:+.2f}%</strong> | 
+            Confidence: <strong>{results['model_confidence']:.0%}</strong>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Key metrics in a simplified format
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         st.metric(
@@ -386,41 +459,27 @@ def display_analysis_results():
     
     with col2:
         st.metric(
-            "Predicted Price",
+            "Target Price",
             f"{results['predicted_price']:.5f}",
             delta=f"{results['price_change']:+.5f}",
-            help=f"Prediction for {results['horizon']}"
+            help=f"Predicted price for {results['horizon']}"
         )
     
     with col3:
-        st.metric(
-            "Price Change",
-            f"{results['price_change_pct']:+.2f}%",
-            help="Expected percentage change"
-        )
-    
-    with col4:
-        st.metric(
-            "Model Confidence",
-            f"{results['model_confidence']:.1%}",
-            help="AI model confidence level"
-        )
-    
-    with col5:
-        sentiment_color = "🟢" if results['sentiment']['score'] > 0 else "🔴" if results['sentiment']['score'] < 0 else "🟡"
+        sentiment_emoji = "🟢" if results['sentiment']['score'] > 0 else "🔴" if results['sentiment']['score'] < 0 else "🟡"
         st.metric(
             "Market Sentiment",
-            f"{sentiment_color} {results['sentiment']['signal']}",
-            help=f"Sentiment strength: {results['sentiment']['strength']}"
+            f"{sentiment_emoji} {results['sentiment']['signal']}",
+            help="Overall market sentiment from news analysis"
         )
     
-    # Main charts
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Price Chart", "🔮 Predictions", "📰 Sentiment", "⚖️ Risk Analysis", "🔧 Model Performance"
+    # Simplified tabs - only essential information
+    tab1, tab2, tab3 = st.tabs([
+        "📊 Price & Signals", "📰 Analysis Details", "⚖️ Risk & Settings"
     ])
     
     with tab1:
-        st.markdown("### Technical Analysis Chart")
+        # Price chart with key technical signals
         price_chart = services['visualizer'].create_price_chart(
             results['data'].tail(200), 
             results['pair'],
@@ -428,30 +487,60 @@ def display_analysis_results():
         )
         st.plotly_chart(price_chart, use_container_width=True)
         
-        # Trading signals summary
-        st.markdown("### 🚦 Trading Signals")
-        signals = results['trading_signals']
-        recent_signals = signals.tail(1).iloc[0]
+        # Key signals summary in a compact format
+        signals = results['trading_signals'].tail(1).iloc[0]
         
-        signal_cols = st.columns(4)
-        with signal_cols[0]:
-            rsi_signal = "🟢 Oversold" if recent_signals['RSI_Oversold'] else "🔴 Overbought" if recent_signals['RSI_Overbought'] else "🟡 Neutral"
-            st.info(f"RSI: {rsi_signal}")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            rsi_signal = "Oversold" if signals['RSI_Oversold'] else "Overbought" if signals['RSI_Overbought'] else "Neutral"
+            rsi_color = "🟢" if signals['RSI_Oversold'] else "🔴" if signals['RSI_Overbought'] else "🟡"
+            st.info(f"RSI: {rsi_color} {rsi_signal}")
         
-        with signal_cols[1]:
-            macd_signal = "🟢 Bullish" if recent_signals['MACD_Bullish'] else "🔴 Bearish" if recent_signals['MACD_Bearish'] else "🟡 Neutral"
-            st.info(f"MACD: {macd_signal}")
+        with col2:
+            macd_signal = "Bullish" if signals['MACD_Bullish'] else "Bearish" if signals['MACD_Bearish'] else "Neutral"
+            macd_color = "🟢" if signals['MACD_Bullish'] else "🔴" if signals['MACD_Bearish'] else "🟡"
+            st.info(f"MACD: {macd_color} {macd_signal}")
         
-        with signal_cols[2]:
-            sma_signal = "🟢 Bullish" if recent_signals['SMA_Bullish'] else "🔴 Bearish"
-            st.info(f"SMA: {sma_signal}")
+        with col3:
+            sma_signal = "Bullish" if signals['SMA_Bullish'] else "Bearish"
+            sma_color = "🟢" if signals['SMA_Bullish'] else "🔴"
+            st.info(f"Trend: {sma_color} {sma_signal}")
         
-        with signal_cols[3]:
-            bb_signal = "🟠 Squeeze" if recent_signals['BB_Squeeze'] else "🟡 Normal"
-            st.info(f"Bollinger: {bb_signal}")
+        with col4:
+            bb_signal = "Squeeze" if signals['BB_Squeeze'] else "Normal"
+            bb_color = "🟠" if signals['BB_Squeeze'] else "🟡"
+            st.info(f"Volatility: {bb_color} {bb_signal}")
     
     with tab2:
-        st.markdown("### Prediction Analysis")
+        # Combined analysis view
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### AI Prediction")
+            direction = "Bullish" if results['price_change'] > 0 else "Bearish"
+            direction_icon = "📈" if results['price_change'] > 0 else "📉"
+            confidence_level = "High" if results['model_confidence'] > 0.7 else "Medium" if results['model_confidence'] > 0.4 else "Low"
+            
+            st.markdown(f"""
+            - **Direction:** {direction_icon} {direction}
+            - **Confidence:** {confidence_level} ({results['model_confidence']:.0%})
+            - **Expected Move:** {results['price_change_pct']:+.2f}%
+            - **Target Price:** {results['predicted_price']:.5f}
+            """)
+            
+        with col2:
+            st.markdown("#### Market Sentiment")
+            sentiment_direction = "Positive" if results['sentiment']['score'] > 0 else "Negative" if results['sentiment']['score'] < 0 else "Neutral"
+            sentiment_icon = "😊" if results['sentiment']['score'] > 0 else "😟" if results['sentiment']['score'] < 0 else "😐"
+            
+            st.markdown(f"""
+            - **Sentiment:** {sentiment_icon} {sentiment_direction}
+            - **Score:** {results['sentiment']['score']:.2f}
+            - **Strength:** {results['sentiment']['strength']}
+            - **Signal:** {results['sentiment']['signal']}
+            """)
+        
+        # Prediction chart
         prediction_chart = services['visualizer'].create_prediction_chart(
             results['data'].tail(100),
             results['predictions'],
@@ -460,119 +549,45 @@ def display_analysis_results():
             results['horizon']
         )
         st.plotly_chart(prediction_chart, use_container_width=True)
-        
-        # Prediction details
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("#### Prediction Summary")
-            direction = "📈 **BULLISH**" if results['price_change'] > 0 else "📉 **BEARISH**"
-            confidence_level = "High" if results['model_confidence'] > 0.7 else "Medium" if results['model_confidence'] > 0.4 else "Low"
-            
-            st.markdown(f"""
-            - **Direction:** {direction}
-            - **Confidence:** {confidence_level} ({results['model_confidence']:.1%})
-            - **Expected Move:** {results['price_change_pct']:+.2f}%
-            - **Time Horizon:** {results['horizon']}
-            """)
-        
-        with col2:
-            st.markdown("#### Key Levels")
-            st.markdown(f"""
-            - **Current:** {results['current_price']:.5f}
-            - **Target:** {results['predicted_price']:.5f}
-            - **Support:** {results['current_price'] * 0.995:.5f}
-            - **Resistance:** {results['current_price'] * 1.005:.5f}
-            """)
     
     with tab3:
-        st.markdown("### Market Sentiment Analysis")
-        
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            sentiment_gauge = services['visualizer'].create_sentiment_gauge(
-                results['sentiment']['score'],
-                results['sentiment']['signal']
-            )
-            st.plotly_chart(sentiment_gauge, use_container_width=True)
-        
-        with col2:
-            st.markdown("#### Sentiment Breakdown")
-            st.markdown(f"""
-            - **Overall Sentiment:** {results['sentiment']['signal']}
-            - **Sentiment Score:** {results['sentiment']['score']:.3f}
-            - **Strength:** {results['sentiment']['strength']}
-            - **Market Bias:** {'Positive' if results['sentiment']['score'] > 0 else 'Negative' if results['sentiment']['score'] < 0 else 'Neutral'}
-            """)
-            
-            if abs(results['sentiment']['score']) > 0.3:
-                st.warning("⚠️ Strong sentiment detected. Consider potential volatility.")
-            elif abs(results['sentiment']['score']) < 0.1:
-                st.info("ℹ️ Neutral sentiment. Technical analysis may be more reliable.")
-    
-    with tab4:
-        st.markdown("### Risk Management")
-        
-        risk_chart = services['visualizer'].create_risk_metrics_chart(
-            results['predictions'],
-            results['uncertainties']
-        )
-        if risk_chart.data:
-            st.plotly_chart(risk_chart, use_container_width=True)
-        
-        # Risk assessment
+        # Risk management and position sizing
         col1, col2 = st.columns(2)
+        
         with col1:
-            st.markdown("#### Position Sizing")
+            st.markdown("#### Suggested Position")
             risk_data = results['risk_assessment']
             st.markdown(f"""
             - **Risk Level:** {risk_data['risk_level']}
-            - **Recommended Position:** {risk_data['position_size']:.2%}
+            - **Position Size:** {risk_data['position_size']:.1%} of portfolio
             - **Stop Loss:** {risk_data['stop_loss']:.5f}
             - **Take Profit:** {risk_data['take_profit']:.5f}
             """)
-        
-        with col2:
-            st.markdown("#### Risk Warnings")
-            if results['model_confidence'] < 0.5:
-                st.error("⚠️ Low model confidence. Consider reducing position size.")
-            if abs(results['sentiment']['score']) > 0.4:
-                st.warning("⚠️ High sentiment volatility expected.")
-            if results['price_change_pct'] > 2:
-                st.warning("⚠️ Large price movement predicted. High risk/reward.")
             
-            st.info("💡 Always use proper risk management and never risk more than you can afford to lose.")
-    
-    with tab5:
-        st.markdown("### Model Performance Metrics")
-        
-        # Training metrics
-        metrics_df = services['visualizer'].create_performance_metrics_table(
-            results['training_metrics']
-        )
-        st.dataframe(metrics_df, use_container_width=True)
-        
-        # Model details
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("#### Model Configuration")
-            st.markdown(f"""
-            - **Model Type:** Enhanced LSTM with Attention
-            - **Lookback Period:** {LOOKBACK_PERIOD} periods
-            - **Hidden Size:** {HIDDEN_SIZE}
-            - **Layers:** {NUM_LAYERS}
-            - **Dropout:** {DROPOUT}
-            """)
+            # Simple risk warnings
+            if results['model_confidence'] < 0.5:
+                st.warning("Low confidence - reduce position size")
+            if abs(results['price_change_pct']) > 2:
+                st.warning("Large move predicted - high risk/reward")
         
         with col2:
-            st.markdown("#### Training Details")
+            st.markdown("#### Analysis Settings")
             st.markdown(f"""
-            - **Epochs Trained:** {results['training_metrics'].get('epochs_trained', 'N/A')}
-            - **Final Training Loss:** {results['training_metrics'].get('final_train_loss', 0):.6f}
-            - **Validation Loss:** {results['training_metrics'].get('final_val_loss', 0):.6f}
-            - **Model Confidence:** {results['model_confidence']:.1%}
+            - **Pair:** {results['pair']}
+            - **Timeframe:** {results['interval']}
+            - **Prediction Horizon:** {results['horizon']}
+            - **Analysis Time:** {results['timestamp'].strftime('%H:%M:%S')}
             """)
-        
-        # Performance indicators
+            
+            # Model performance summary
+            st.markdown("#### Model Performance")
+            train_loss = results['training_metrics'].get('final_train_loss', 0)
+            val_loss = results['training_metrics'].get('final_val_loss', 0)
+            st.markdown(f"""
+            - **Training Loss:** {train_loss:.4f}
+            - **Validation Loss:** {val_loss:.4f}
+            - **Model Confidence:** {results['model_confidence']:.0%}
+            """)
         mae = results['training_metrics'].get('mae', 0)
         rmse = results['training_metrics'].get('rmse', 0)
         
