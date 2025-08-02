@@ -11,6 +11,14 @@ PORTUGUESE_BR = {
     "username_placeholder": "Digite o nome de usuário",
     "password_placeholder": "Digite a senha",
     "invalid_credentials": "😞 Nome de usuário ou senha inválidos",
+    "remember_credentials": "🔒 Lembrar credenciais",
+    "auto_login": "🚀 Entrar Automaticamente",
+    "manual_login": "✏️ Inserir Manualmente",
+    "clear_credentials": "🗑️ Limpar Credenciais Salvas",
+    "login_button": "🔓 Fazer Login",
+    "saved_credentials_found": "🔑 Credenciais salvas encontradas!",
+    "credentials_cleared": "Credenciais removidas com sucesso!",
+    "secure_storage_info": "🔐 Suas credenciais são armazenadas localmente e criptografadas",
     
     # Main header
     "main_title": "🏢 Plataforma Avançada de Análise Forex",

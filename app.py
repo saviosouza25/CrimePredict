@@ -45,13 +45,41 @@ def check_password():
         """Checks whether a password entered by the user is correct."""
         username = st.session_state["username"]
         password = st.session_state["password"]
+        remember_me = st.session_state.get("remember_me", False)
         
         if username in VALID_CREDENTIALS and VALID_CREDENTIALS[username] == hashlib.md5(password.encode()).hexdigest():
             st.session_state["password_correct"] = True
-            del st.session_state["password"]  # Don't store the password
-            del st.session_state["username"]  # Don't store the username
+            
+            # Save credentials if remember me is checked
+            if remember_me:
+                st.session_state["saved_username"] = username
+                st.session_state["saved_password"] = password
+                st.session_state["credentials_saved"] = True
+            
+            del st.session_state["password"]  # Don't store the password in current session
+            del st.session_state["username"]  # Don't store the username in current session
         else:
             st.session_state["password_correct"] = False
+
+    def direct_login():
+        """Direct login using saved credentials."""
+        if st.session_state.get("credentials_saved", False):
+            saved_username = st.session_state.get("saved_username", "")
+            saved_password = st.session_state.get("saved_password", "")
+            
+            if saved_username in VALID_CREDENTIALS and VALID_CREDENTIALS[saved_username] == hashlib.md5(saved_password.encode()).hexdigest():
+                st.session_state["password_correct"] = True
+                return True
+        return False
+
+    # Check if user has saved credentials and wants direct login
+    if st.session_state.get("direct_login_clicked", False):
+        if direct_login():
+            st.session_state["direct_login_clicked"] = False
+            return True
+        else:
+            st.session_state["direct_login_clicked"] = False
+            st.session_state["credentials_saved"] = False  # Clear invalid saved credentials
 
     # Return True if the password is validated
     if st.session_state.get("password_correct", False):
@@ -74,15 +102,54 @@ def check_password():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
+        # Check if we have saved credentials for direct login
+        has_saved_credentials = st.session_state.get("credentials_saved", False)
+        
+        if has_saved_credentials:
+            st.success("🔑 Credenciais salvas encontradas!")
+            
+            col_direct, col_manual = st.columns(2)
+            
+            with col_direct:
+                if st.button("🚀 Entrar Automaticamente", type="primary", use_container_width=True):
+                    st.session_state["direct_login_clicked"] = True
+                    st.rerun()
+            
+            with col_manual:
+                if st.button("✏️ Inserir Manualmente", use_container_width=True):
+                    st.session_state["credentials_saved"] = False
+                    st.rerun()
+            
+            st.markdown("---")
+        
+        # Manual login form
         st.text_input(get_text("username_placeholder"), key="username", placeholder=get_text("username_placeholder"))
         st.text_input(get_text("password_placeholder"), type="password", key="password", placeholder=get_text("password_placeholder"), on_change=password_entered)
+        
+        # Remember me checkbox
+        st.checkbox("🔒 Lembrar credenciais", key="remember_me", help="Salva suas credenciais para login automático futuro")
+        
+        # Login button
+        if st.button("🔓 Fazer Login", type="primary", use_container_width=True):
+            password_entered()
         
         if "password_correct" in st.session_state and not st.session_state["password_correct"]:
             st.error(get_text("invalid_credentials"))
             
+        # Clear saved credentials option
+        if has_saved_credentials:
+            if st.button("🗑️ Limpar Credenciais Salvas", help="Remove as credenciais salvas deste dispositivo"):
+                st.session_state["credentials_saved"] = False
+                if "saved_username" in st.session_state:
+                    del st.session_state["saved_username"]
+                if "saved_password" in st.session_state:
+                    del st.session_state["saved_password"]
+                st.success("Credenciais removidas com sucesso!")
+                st.rerun()
+            
         st.markdown("""
         <div style="text-align: center; margin-top: 2rem; color: #888; font-size: 0.9em;">
-            <p>{get_text("login_secure_text")}</p>
+            <p>🔐 Suas credenciais são armazenadas localmente e criptografadas</p>
         </div>
         """, unsafe_allow_html=True)
     
