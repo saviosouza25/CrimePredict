@@ -20,11 +20,21 @@ from models.lstm_model import ForexPredictor
 from utils.visualization import ForexVisualizer
 from utils.cache_manager import CacheManager
 import hashlib
+import base64
 
 # Authentication configuration
 VALID_CREDENTIALS = {
     "artec": "e10adc3949ba59abbe56e057f20f883e"  # MD5 hash of "123456"
 }
+
+def get_logo_base64():
+    """Get the company logo as base64 encoded string."""
+    try:
+        with open("assets/company_logo.png", "rb") as f:
+            logo_data = f.read()
+            return base64.b64encode(logo_data).decode()
+    except FileNotFoundError:
+        return ""
 
 def check_password():
     """Returns `True` if the user had the correct password."""
@@ -45,11 +55,16 @@ def check_password():
     if st.session_state.get("password_correct", False):
         return True
 
-    # Show input for password
-    st.markdown("""
+    # Show input for password with company logo
+    logo_base64 = get_logo_base64()
+    
+    st.markdown(f"""
     <div style="display: flex; justify-content: center; align-items: center; height: 60vh;">
         <div style="text-align: center; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); background: white; min-width: 400px;">
-            <h2 style="color: #333; margin-bottom: 2rem;">🔐 Advanced Forex Analysis Platform</h2>
+            <div style="margin-bottom: 1.5rem;">
+                <img src="data:image/png;base64,{logo_base64}" style="max-width: 120px; height: auto;" />
+            </div>
+            <h2 style="color: #333; margin-bottom: 2rem;">Advanced Forex Analysis Platform</h2>
             <p style="color: #666; margin-bottom: 2rem;">Please enter your credentials to access the platform</p>
         </div>
     </div>
@@ -167,13 +182,20 @@ def main():
     if not check_password():
         return
     
-    # Header
-    st.markdown("""
+    # Header with company logo
+    logo_base64 = get_logo_base64()
+    
+    st.markdown(f"""
     <div class="main-header">
-        <h1>🚀 Advanced Forex Analysis Platform</h1>
-        <p style="color: white; text-align: center; margin: 0; font-size: 1.1rem;">
-            AI-Powered Forex Predictions with Real-Time Analysis
-        </p>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
+            <img src="data:image/png;base64,{logo_base64}" style="max-width: 60px; height: auto;" />
+            <div>
+                <h1 style="margin: 0;">Advanced Forex Analysis Platform</h1>
+                <p style="color: white; text-align: center; margin: 0; font-size: 1.1rem;">
+                    AI-Powered Forex Predictions with Real-Time Analysis
+                </p>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
     
