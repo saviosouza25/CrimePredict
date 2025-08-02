@@ -283,18 +283,14 @@ def main():
                 del st.session_state[key]
             st.rerun()
         
-        # Currency pair selection with detailed help
+        # Currency pair selection
         pair = st.selectbox(
             get_text("sidebar_currency_pair"),
             PAIRS,
             help=get_help_content("currency_pair")
         )
         
-        # Show detailed help for currency pair
-        with st.expander("❓ O que é Par de Moedas?"):
-            st.markdown(get_help_content("currency_pair", detailed=True), unsafe_allow_html=True)
-        
-        # Time interval with detailed help
+        # Time interval
         interval = st.selectbox(
             get_text("sidebar_time_interval"),
             list(INTERVALS.keys()),
@@ -302,39 +298,23 @@ def main():
             help=get_help_content("time_interval")
         )
         
-        # Show detailed help for time interval
-        with st.expander("❓ Como escolher Intervalo de Tempo?"):
-            st.markdown(get_help_content("time_interval", detailed=True), unsafe_allow_html=True)
-        
-        # Prediction horizon with detailed help
+        # Prediction horizon
         horizon = st.selectbox(
             "Período de Previsão",
             HORIZONS,
             help=get_help_content("prediction_horizon")
         )
         
-        # Show detailed help for prediction horizon
-        with st.expander("❓ Período de Previsão - Como funciona?"):
-            st.markdown(get_help_content("prediction_horizon", detailed=True), unsafe_allow_html=True)
-        
         st.markdown("---")
         
-        # Analysis buttons with detailed help
+        # Analysis buttons
         st.markdown("---")
-        
-        # Show detailed help for trading signal
-        with st.expander("❓ Como funciona o Sinal de Trading?"):
-            st.markdown(get_help_content("get_trading_signal", detailed=True), unsafe_allow_html=True)
         
         analyze_button = st.button(
             "🎯 Obter Sinal de Trading", 
             type="primary", 
             help=get_help_content("get_trading_signal")
         )
-        
-        # Show detailed help for quick check
-        with st.expander("❓ O que é Verificação Rápida?"):
-            st.markdown(get_help_content("quick_check", detailed=True), unsafe_allow_html=True)
         
         quick_analysis = st.button(
             "⚡ Verificação Rápida",
@@ -343,17 +323,13 @@ def main():
         
         st.markdown("---")
         
-        # Risk settings with detailed help
+        # Risk settings
         risk_level = st.selectbox(
             get_text("sidebar_risk_level"),
             list(RISK_LEVELS.keys()),
             index=1,  # Default to Moderate
             help=get_help_content("risk_level")
         )
-        
-        # Show detailed help for risk level
-        with st.expander("❓ Como escolher Nível de Risco?"):
-            st.markdown(get_help_content("risk_level", detailed=True), unsafe_allow_html=True)
         
         # Advanced settings - collapsed by default
         with st.expander("Opções Avançadas"):
