@@ -157,6 +157,46 @@ st.markdown("""
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         transform: translateY(-2px);
     }
+    
+    /* Custom loading spinner - hide default Streamlit spinners */
+    .stSpinner > div {
+        display: none !important;
+    }
+    
+    /* Replace with custom circular spinner */
+    .stSpinner::before {
+        content: '';
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        display: block;
+        margin: 20px auto;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Custom spinner for manual use */
+    .custom-spinner {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 60px;
+    }
+    
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(102, 126, 234, 0.1);
+        border-left: 4px solid #667eea;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -306,6 +346,16 @@ def main():
 
 def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_samples, epochs, is_quick=False):
     """Run the complete forex analysis"""
+    
+    # Custom loading display
+    with st.container():
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown("""
+            <div class="custom-spinner">
+                <div class="spinner"></div>
+            </div>
+            """, unsafe_allow_html=True)
     
     progress_bar = st.progress(0)
     status_text = st.empty()
