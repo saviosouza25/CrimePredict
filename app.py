@@ -318,24 +318,28 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
         # Calculate price variation range against the expected trend
         uncertainty = uncertainties[-1] if uncertainties and len(uncertainties) > 0 else 0.0
         
-        # Calculate counter-trend risk levels (opposite direction price targets)
-        risk_multiplier = 1.5  # How far opposite the trend could go
+        # Calculate where price could move OPPOSITE to current direction
+        # This shows risk of market moving against current momentum
+        recent_change = (current_price - float(df_with_indicators['close'].iloc[-5])) if len(df_with_indicators) >= 5 else 0
+        risk_multiplier = 2.0  # Potential reversal magnitude
         
-        if price_change > 0:  # Bullish prediction - show bearish risk
-            # If we predict UP, show where price could go DOWN (bearish risk)
-            counter_trend_target = current_price - (abs(price_change) * risk_multiplier)
+        # Determine current price momentum direction
+        if recent_change >= 0:  # Current price has been rising - show downside risk
+            counter_trend_target = current_price - (current_price * 0.02 * risk_multiplier)  # 2% down * multiplier
             risk_direction = "Downside"
-        else:  # Bearish prediction - show bullish risk
-            # If we predict DOWN, show where price could go UP (bullish risk)
-            counter_trend_target = current_price + (abs(price_change) * risk_multiplier)
+            risk_description = "if price reverses from current upward momentum"
+        else:  # Current price has been falling - show upside risk  
+            counter_trend_target = current_price + (current_price * 0.02 * risk_multiplier)  # 2% up * multiplier
             risk_direction = "Upside"
+            risk_description = "if price reverses from current downward momentum"
         
         # Debug logging (temporary)
         print(f"DEBUG - Current Price: {current_price:.5f}")
         print(f"DEBUG - Raw Predicted Price: {predictions[-1] if predictions else 'None'}")
         print(f"DEBUG - Final Predicted Price: {predicted_price:.5f}")
         print(f"DEBUG - Price Change: {price_change_pct:.2f}%")
-        print(f"DEBUG - Counter-trend Risk: {risk_direction} to {counter_trend_target:.5f}")
+        print(f"DEBUG - Recent price change: {recent_change:.5f}")
+        print(f"DEBUG - Counter-trend Risk: {risk_direction} to {counter_trend_target:.5f} ({risk_description})")
         
         # Risk assessment
         risk_tolerance = RISK_LEVELS[risk_level]
@@ -370,7 +374,9 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
             'counter_trend_risk': {
                 'direction': risk_direction,
                 'target_price': counter_trend_target,
-                'risk_percentage': abs(counter_trend_target - current_price) / current_price * 100
+                'risk_percentage': abs(counter_trend_target - current_price) / current_price * 100,
+                'description': risk_description,
+                'current_momentum': 'Rising' if recent_change >= 0 else 'Falling'
             }
         }
         
@@ -486,7 +492,7 @@ def display_analysis_results():
         </h2>
         <p style="color: #666; font-size: 1.2em; margin: 0;">
             Expected Price Change: <strong>{results['price_change_pct']:+.2f}%</strong> | 
-            Target Range: <strong>{results['predicted_price']:.5f}</strong> | 
+            Reversal Risk: <strong>{results['counter_trend_risk']['target_price']:.5f}</strong> | 
             Confidence: <strong>{results['model_confidence']:.0%}</strong>
         </p>
     </div>
@@ -578,21 +584,16 @@ def display_analysis_results():
             trend_direction = "Bullish" if results['price_change'] > 0 else "Bearish"
             counter_risk = results['counter_trend_risk']
             
-            # Show risk of analysis being wrong (opposite direction)
-            if results['price_change'] > 0:  # Bullish prediction
-                st.markdown(f"""
-                - **Prediction:** 📈 {trend_direction} to {results['predicted_price']:.5f}
-                - **Risk if Wrong:** 📉 {counter_risk['direction']} risk
-                - **Counter-trend Target:** {counter_risk['target_price']:.5f}
-                - **Risk Exposure:** -{counter_risk['risk_percentage']:.1f}%
-                """)
-            else:  # Bearish prediction
-                st.markdown(f"""
-                - **Prediction:** 📉 {trend_direction} to {results['predicted_price']:.5f}
-                - **Risk if Wrong:** 📈 {counter_risk['direction']} risk
-                - **Counter-trend Target:** {counter_risk['target_price']:.5f}
-                - **Risk Exposure:** +{counter_risk['risk_percentage']:.1f}%
-                """)
+            # Show risk of current price momentum reversing
+            momentum_icon = "📈" if counter_risk['current_momentum'] == 'Rising' else "📉"
+            risk_icon = "📉" if counter_risk['direction'] == 'Downside' else "📈"
+            
+            st.markdown(f"""
+            - **Current Momentum:** {momentum_icon} {counter_risk['current_momentum']}
+            - **Reversal Risk:** {risk_icon} {counter_risk['direction']} risk
+            - **Counter-trend Target:** {counter_risk['target_price']:.5f}
+            - **Risk Exposure:** {counter_risk['risk_percentage']:.1f}%
+            """)
         
         # Market sentiment section
         st.markdown("#### Market Sentiment Analysis")
@@ -613,11 +614,12 @@ def display_analysis_results():
             counter_risk = results['counter_trend_risk']
             
             st.markdown(f"""
-            **If Analysis is Wrong:**
-            - Price could move {counter_risk['direction'].lower()}
-            - Target if opposite: {counter_risk['target_price']:.5f}
-            - Potential loss: {counter_risk['risk_percentage']:.1f}%
-            - Risk level: {'HIGH' if counter_risk['risk_percentage'] > 2 else 'MODERATE' if counter_risk['risk_percentage'] > 1 else 'LOW'}
+            **If Current Momentum Reverses:**
+            - Current trend: {counter_risk['current_momentum']}
+            - Reversal direction: {counter_risk['direction']}
+            - Target if reversed: {counter_risk['target_price']:.5f}
+            - Potential move: {counter_risk['risk_percentage']:.1f}%
+            - Risk level: {'HIGH' if counter_risk['risk_percentage'] > 4 else 'MODERATE' if counter_risk['risk_percentage'] > 2 else 'LOW'}
             """)
         
         # Prediction chart
