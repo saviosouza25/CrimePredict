@@ -167,13 +167,31 @@ st.markdown("""
     
     /* Sidebar styling */
     .css-1d391kg, .css-1cypcdb, .css-1lcbmhc {
-        background: linear-gradient(180deg, #0d1421 0%, #1a2842 100%) !important;
-        border-right: 2px solid #2a3f63 !important;
+        background: linear-gradient(180deg, #1a2842 0%, #2a3f63 100%) !important;
+        border-right: 2px solid #3a5f8f !important;
     }
     .sidebar .stSelectbox label, .stSelectbox label {
         font-weight: bold;
-        color: #e8f0ff !important;
-        font-size: 0.95rem !important;
+        color: #ffffff !important;
+        font-size: 1rem !important;
+    }
+    
+    /* Sidebar select boxes */
+    .css-1d391kg .stSelectbox > div > div > select,
+    .css-1cypcdb .stSelectbox > div > div > select,
+    .css-1lcbmhc .stSelectbox > div > div > select {
+        background-color: #2a3f63 !important;
+        color: #ffffff !important;
+        border: 2px solid #4a6fa5 !important;
+        border-radius: 8px !important;
+        padding: 0.75rem !important;
+    }
+    
+    /* Sidebar text elements */
+    .css-1d391kg .stMarkdown,
+    .css-1cypcdb .stMarkdown,
+    .css-1lcbmhc .stMarkdown {
+        color: #ffffff !important;
     }
     
     /* Button styling */
@@ -196,16 +214,18 @@ st.markdown("""
     
     /* Text inputs and selects */
     .stTextInput > div > div > input, .stSelectbox > div > div > select {
-        background-color: #0f1419 !important;
-        color: #e8f0ff !important;
-        border: 2px solid #2a3f63 !important;
+        background-color: #2a3f63 !important;
+        color: #ffffff !important;
+        border: 2px solid #4a6fa5 !important;
         border-radius: 8px !important;
         padding: 0.75rem !important;
         transition: all 0.3s ease !important;
+        font-weight: 500 !important;
     }
     .stTextInput > div > div > input:focus, .stSelectbox > div > div > select:focus {
         border-color: #3a7fc7 !important;
         box-shadow: 0 0 0 3px rgba(58, 127, 199, 0.2) !important;
+        background-color: #3a5f8f !important;
     }
     
     /* Tab styling */
