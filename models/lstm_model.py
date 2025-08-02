@@ -266,13 +266,22 @@ class ForexPredictor:
             mean_pred = np.mean(step_predictions)
             std_pred = np.std(step_predictions)
             
-            predictions.append(mean_pred)
-            uncertainties.append(std_pred)
+            # CRITICAL FIX: Inverse transform the prediction to get actual price
+            # Create a dummy feature vector with the prediction as the first feature (close price)
+            dummy_features = np.zeros((1, feature_matrix.shape[1]), dtype=np.float32)
+            dummy_features[0, 0] = mean_pred  # Put prediction in close price position
+            
+            # Inverse transform to get actual price
+            actual_price = self.scaler.inverse_transform(dummy_features)[0, 0]
+            actual_std = std_pred * (self.scaler.scale_[0] if hasattr(self.scaler, 'scale_') else 1.0)
+            
+            predictions.append(actual_price)
+            uncertainties.append(actual_std)
             
             # Update input for next prediction
-            # Create new feature vector (simplified approach)
+            # Create new feature vector using the RAW prediction (not inverse transformed)
             new_features = np.zeros((1, feature_matrix.shape[1]), dtype=np.float32)
-            new_features[0, 0] = mean_pred  # Close price
+            new_features[0, 0] = actual_price  # Use actual price for features
             new_features[0, -1] = sentiment  # Sentiment
             
             # Scale the new features

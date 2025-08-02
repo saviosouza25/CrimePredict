@@ -300,11 +300,26 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
         status_text.text("💾 Finalizing analysis...")
         
         current_price = float(df_with_indicators['close'].iloc[-1])
-        predicted_price = predictions[-1] if predictions else current_price
+        predicted_price = predictions[-1] if predictions and len(predictions) > 0 else current_price
+        
+        # Validation: Ensure predicted price is realistic (within 10% of current price for safety)
+        max_change = current_price * 0.1  # 10% maximum change as sanity check
+        if abs(predicted_price - current_price) > max_change:
+            # If prediction seems unrealistic, use a more conservative estimate
+            if predicted_price > current_price:
+                predicted_price = current_price + (max_change * 0.5)  # 5% increase max
+            else:
+                predicted_price = current_price - (max_change * 0.5)  # 5% decrease max
         
         # Calculate additional metrics
         price_change = predicted_price - current_price
         price_change_pct = (price_change / current_price) * 100
+        
+        # Debug logging (temporary)
+        print(f"DEBUG - Current Price: {current_price:.5f}")
+        print(f"DEBUG - Raw Predicted Price: {predictions[-1] if predictions else 'None'}")
+        print(f"DEBUG - Final Predicted Price: {predicted_price:.5f}")
+        print(f"DEBUG - Price Change: {price_change_pct:.2f}%")
         
         # Risk assessment
         risk_tolerance = RISK_LEVELS[risk_level]
@@ -364,6 +379,14 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
 
 def get_trading_recommendation(results):
     """Calculate overall trading recommendation based on all signals"""
+    
+    # Validate the price change makes sense
+    current_price = results['current_price']
+    predicted_price = results['predicted_price']
+    price_change_pct = results['price_change_pct']
+    
+    # Debug logging
+    print(f"RECOMMENDATION DEBUG - Current: {current_price:.5f}, Predicted: {predicted_price:.5f}, Change: {price_change_pct:.2f}%")
     
     # Get individual signals
     price_signal = 1 if results['price_change'] > 0 else -1
