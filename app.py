@@ -59,13 +59,13 @@ def check_password():
     logo_base64 = get_logo_base64()
     
     st.markdown(f"""
-    <div style="display: flex; justify-content: center; align-items: center; height: 60vh; background: #000000;">
-        <div style="text-align: center; padding: 2.5rem; border-radius: 16px; box-shadow: 0 8px 32px rgba(58, 127, 199, 0.15); background: linear-gradient(135deg, #0d1421 0%, #1a2842 100%); min-width: 450px; border: 2px solid #2a5f8f;">
-            <div style="margin-bottom: 2rem;">
-                <img src="data:image/png;base64,{logo_base64}" style="max-width: 140px; height: auto; filter: drop-shadow(0 4px 8px rgba(58, 127, 199, 0.3));" />
+    <div style="display: flex; justify-content: center; align-items: center; height: 60vh;">
+        <div style="text-align: center; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); background: white; min-width: 400px;">
+            <div style="margin-bottom: 1.5rem;">
+                <img src="data:image/png;base64,{logo_base64}" style="max-width: 120px; height: auto;" />
             </div>
-            <h2 style="color: #ffffff; margin-bottom: 1rem; font-size: 1.8rem; font-weight: 600;">Advanced Forex Analysis Platform</h2>
-            <p style="color: #b8c8e0; margin-bottom: 2rem; font-size: 1.1rem;">Please enter your credentials to access the platform</p>
+            <h2 style="color: #333; margin-bottom: 2rem;">Advanced Forex Analysis Platform</h2>
+            <p style="color: #666; margin-bottom: 2rem;">Please enter your credentials to access the platform</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -79,7 +79,7 @@ def check_password():
             st.error("😞 Invalid username or password")
             
         st.markdown("""
-        <div style="text-align: center; margin-top: 2rem; color: #b8c8e0; font-size: 1rem; font-weight: 300;">
+        <div style="text-align: center; margin-top: 2rem; color: #888; font-size: 0.9em;">
             <p>Secure access to professional forex analysis tools</p>
         </div>
         """, unsafe_allow_html=True)
@@ -94,29 +94,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for dark theme styling
+# Custom CSS for professional styling
 st.markdown("""
 <style>
-    /* Global dark theme */
-    .stApp {
-        background-color: #000000 !important;
-        color: #ffffff !important;
-    }
-    
-    /* Main content area */
-    .main .block-container {
-        background-color: #000000 !important;
-        color: #ffffff !important;
-    }
-    
-    /* Header styling */
     .main-header {
-        background: linear-gradient(135deg, #0d1421 0%, #1a2842 50%, #2a3f63 100%);
-        padding: 1.5rem;
-        border-radius: 12px;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        padding: 1rem;
+        border-radius: 10px;
         margin-bottom: 2rem;
-        border: 1px solid #3a5f8f;
-        box-shadow: 0 4px 20px rgba(26, 40, 66, 0.4);
     }
     .main-header h1 {
         color: white;
@@ -124,150 +109,53 @@ st.markdown("""
         margin: 0;
         font-size: 2.5rem;
     }
-    
-    /* Metric cards with dark theme */
     .metric-card {
-        background: linear-gradient(135deg, #0f1419 0%, #1a2533 100%) !important;
-        padding: 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(26, 37, 51, 0.3);
-        border-left: 4px solid #3a7fc7;
-        border: 1px solid #2a3f63;
-        color: #e8f0ff !important;
-    }
-    
-    /* Alert boxes */
-    .success-alert {
-        background: linear-gradient(135deg, #0d2818 0%, #1a4d2e 100%) !important;
-        border: 1px solid #28a745;
-        color: #a8f5c4 !important;
+        background: white;
         padding: 1rem;
-        border-radius: 8px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #667eea;
+    }
+    .success-alert {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+        padding: 0.75rem;
+        border-radius: 0.25rem;
         margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
     }
     .error-alert {
-        background: linear-gradient(135deg, #2d0d0d 0%, #4d1a1a 100%) !important;
-        border: 1px solid #dc3545;
-        color: #ffb3ba !important;
-        padding: 1rem;
-        border-radius: 8px;
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+        padding: 0.75rem;
+        border-radius: 0.25rem;
         margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.2);
     }
     .warning-alert {
-        background: linear-gradient(135deg, #2d2a0d 0%, #4d441a 100%) !important;
-        border: 1px solid #ffc107;
-        color: #fff3a0 !important;
-        padding: 1rem;
-        border-radius: 8px;
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+        padding: 0.75rem;
+        border-radius: 0.25rem;
         margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
     }
-    
-    /* Sidebar styling */
-    .css-1d391kg, .css-1cypcdb, .css-1lcbmhc {
-        background: linear-gradient(180deg, #1a2842 0%, #2a3f63 100%) !important;
-        border-right: 2px solid #3a5f8f !important;
-    }
-    .sidebar .stSelectbox label, .stSelectbox label {
+    .sidebar .stSelectbox label {
         font-weight: bold;
-        color: #ffffff !important;
-        font-size: 1rem !important;
+        color: #333;
     }
-    
-    /* Sidebar select boxes */
-    .css-1d391kg .stSelectbox > div > div > select,
-    .css-1cypcdb .stSelectbox > div > div > select,
-    .css-1lcbmhc .stSelectbox > div > div > select {
-        background-color: #2a3f63 !important;
-        color: #ffffff !important;
-        border: 2px solid #4a6fa5 !important;
-        border-radius: 8px !important;
-        padding: 0.75rem !important;
-    }
-    
-    /* Sidebar text elements */
-    .css-1d391kg .stMarkdown,
-    .css-1cypcdb .stMarkdown,
-    .css-1lcbmhc .stMarkdown {
-        color: #ffffff !important;
-    }
-    
-    /* Button styling */
     .stButton > button {
-        background: linear-gradient(90deg, #1a4a6b 0%, #2a5f8f 100%) !important;
-        color: #ffffff !important;
-        border: 1px solid #3a7fc7 !important;
-        border-radius: 8px;
-        padding: 0.75rem 1.5rem;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 0.5rem 1rem;
         font-weight: bold;
         width: 100%;
-        transition: all 0.3s ease;
     }
     .stButton > button:hover {
-        background: linear-gradient(90deg, #2a5f8f 0%, #3a7fc7 100%) !important;
-        box-shadow: 0 6px 12px rgba(58, 127, 199, 0.3);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         transform: translateY(-2px);
-        border-color: #4a8fd7 !important;
-    }
-    
-    /* Text inputs and selects */
-    .stTextInput > div > div > input, .stSelectbox > div > div > select {
-        background-color: #2a3f63 !important;
-        color: #ffffff !important;
-        border: 2px solid #4a6fa5 !important;
-        border-radius: 8px !important;
-        padding: 0.75rem !important;
-        transition: all 0.3s ease !important;
-        font-weight: 500 !important;
-    }
-    .stTextInput > div > div > input:focus, .stSelectbox > div > div > select:focus {
-        border-color: #3a7fc7 !important;
-        box-shadow: 0 0 0 3px rgba(58, 127, 199, 0.2) !important;
-        background-color: #3a5f8f !important;
-    }
-    
-    /* Tab styling */
-    .stTabs [data-baseweb="tab-list"] {
-        background: linear-gradient(90deg, #0f1419 0%, #1a2533 100%) !important;
-        border-radius: 8px !important;
-        padding: 0.25rem !important;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background-color: transparent !important;
-        color: #b8c8e0 !important;
-        border-radius: 6px !important;
-        padding: 0.75rem 1.5rem !important;
-        transition: all 0.3s ease !important;
-    }
-    .stTabs [data-baseweb="tab"]:hover {
-        background-color: #2a3f63 !important;
-        color: #e8f0ff !important;
-    }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background: linear-gradient(90deg, #1a4a6b 0%, #2a5f8f 100%) !important;
-        color: #ffffff !important;
-    }
-    
-    /* General text */
-    .stMarkdown, p, div, span, h1, h2, h3, h4 {
-        color: #e8f0ff !important;
-    }
-    
-    /* Metric displays */
-    .metric h1, .metric h2, .metric h3 {
-        color: #ffffff !important;
-    }
-    
-    /* Progress bars */
-    .stProgress > div > div > div {
-        background: linear-gradient(90deg, #1a4a6b 0%, #3a7fc7 100%) !important;
-    }
-    
-    /* Plotly charts dark theme */
-    .js-plotly-plot {
-        background-color: #000000 !important;
     }
 </style>
 """, unsafe_allow_html=True)

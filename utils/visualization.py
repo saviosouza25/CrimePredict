@@ -150,22 +150,13 @@ class ForexVisualizer:
                     row=3, col=1
                 )
         
-        # Update layout with dark theme
+        # Update layout
         fig.update_layout(
             title=f'{pair} Technical Analysis',
             xaxis_rangeslider_visible=False,
             height=800,
             showlegend=True,
-            hovermode='x unified',
-            plot_bgcolor='#000000',
-            paper_bgcolor='#000000',
-            font=dict(color='white'),
-            xaxis=dict(gridcolor='#333333'),
-            yaxis=dict(gridcolor='#333333'),
-            xaxis2=dict(gridcolor='#333333'),
-            yaxis2=dict(gridcolor='#333333'),
-            xaxis3=dict(gridcolor='#333333'),
-            yaxis3=dict(gridcolor='#333333')
+            hovermode='x unified'
         )
         
         return fig
@@ -261,12 +252,7 @@ class ForexVisualizer:
             xaxis_title='Date',
             yaxis_title='Price',
             hovermode='x unified',
-            height=500,
-            plot_bgcolor='#000000',
-            paper_bgcolor='#000000',
-            font=dict(color='white'),
-            xaxis=dict(gridcolor='#333333'),
-            yaxis=dict(gridcolor='#333333')
+            height=500
         )
         
         return fig
