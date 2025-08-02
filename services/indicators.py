@@ -66,41 +66,47 @@ class TechnicalIndicators:
         """Add all technical indicators to dataframe"""
         df = df.copy()
         
+        # Ensure we have the required columns
+        required_cols = ['open', 'high', 'low', 'close']
+        for col in required_cols:
+            if col not in df.columns:
+                raise ValueError(f"Required column '{col}' not found in dataframe")
+        
         # Moving Averages
-        df['SMA_10'] = TechnicalIndicators.sma(df['close'], 10)
-        df['SMA_20'] = TechnicalIndicators.sma(df['close'], 20)
-        df['SMA_50'] = TechnicalIndicators.sma(df['close'], 50)
-        df['EMA_12'] = TechnicalIndicators.ema(df['close'], 12)
-        df['EMA_26'] = TechnicalIndicators.ema(df['close'], 26)
+        df.loc[:, 'SMA_10'] = TechnicalIndicators.sma(df['close'], 10)
+        df.loc[:, 'SMA_20'] = TechnicalIndicators.sma(df['close'], 20)
+        df.loc[:, 'SMA_50'] = TechnicalIndicators.sma(df['close'], 50)
+        df.loc[:, 'EMA_12'] = TechnicalIndicators.ema(df['close'], 12)
+        df.loc[:, 'EMA_26'] = TechnicalIndicators.ema(df['close'], 26)
         
         # RSI
-        df['RSI'] = TechnicalIndicators.rsi(df['close'])
+        df.loc[:, 'RSI'] = TechnicalIndicators.rsi(df['close'])
         
         # MACD
         macd, signal, histogram = TechnicalIndicators.macd(df['close'])
-        df['MACD'] = macd
-        df['MACD_Signal'] = signal
-        df['MACD_Histogram'] = histogram
+        df.loc[:, 'MACD'] = macd
+        df.loc[:, 'MACD_Signal'] = signal
+        df.loc[:, 'MACD_Histogram'] = histogram
         
         # Bollinger Bands
         bb_upper, bb_middle, bb_lower = TechnicalIndicators.bollinger_bands(df['close'])
-        df['BB_Upper'] = bb_upper
-        df['BB_Middle'] = bb_middle
-        df['BB_Lower'] = bb_lower
-        df['BB_Width'] = (bb_upper - bb_lower) / bb_middle
-        df['BB_Position'] = (df['close'] - bb_lower) / (bb_upper - bb_lower)
+        df.loc[:, 'BB_Upper'] = bb_upper
+        df.loc[:, 'BB_Middle'] = bb_middle
+        df.loc[:, 'BB_Lower'] = bb_lower
+        df.loc[:, 'BB_Width'] = (bb_upper - bb_lower) / bb_middle
+        df.loc[:, 'BB_Position'] = (df['close'] - bb_lower) / (bb_upper - bb_lower)
         
         # Stochastic
         stoch_k, stoch_d = TechnicalIndicators.stochastic(df['high'], df['low'], df['close'])
-        df['Stoch_K'] = stoch_k
-        df['Stoch_D'] = stoch_d
+        df.loc[:, 'Stoch_K'] = stoch_k
+        df.loc[:, 'Stoch_D'] = stoch_d
         
         # ATR
-        df['ATR'] = TechnicalIndicators.atr(df['high'], df['low'], df['close'])
+        df.loc[:, 'ATR'] = TechnicalIndicators.atr(df['high'], df['low'], df['close'])
         
         # Volume-based indicators (if volume data available)
         if 'volume' in df.columns:
-            df['Volume_SMA'] = TechnicalIndicators.sma(df['volume'], 20)
+            df.loc[:, 'Volume_SMA'] = TechnicalIndicators.sma(df['volume'], 20)
         
         return df.dropna()
     

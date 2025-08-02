@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Ensure we can find all installed packages
+sys.path.insert(0, '/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages')
+
 import torch
 import torch.nn as nn
 import numpy as np
@@ -155,6 +161,10 @@ class ForexPredictor:
         self.training_history = []
         best_val_loss = float('inf')
         patience_counter = 0
+        train_loss = 0.0
+        val_loss = 0.0
+        val_predictions = []
+        val_targets = []
         
         for epoch in range(epochs):
             # Training
@@ -205,14 +215,18 @@ class ForexPredictor:
                     break
         
         # Calculate metrics
-        val_predictions = np.array(val_predictions)
-        val_targets = np.array(val_targets)
+        if val_predictions:
+            val_predictions = np.array(val_predictions)
+            val_targets = np.array(val_targets)
+        else:
+            val_predictions = np.array([])
+            val_targets = np.array([])
         
         metrics = {
             'final_train_loss': train_loss,
             'final_val_loss': val_loss,
-            'mae': mean_absolute_error(val_targets, val_predictions),
-            'rmse': np.sqrt(mean_squared_error(val_targets, val_predictions)),
+            'mae': mean_absolute_error(val_targets, val_predictions) if len(val_predictions) > 0 else 0.0,
+            'rmse': np.sqrt(mean_squared_error(val_targets, val_predictions)) if len(val_predictions) > 0 else 0.0,
             'epochs_trained': len(self.training_history)
         }
         
@@ -279,6 +293,8 @@ class ForexPredictor:
         
         try:
             feature_matrix = self.prepare_features(df, sentiment)
+            if self.scaler is None:
+                return 0.5
             scaled_data = self.scaler.transform(feature_matrix)
             
             # Use last 20 samples for confidence calculation
@@ -307,8 +323,16 @@ class ForexPredictor:
                     actuals.append(actual)
             
             # Calculate accuracy-based confidence
-            mape = np.mean(np.abs((np.array(actuals) - np.array(predictions)) / np.array(actuals))) * 100
-            confidence = max(0.0, min(1.0, 1.0 - mape / 100))
+            actuals_array = np.array(actuals)
+            predictions_array = np.array(predictions)
+            
+            # Avoid division by zero
+            non_zero_mask = actuals_array != 0
+            if np.sum(non_zero_mask) > 0:
+                mape = np.mean(np.abs((actuals_array[non_zero_mask] - predictions_array[non_zero_mask]) / actuals_array[non_zero_mask])) * 100
+                confidence = max(0.0, min(1.0, 1.0 - mape / 100))
+            else:
+                confidence = 0.5
             
             return confidence
             

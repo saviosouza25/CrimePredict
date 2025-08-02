@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Ensure we can find all installed packages
+sys.path.insert(0, '/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages')
+
 import requests
 import numpy as np
 import streamlit as st

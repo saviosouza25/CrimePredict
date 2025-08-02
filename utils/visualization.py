@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Ensure we can find all installed packages
+sys.path.insert(0, '/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages')
+
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import plotly.express as px
@@ -177,7 +183,7 @@ class ForexVisualizer:
         future_dates = pd.date_range(
             start=last_date, 
             periods=len(predictions) + 1, 
-            freq='H'
+            freq='h'
         )[1:]  # Skip the first date as it's the same as last_date
         
         # Predictions
@@ -222,11 +228,23 @@ class ForexVisualizer:
             )
         
         # Add vertical line at prediction start
-        fig.add_vline(
+        fig.add_shape(
+            type="line",
+            x0=last_date, x1=last_date,
+            y0=0, y1=1,
+            yref="paper",
+            line=dict(color="gray", width=2, dash="dash"),
+        )
+        
+        # Add annotation for prediction start
+        fig.add_annotation(
             x=last_date,
-            line_dash="dash",
-            line_color="gray",
-            annotation_text="Prediction Start"
+            y=0.9,
+            yref="paper",
+            text="Prediction Start",
+            showarrow=True,
+            arrowhead=2,
+            arrowcolor="gray"
         )
         
         fig.update_layout(
