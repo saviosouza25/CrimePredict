@@ -452,6 +452,16 @@ def apply_theme_css():
         </style>
         """, unsafe_allow_html=True)
 
+# Initialize services
+@st.cache_resource
+def initialize_services():
+    """Initialize all services once and cache them."""
+    return {
+        'data_service': DataService(),
+        'sentiment_service': SentimentService(),
+        'visualizer': ForexVisualizer()
+    }
+
 services = initialize_services()
 
 # Additional Dark Theme fixes for dashboard functions panel - apply globally for better coverage
@@ -689,16 +699,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize services
-@st.cache_resource
-def initialize_services():
-    return {
-        'data_service': DataService(),
-        'sentiment_service': SentimentService(),
-        'visualizer': ForexVisualizer()
-    }
-
-services = initialize_services()
+# Services already initialized above
 
 # Initialize session state
 if 'analysis_results' not in st.session_state:
