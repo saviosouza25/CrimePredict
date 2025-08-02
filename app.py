@@ -244,42 +244,139 @@ def apply_theme_css():
                 background-color: #2d2d2d !important;
             }
             
-            /* Dark theme text */
-            .stMarkdown, .stText, h1, h2, h3, h4, h5, h6, p, div, span {
+            /* Dark theme text - More specific selectors */
+            .stApp .stMarkdown, 
+            .stApp .stText, 
+            .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, 
+            .stApp p, .stApp div, .stApp span, 
+            .stApp label,
+            .stApp .stSelectbox label,
+            .stApp .stSlider label,
+            .stApp .stCheckbox label,
+            .css-1kyxreq, .css-1kyxreq p, .css-1kyxreq div, .css-1kyxreq span,
+            .element-container, .element-container p, .element-container div,
+            .st-emotion-cache-1kyxreq,
+            .st-emotion-cache-1kyxreq p,
+            .st-emotion-cache-1kyxreq div,
+            .st-emotion-cache-1kyxreq span,
+            .st-emotion-cache-1kyxreq h1,
+            .st-emotion-cache-1kyxreq h2,
+            .st-emotion-cache-1kyxreq h3,
+            .st-emotion-cache-1kyxreq h4 {
                 color: #ffffff !important;
             }
             
             /* Dark theme input fields */
-            .stSelectbox > div > div, .stTextInput > div > div > input, .stSlider > div > div {
+            .stSelectbox > div > div, 
+            .stTextInput > div > div > input, 
+            .stSlider > div > div,
+            .stSelectbox div[data-baseweb="select"] > div,
+            .stSelectbox div[data-baseweb="select"] > div > div,
+            .stSelectbox [role="option"],
+            .stSelectbox [role="listbox"] {
                 background-color: #2d2d2d !important;
                 color: #ffffff !important;
                 border: 1px solid #444 !important;
             }
             
+            /* Dark theme dropdown options */
+            .stSelectbox div[data-baseweb="popover"] {
+                background-color: #2d2d2d !important;
+            }
+            
+            .stSelectbox div[data-baseweb="popover"] li {
+                background-color: #2d2d2d !important;
+                color: #ffffff !important;
+            }
+            
+            .stSelectbox div[data-baseweb="popover"] li:hover {
+                background-color: #404040 !important;
+                color: #ffffff !important;
+            }
+            
             /* Dark theme expanders */
-            .streamlit-expanderHeader {
+            .streamlit-expanderHeader,
+            details[open] > summary,
+            details > summary,
+            .st-emotion-cache-1p1nwyz,
+            .st-emotion-cache-1p1nwyz p,
+            .st-emotion-cache-1p1nwyz div {
                 background-color: #2d2d2d !important;
                 color: #ffffff !important;
             }
             
             /* Dark theme tabs */
-            .stTabs [data-baseweb="tab-list"] {
+            .stTabs [data-baseweb="tab-list"],
+            .stTabs [data-baseweb="tab-list"] button,
+            .st-emotion-cache-1whx7iy,
+            .st-emotion-cache-1whx7iy button {
                 background-color: #2d2d2d !important;
+                color: #ffffff !important;
             }
             
-            .stTabs [data-baseweb="tab"] {
+            .stTabs [data-baseweb="tab"],
+            .stTabs [data-baseweb="tab"] div,
+            .st-emotion-cache-1whx7iy button div {
                 color: #ffffff !important;
                 background-color: #2d2d2d !important;
             }
             
-            .stTabs [data-baseweb="tab-panel"] {
+            .stTabs [data-baseweb="tab-panel"],
+            .st-emotion-cache-1kyxreq {
                 background-color: #1e1e1e !important;
                 color: #ffffff !important;
             }
             
-            /* Dark theme for tutorial sections */
-            .css-1kyxreq {
+            /* Dark theme for all containers and panels */
+            .block-container,
+            .css-1kyxreq,
+            .element-container,
+            .st-emotion-cache-1kyxreq,
+            .st-emotion-cache-16idsys,
+            .st-emotion-cache-1wmy9hl,
+            .st-emotion-cache-12fmjuu {
                 background-color: #1e1e1e !important;
+                color: #ffffff !important;
+            }
+            
+            /* Dark theme metrics and info boxes */
+            .stMetric,
+            .stMetric label,
+            .stMetric div,
+            .stInfo,
+            .stSuccess,
+            .stWarning,
+            .stError {
+                color: #ffffff !important;
+            }
+            
+            /* Dark theme sidebar improvements */
+            .css-1d391kg,
+            .css-1lcbmhc, 
+            .css-1outpf7,
+            .st-emotion-cache-16idsys,
+            .st-emotion-cache-1gwvy71 {
+                background-color: #2d2d2d !important;
+                color: #ffffff !important;
+            }
+            
+            .css-1d391kg p,
+            .css-1d391kg div,
+            .css-1d391kg span,
+            .css-1d391kg label {
+                color: #ffffff !important;
+            }
+            
+            /* Dark theme for tutorial sections - comprehensive */
+            .css-1kyxreq ul,
+            .css-1kyxreq li,
+            .css-1kyxreq strong,
+            .css-1kyxreq em,
+            .st-emotion-cache-1kyxreq ul,
+            .st-emotion-cache-1kyxreq li,
+            .st-emotion-cache-1kyxreq strong,
+            .st-emotion-cache-1kyxreq em {
+                color: #ffffff !important;
             }
         </style>
         """, unsafe_allow_html=True)
@@ -367,8 +464,129 @@ def initialize_services():
 
 services = initialize_services()
 
-# Apply theme CSS
-apply_theme_css()
+# Additional Dark Theme fixes for dashboard functions panel - apply globally for better coverage
+if st.session_state.get('theme', 'light') == 'dark':
+    st.markdown("""
+    <style>
+        /* Critical fixes for Dark theme dashboard functions visibility */
+        
+        /* Ensure ALL text elements in main content are visible */
+        .main .block-container,
+        .main .block-container *,
+        .stApp .main,
+        .stApp .main *,
+        .css-1kyxreq *,
+        .st-emotion-cache-1kyxreq *,
+        [data-testid="stHorizontalBlock"] *,
+        [data-testid="stVerticalBlock"] *,
+        [data-testid="stColumns"] *,
+        [data-testid="column"] *,
+        .element-container *,
+        .st-emotion-cache-12fmjuu *,
+        .st-emotion-cache-1wmy9hl * {
+            color: #ffffff !important;
+        }
+        
+        /* Function panel specific fixes */
+        .stTabs .st-emotion-cache-1kyxreq,
+        .stTabs .st-emotion-cache-1kyxreq p,
+        .stTabs .st-emotion-cache-1kyxreq div,
+        .stTabs .st-emotion-cache-1kyxreq span,
+        .stTabs .st-emotion-cache-1kyxreq li,
+        .stTabs .st-emotion-cache-1kyxreq ul,
+        .stTabs .st-emotion-cache-1kyxreq h1,
+        .stTabs .st-emotion-cache-1kyxreq h2,
+        .stTabs .st-emotion-cache-1kyxreq h3,
+        .stTabs .st-emotion-cache-1kyxreq h4,
+        .stTabs .st-emotion-cache-1kyxreq strong,
+        .stTabs .st-emotion-cache-1kyxreq em {
+            color: #ffffff !important;
+            background-color: transparent !important;
+        }
+        
+        /* Markdown content in Dark theme */
+        .stMarkdown h1,
+        .stMarkdown h2,
+        .stMarkdown h3,
+        .stMarkdown h4,
+        .stMarkdown p,
+        .stMarkdown div,
+        .stMarkdown span,
+        .stMarkdown li,
+        .stMarkdown ul,
+        .stMarkdown strong,
+        .stMarkdown em,
+        .stMarkdown code {
+            color: #ffffff !important;
+        }
+        
+        /* Tutorial sections comprehensive fix */
+        .css-1kyxreq,
+        .css-1kyxreq *,
+        .st-emotion-cache-1kyxreq,
+        .st-emotion-cache-1kyxreq * {
+            color: #ffffff !important;
+        }
+        
+        /* Column content visibility */
+        [data-testid="column"] div,
+        [data-testid="column"] p,
+        [data-testid="column"] span,
+        [data-testid="column"] h1,
+        [data-testid="column"] h2,
+        [data-testid="column"] h3,
+        [data-testid="column"] h4,
+        [data-testid="column"] li,
+        [data-testid="column"] ul,
+        [data-testid="column"] strong {
+            color: #ffffff !important;
+        }
+        
+        /* Info boxes and alerts in Dark theme */
+        .info-alert,
+        .success-alert,
+        .warning-alert,
+        .error-alert {
+            border: 1px solid #444 !important;
+        }
+        
+        .info-alert,
+        .info-alert * {
+            background-color: #1a237e !important;
+            color: #e3f2fd !important;
+        }
+        
+        /* Gradient boxes for Dark theme */
+        div[style*="background: linear-gradient"] * {
+            color: #ffffff !important;
+        }
+        
+        /* Ensure button text is visible */
+        .stButton > button,
+        .stButton > button * {
+            color: white !important;
+        }
+        
+        /* Progress and status elements */
+        .stProgress,
+        .stProgress *,
+        .stMetric,
+        .stMetric * {
+            color: #ffffff !important;
+        }
+        
+        /* Fix for any remaining invisible elements */
+        * {
+            color: inherit !important;
+        }
+        
+        /* Override any Streamlit defaults for Dark theme */
+        .stApp[data-theme="dark"] *,
+        [data-theme="dark"] * {
+            color: #ffffff !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
 # Common CSS for both themes
 st.markdown("""
@@ -503,6 +721,9 @@ def main():
     if not check_password():
         return
     
+    # Apply theme CSS immediately after authentication
+    apply_theme_css()
+    
     # Header with company logo
     logo_base64 = get_logo_base64()
     
@@ -536,6 +757,7 @@ def main():
         current_theme = 'light' if theme == "Light (Claro)" else 'dark'
         if st.session_state.get('theme', 'light') != current_theme:
             st.session_state['theme'] = current_theme
+            apply_theme_css()  # Apply CSS when theme changes
             st.rerun()
         
         # Tutorial button
