@@ -18,8 +18,10 @@ INTERVALS: Dict[str, str] = {
 }
 
 # Prediction Horizons
-HORIZONS: List[str] = ['1 Hora', '4 Horas', '1 Dia', '1 Semana', '1 Mês']
+HORIZONS: List[str] = ['5 Minutos', '15 Minutos', '1 Hora', '4 Horas', '1 Dia', '1 Semana', '1 Mês']
 HORIZON_STEPS: Dict[str, int] = {
+    '5 Minutos': 1,    # 1 step ahead for 5min intervals
+    '15 Minutos': 1,   # 1 step ahead for 15min intervals  
     '1 Hora': 1,
     '4 Horas': 4, 
     '1 Dia': 24,

@@ -161,22 +161,27 @@ HELP_CONTENT = {
         
         <h5>⏰ Horizontes Disponíveis:</h5>
         <ul>
-            <li><strong>Próxima Hora:</strong> Previsão para 1 hora à frente</li>
-            <li><strong>Próximas 4 Horas:</strong> Previsão para 4 horas à frente</li>
-            <li><strong>Próximo Dia:</strong> Previsão para 24 horas à frente</li>
-            <li><strong>Próxima Semana:</strong> Previsão para 7 dias à frente</li>
+            <li><strong>5 Minutos:</strong> Previsão ultra rápida para scalping</li>
+            <li><strong>15 Minutos:</strong> Previsão de curto prazo para day trading</li>
+            <li><strong>1 Hora:</strong> Previsão para 1 hora à frente</li>
+            <li><strong>4 Horas:</strong> Previsão para 4 horas à frente</li>
+            <li><strong>1 Dia:</strong> Previsão para 24 horas à frente</li>
+            <li><strong>1 Semana:</strong> Previsão para 7 dias à frente</li>
         </ul>
         
         <h5>🎯 Precisão vs Horizonte:</h5>
         <ul>
-            <li><strong>Curto Prazo (1h):</strong> Maior precisão, menos incerteza</li>
+            <li><strong>Ultra Curto (5-15min):</strong> Máxima precisão, ideal para scalping</li>
+            <li><strong>Curto Prazo (1h):</strong> Alta precisão, menos incerteza</li>
             <li><strong>Médio Prazo (4h-1d):</strong> Boa precisão, equilibrio ideal</li>
             <li><strong>Longo Prazo (1w):</strong> Menor precisão, mais incerteza</li>
         </ul>
         
         <h5>💡 Estratégias por Horizonte:</h5>
         <ul>
-            <li><strong>1h:</strong> Scalping, day trading</li>
+            <li><strong>5min:</strong> Scalping rápido, múltiplas operações por hora</li>
+            <li><strong>15min:</strong> Scalping e micro day trading</li>
+            <li><strong>1h:</strong> Day trading clássico</li>
             <li><strong>4h:</strong> Swing trading intraday</li>
             <li><strong>1d:</strong> Position trading</li>
             <li><strong>1w:</strong> Investimento de tendência</li>
