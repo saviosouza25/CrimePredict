@@ -452,16 +452,6 @@ def apply_theme_css():
         </style>
         """, unsafe_allow_html=True)
 
-# Initialize services
-@st.cache_resource
-def initialize_services():
-    """Initialize all services once and cache them."""
-    return {
-        'data_service': DataService(),
-        'sentiment_service': SentimentService(),
-        'visualizer': ForexVisualizer()
-    }
-
 services = initialize_services()
 
 # Additional Dark Theme fixes for dashboard functions panel - apply globally for better coverage
@@ -723,6 +713,104 @@ def main():
     
     # Apply theme CSS immediately after authentication
     apply_theme_css()
+    
+    # Force Dark theme CSS specifically for tutorial/configuration panels
+    if st.session_state.get('theme', 'light') == 'dark':
+        st.markdown("""
+        <style>
+            /* Ultra-specific CSS for tutorial/configuration panels in Dark theme */
+            
+            /* All tab content should be white text on dark background */
+            div[data-testid="stHorizontalBlock"] div,
+            div[data-testid="stHorizontalBlock"] p,
+            div[data-testid="stHorizontalBlock"] span,
+            div[data-testid="stHorizontalBlock"] h1,
+            div[data-testid="stHorizontalBlock"] h2,
+            div[data-testid="stHorizontalBlock"] h3,
+            div[data-testid="stHorizontalBlock"] h4,
+            div[data-testid="stHorizontalBlock"] li,
+            div[data-testid="stHorizontalBlock"] ul,
+            div[data-testid="stHorizontalBlock"] strong,
+            div[data-testid="stHorizontalBlock"] em {
+                color: #ffffff !important;
+            }
+            
+            /* Tab panels specifically */
+            div[data-baseweb="tab-panel"] *,
+            div[data-baseweb="tab-panel"] div,
+            div[data-baseweb="tab-panel"] p,
+            div[data-baseweb="tab-panel"] span,
+            div[data-baseweb="tab-panel"] h1,
+            div[data-baseweb="tab-panel"] h2,
+            div[data-baseweb="tab-panel"] h3,
+            div[data-baseweb="tab-panel"] h4,
+            div[data-baseweb="tab-panel"] li,
+            div[data-baseweb="tab-panel"] ul,
+            div[data-baseweb="tab-panel"] strong,
+            div[data-baseweb="tab-panel"] em {
+                color: #ffffff !important;
+                background-color: transparent !important;
+            }
+            
+            /* Force all markdown inside tabs to be white */
+            .stTabs div[data-testid="stMarkdown"],
+            .stTabs div[data-testid="stMarkdown"] *,
+            .stTabs .element-container,
+            .stTabs .element-container * {
+                color: #ffffff !important;
+            }
+            
+            /* Column content in tabs */
+            .stTabs div[data-testid="column"],
+            .stTabs div[data-testid="column"] * {
+                color: #ffffff !important;
+            }
+            
+            /* Override any inline styles that might be setting color */
+            .stTabs [style*="color"] {
+                color: #ffffff !important;
+            }
+            
+            /* Ensure tutorial content is visible */
+            div:has(> h1:contains("Tutorial")) + div,
+            div:has(> h1:contains("Tutorial")) + div *,
+            div:has(> h2:contains("Configurações")) *,
+            div:has(> h2:contains("Análise")) *,
+            div:has(> h2:contains("Indicadores")) *,
+            div:has(> h2:contains("Gestão")) *,
+            div:has(> h2:contains("Opções")) * {
+                color: #ffffff !important;
+            }
+            
+            /* Last resort - force everything in main content to be white */
+            .main * {
+                color: #ffffff !important;
+            }
+            
+            /* Specific targeting for st-emotion cache classes */
+            .st-emotion-cache-1kyxreq *,
+            .st-emotion-cache-16idsys *,
+            .st-emotion-cache-1wmy9hl *,
+            .st-emotion-cache-12fmjuu * {
+                color: #ffffff !important;
+            }
+            
+            /* Override any Streamlit defaults for specific elements */
+            .stMarkdown h1,
+            .stMarkdown h2, 
+            .stMarkdown h3,
+            .stMarkdown h4,
+            .stMarkdown p,
+            .stMarkdown div,
+            .stMarkdown span,
+            .stMarkdown li,
+            .stMarkdown ul,
+            .stMarkdown strong,
+            .stMarkdown em {
+                color: #ffffff !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
     
     # Header with company logo
     logo_base64 = get_logo_base64()
