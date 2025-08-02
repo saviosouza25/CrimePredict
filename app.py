@@ -719,96 +719,66 @@ def main():
     if st.session_state.get('theme', 'light') == 'dark':
         st.markdown("""
         <style>
-            /* Ultra-specific CSS for tutorial/configuration panels in Dark theme */
+            /* CRITICAL: Force white text on ALL elements in Dark theme */
             
-            /* All tab content should be white text on dark background */
-            div[data-testid="stHorizontalBlock"] div,
-            div[data-testid="stHorizontalBlock"] p,
-            div[data-testid="stHorizontalBlock"] span,
-            div[data-testid="stHorizontalBlock"] h1,
-            div[data-testid="stHorizontalBlock"] h2,
-            div[data-testid="stHorizontalBlock"] h3,
-            div[data-testid="stHorizontalBlock"] h4,
-            div[data-testid="stHorizontalBlock"] li,
-            div[data-testid="stHorizontalBlock"] ul,
-            div[data-testid="stHorizontalBlock"] strong,
-            div[data-testid="stHorizontalBlock"] em {
+            /* Global override for all text elements */
+            * {
                 color: #ffffff !important;
             }
             
-            /* Tab panels specifically */
+            /* Specific elements that need white text */
+            h1, h2, h3, h4, h5, h6,
+            p, div, span, label, li, ul, ol,
+            strong, em, b, i, code, pre,
+            .stMarkdown, .stText,
+            [data-testid] *,
+            .element-container *,
+            .block-container *,
+            .css-* *,
+            .st-* *,
+            .st-emotion-* * {
+                color: #ffffff !important;
+            }
+            
+            /* Tutorial and tab specific fixes */
+            .stTabs *,
+            .stTabs div,
+            .stTabs p,
+            .stTabs span,
+            .stTabs h1,
+            .stTabs h2,
+            .stTabs h3,
+            .stTabs h4,
+            .stTabs li,
+            .stTabs ul,
+            .stTabs strong,
+            .stTabs em,
             div[data-baseweb="tab-panel"] *,
-            div[data-baseweb="tab-panel"] div,
-            div[data-baseweb="tab-panel"] p,
-            div[data-baseweb="tab-panel"] span,
-            div[data-baseweb="tab-panel"] h1,
-            div[data-baseweb="tab-panel"] h2,
-            div[data-baseweb="tab-panel"] h3,
-            div[data-baseweb="tab-panel"] h4,
-            div[data-baseweb="tab-panel"] li,
-            div[data-baseweb="tab-panel"] ul,
-            div[data-baseweb="tab-panel"] strong,
-            div[data-baseweb="tab-panel"] em {
+            div[data-testid="stHorizontalBlock"] *,
+            div[data-testid="stVerticalBlock"] *,
+            div[data-testid="column"] *,
+            div[data-testid="stMarkdown"] * {
                 color: #ffffff !important;
                 background-color: transparent !important;
             }
             
-            /* Force all markdown inside tabs to be white */
-            .stTabs div[data-testid="stMarkdown"],
-            .stTabs div[data-testid="stMarkdown"] *,
-            .stTabs .element-container,
-            .stTabs .element-container * {
+            /* Override any conflicting styles */
+            .main .block-container * {
                 color: #ffffff !important;
             }
             
-            /* Column content in tabs */
-            .stTabs div[data-testid="column"],
-            .stTabs div[data-testid="column"] * {
-                color: #ffffff !important;
+            /* Ensure buttons remain readable */
+            .stButton > button {
+                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%) !important;
+                color: white !important;
+                border: none !important;
             }
             
-            /* Override any inline styles that might be setting color */
-            .stTabs [style*="color"] {
+            /* Ensure dropdowns work properly */
+            .stSelectbox div[data-baseweb="select"] > div {
+                background-color: #2d2d2d !important;
                 color: #ffffff !important;
-            }
-            
-            /* Ensure tutorial content is visible */
-            div:has(> h1:contains("Tutorial")) + div,
-            div:has(> h1:contains("Tutorial")) + div *,
-            div:has(> h2:contains("Configurações")) *,
-            div:has(> h2:contains("Análise")) *,
-            div:has(> h2:contains("Indicadores")) *,
-            div:has(> h2:contains("Gestão")) *,
-            div:has(> h2:contains("Opções")) * {
-                color: #ffffff !important;
-            }
-            
-            /* Last resort - force everything in main content to be white */
-            .main * {
-                color: #ffffff !important;
-            }
-            
-            /* Specific targeting for st-emotion cache classes */
-            .st-emotion-cache-1kyxreq *,
-            .st-emotion-cache-16idsys *,
-            .st-emotion-cache-1wmy9hl *,
-            .st-emotion-cache-12fmjuu * {
-                color: #ffffff !important;
-            }
-            
-            /* Override any Streamlit defaults for specific elements */
-            .stMarkdown h1,
-            .stMarkdown h2, 
-            .stMarkdown h3,
-            .stMarkdown h4,
-            .stMarkdown p,
-            .stMarkdown div,
-            .stMarkdown span,
-            .stMarkdown li,
-            .stMarkdown ul,
-            .stMarkdown strong,
-            .stMarkdown em {
-                color: #ffffff !important;
+                border: 1px solid #444 !important;
             }
         </style>
         """, unsafe_allow_html=True)
@@ -943,9 +913,37 @@ def main():
         if cache_count > 0:
             st.info(f"💾 {cache_count} análises em cache disponíveis")
     
-    # Tutorial section
+    # Tutorial section with forced styling for Dark theme
     if st.session_state.get('show_tutorial', False):
         st.markdown("---")
+        
+        # Apply dark theme specific styling directly to tutorial content
+        if st.session_state.get('theme', 'light') == 'dark':
+            st.markdown("""
+            <style>
+                /* Force all tutorial text to be white */
+                .main * {
+                    color: #ffffff !important;
+                }
+                
+                /* Specific tutorial styling */
+                .stTabs * {
+                    color: #ffffff !important;
+                }
+                
+                /* Tab content background */
+                div[data-baseweb="tab-panel"] {
+                    background-color: #1e1e1e !important;
+                    color: #ffffff !important;
+                }
+                
+                /* All text in tabs */
+                div[data-baseweb="tab-panel"] * {
+                    color: #ffffff !important;
+                }
+            </style>
+            """, unsafe_allow_html=True)
+        
         st.markdown("# 📚 Tutorial Completo da Plataforma")
         
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -957,94 +955,164 @@ def main():
         ])
         
         with tab1:
+            # Force white text for this tab content
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('<div style="color: #ffffff !important;">', unsafe_allow_html=True)
+            
             st.markdown("## 🔧 Configurações Básicas")
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown("### " + get_help_title("currency_pair"))
-                st.markdown(get_help_content("currency_pair", detailed=True), unsafe_allow_html=True)
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("currency_pair")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("currency_pair", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
                 
-                st.markdown("### " + get_help_title("time_interval"))
-                st.markdown(get_help_content("time_interval", detailed=True), unsafe_allow_html=True)
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("time_interval")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("time_interval", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
             
             with col2:
-                st.markdown("### " + get_help_title("prediction_horizon"))
-                st.markdown(get_help_content("prediction_horizon", detailed=True), unsafe_allow_html=True)
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("prediction_horizon")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("prediction_horizon", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
                 
-                st.markdown("### " + get_help_title("risk_level"))
-                st.markdown(get_help_content("risk_level", detailed=True), unsafe_allow_html=True)
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("risk_level")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("risk_level", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
+            
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('</div>', unsafe_allow_html=True)
         
         with tab2:
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('<div style="color: #ffffff !important;">', unsafe_allow_html=True)
+            
             st.markdown("## 📊 Tipos de Análise")
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown("### " + get_help_title("get_trading_signal"))
-                st.markdown(get_help_content("get_trading_signal", detailed=True), unsafe_allow_html=True)
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("get_trading_signal")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("get_trading_signal", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
             
             with col2:
-                st.markdown("### " + get_help_title("quick_check"))
-                st.markdown(get_help_content("quick_check", detailed=True), unsafe_allow_html=True)
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("quick_check")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("quick_check", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
+            
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('</div>', unsafe_allow_html=True)
         
         with tab3:
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('<div style="color: #ffffff !important;">', unsafe_allow_html=True)
+            
             st.markdown("## 📈 Indicadores e Sentimento")
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown("### " + get_help_title("technical_indicators"))
-                st.markdown(get_help_content("technical_indicators", detailed=True), unsafe_allow_html=True)
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("technical_indicators")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("technical_indicators", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
             
             with col2:
-                st.markdown("### " + get_help_title("sentiment_analysis"))
-                st.markdown(get_help_content("sentiment_analysis", detailed=True), unsafe_allow_html=True)
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("sentiment_analysis")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("sentiment_analysis", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
+            
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('</div>', unsafe_allow_html=True)
         
         with tab4:
-            st.markdown("## ⚖️ Gestão e Análise de Risco")
-            st.markdown("### " + get_help_title("risk_analysis"))
-            st.markdown(get_help_content("risk_analysis", detailed=True), unsafe_allow_html=True)
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('<div style="color: #ffffff !important;">', unsafe_allow_html=True)
             
-            st.markdown("""
-            <div class="warning-alert">
-                <h4>⚠️ Aviso Importante sobre Riscos</h4>
-                <p><strong>O trading forex envolve riscos significativos:</strong></p>
-                <ul>
-                    <li>Você pode perder mais do que investiu</li>
-                    <li>Mercados são imprevisíveis, mesmo com IA</li>
-                    <li>Use sempre stop loss e gestão de risco</li>
-                    <li>Nunca invista dinheiro que não pode perder</li>
-                    <li>Esta plataforma é apenas educacional</li>
+            st.markdown("## ⚖️ Gestão e Análise de Risco")
+            st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("risk_analysis")}</h3></div>', unsafe_allow_html=True)
+            content = get_help_content("risk_analysis", detailed=True)
+            if st.session_state.get('theme', 'light') == 'dark':
+                content = f'<div style="color: #ffffff !important;">{content}</div>'
+            st.markdown(content, unsafe_allow_html=True)
+            
+            warning_class = "warning-alert" if st.session_state.get('theme', 'light') == 'light' else "warning-alert"
+            text_color = "" if st.session_state.get('theme', 'light') == 'light' else "color: #ffffff !important;"
+            
+            st.markdown(f"""
+            <div class="{warning_class}" style="{text_color}">
+                <h4 style="{text_color}">⚠️ Aviso Importante sobre Riscos</h4>
+                <p style="{text_color}"><strong>O trading forex envolve riscos significativos:</strong></p>
+                <ul style="{text_color}">
+                    <li style="{text_color}">Você pode perder mais do que investiu</li>
+                    <li style="{text_color}">Mercados são imprevisíveis, mesmo com IA</li>
+                    <li style="{text_color}">Use sempre stop loss e gestão de risco</li>
+                    <li style="{text_color}">Nunca invista dinheiro que não pode perder</li>
+                    <li style="{text_color}">Esta plataforma é apenas educacional</li>
                 </ul>
             </div>
             """, unsafe_allow_html=True)
+            
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('</div>', unsafe_allow_html=True)
         
         with tab5:
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('<div style="color: #ffffff !important;">', unsafe_allow_html=True)
+            
             st.markdown("## ⚙️ Opções Avançadas")
             
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown("### " + get_help_title("advanced_options"))
-                st.markdown(get_help_content("advanced_options", detailed=True), unsafe_allow_html=True)
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("advanced_options")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("advanced_options", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
                 
-                st.markdown("### " + get_help_title("cache_management"))
-                st.markdown(get_help_content("cache_management", detailed=True), unsafe_allow_html=True)
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("cache_management")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("cache_management", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
             
             with col2:
-                st.markdown("### " + get_help_title("model_architecture"))
-                st.markdown(get_help_content("model_architecture", detailed=True), unsafe_allow_html=True)
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("model_architecture")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("model_architecture", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
             
             st.markdown("""
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 10px; margin: 1rem 0;">
-                <h4>🚀 Dicas de Otimização Avançada</h4>
-                <ul>
-                    <li><strong>Para Scalping (5-15min):</strong> Lookback=30, MC=15, Épocas=8</li>
-                    <li><strong>Para Day Trading (1h):</strong> Lookback=60, MC=20, Épocas=10</li>
-                    <li><strong>Para Swing Trading (4h+):</strong> Lookback=120, MC=30, Épocas=15</li>
-                    <li><strong>Para Análise Crítica:</strong> Lookback=100, MC=50, Épocas=20</li>
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white !important; padding: 1.5rem; border-radius: 10px; margin: 1rem 0;">
+                <h4 style="color: white !important;">🚀 Dicas de Otimização Avançada</h4>
+                <ul style="color: white !important;">
+                    <li style="color: white !important;"><strong style="color: white !important;">Para Scalping (5-15min):</strong> Lookback=30, MC=15, Épocas=8</li>
+                    <li style="color: white !important;"><strong style="color: white !important;">Para Day Trading (1h):</strong> Lookback=60, MC=20, Épocas=10</li>
+                    <li style="color: white !important;"><strong style="color: white !important;">Para Swing Trading (4h+):</strong> Lookback=120, MC=30, Épocas=15</li>
+                    <li style="color: white !important;"><strong style="color: white !important;">Para Análise Crítica:</strong> Lookback=100, MC=50, Épocas=20</li>
                 </ul>
-                <p><strong>Lembre-se:</strong> Configurações mais altas = maior precisão, mas tempo de processamento mais longo.</p>
+                <p style="color: white !important;"><strong style="color: white !important;">Lembre-se:</strong> Configurações mais altas = maior precisão, mas tempo de processamento mais longo.</p>
             </div>
             """, unsafe_allow_html=True)
+            
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('</div>', unsafe_allow_html=True)
     
     # Main content area
     if analyze_button or quick_analysis:
