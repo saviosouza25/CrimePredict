@@ -19,6 +19,57 @@ from services.indicators import TechnicalIndicators
 from models.lstm_model import ForexPredictor
 from utils.visualization import ForexVisualizer
 from utils.cache_manager import CacheManager
+import hashlib
+
+# Authentication configuration
+VALID_CREDENTIALS = {
+    "artec": "e10adc3949ba59abbe56e057f20f883e"  # MD5 hash of "123456"
+}
+
+def check_password():
+    """Returns `True` if the user had the correct password."""
+    
+    def password_entered():
+        """Checks whether a password entered by the user is correct."""
+        username = st.session_state["username"]
+        password = st.session_state["password"]
+        
+        if username in VALID_CREDENTIALS and VALID_CREDENTIALS[username] == hashlib.md5(password.encode()).hexdigest():
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # Don't store the password
+            del st.session_state["username"]  # Don't store the username
+        else:
+            st.session_state["password_correct"] = False
+
+    # Return True if the password is validated
+    if st.session_state.get("password_correct", False):
+        return True
+
+    # Show input for password
+    st.markdown("""
+    <div style="display: flex; justify-content: center; align-items: center; height: 60vh;">
+        <div style="text-align: center; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); background: white; min-width: 400px;">
+            <h2 style="color: #333; margin-bottom: 2rem;">🔐 Advanced Forex Analysis Platform</h2>
+            <p style="color: #666; margin-bottom: 2rem;">Please enter your credentials to access the platform</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.text_input("Username", key="username", placeholder="Enter username")
+        st.text_input("Password", type="password", key="password", placeholder="Enter password", on_change=password_entered)
+        
+        if "password_correct" in st.session_state and not st.session_state["password_correct"]:
+            st.error("😞 Invalid username or password")
+            
+        st.markdown("""
+        <div style="text-align: center; margin-top: 2rem; color: #888; font-size: 0.9em;">
+            <p>Secure access to professional forex analysis tools</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    return False
 
 # Page configuration
 st.set_page_config(
@@ -112,6 +163,10 @@ if 'model_trained' not in st.session_state:
     st.session_state.model_trained = False
 
 def main():
+    # Check authentication first
+    if not check_password():
+        return
+    
     # Header
     st.markdown("""
     <div class="main-header">
@@ -125,6 +180,12 @@ def main():
     # Simplified sidebar configuration
     with st.sidebar:
         st.markdown("## 📊 Trading Analysis")
+        
+        # Add logout button
+        if st.button("🚪 Logout", help="Logout from the platform"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
         
         # Currency pair selection
         pair = st.selectbox(
