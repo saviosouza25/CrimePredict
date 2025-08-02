@@ -348,10 +348,12 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
     """Run the complete forex analysis"""
     
     # Custom loading display
-    with st.container():
+    loading_container = st.container()
+    with loading_container:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.markdown("""
+            spinner_placeholder = st.empty()
+            spinner_placeholder.markdown("""
             <div class="custom-spinner">
                 <div class="spinner"></div>
             </div>
@@ -511,12 +513,15 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
         }
         
         progress_bar.progress(100)
-        status_text.text("✅ Analysis complete!")
+        status_text.text("✅ Análise completa!")
+        
+        # Remove the loading spinner
+        spinner_placeholder.empty()
         
         st.markdown("""
         <div class="success-alert">
-            <strong>Analysis completed successfully!</strong> 
-            Check the results below.
+            <strong>Análise concluída com sucesso!</strong> 
+            Verifique os resultados abaixo.
         </div>
         """, unsafe_allow_html=True)
         
@@ -525,9 +530,12 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
         status_text.empty()
         
     except Exception as e:
+        # Remove spinner on error too
+        spinner_placeholder.empty()
+        
         st.markdown(f"""
         <div class="error-alert">
-            <strong>Analysis failed:</strong> {str(e)}
+            <strong>Falha na análise:</strong> {str(e)}
         </div>
         """, unsafe_allow_html=True)
         
