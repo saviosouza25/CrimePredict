@@ -325,19 +325,17 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
             # If we predict UP, show where price could go DOWN (bearish risk)
             counter_trend_target = current_price - (abs(price_change) * risk_multiplier)
             risk_direction = "Downside"
-            risk_level = counter_trend_target
         else:  # Bearish prediction - show bullish risk
             # If we predict DOWN, show where price could go UP (bullish risk)
             counter_trend_target = current_price + (abs(price_change) * risk_multiplier)
             risk_direction = "Upside"
-            risk_level = counter_trend_target
         
         # Debug logging (temporary)
         print(f"DEBUG - Current Price: {current_price:.5f}")
         print(f"DEBUG - Raw Predicted Price: {predictions[-1] if predictions else 'None'}")
         print(f"DEBUG - Final Predicted Price: {predicted_price:.5f}")
         print(f"DEBUG - Price Change: {price_change_pct:.2f}%")
-        print(f"DEBUG - Counter-trend Risk: {risk_direction} to {risk_level:.5f}")
+        print(f"DEBUG - Counter-trend Risk: {risk_direction} to {counter_trend_target:.5f}")
         
         # Risk assessment
         risk_tolerance = RISK_LEVELS[risk_level]
@@ -371,8 +369,8 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
             },
             'counter_trend_risk': {
                 'direction': risk_direction,
-                'target_price': risk_level,
-                'risk_percentage': abs(risk_level - current_price) / current_price * 100
+                'target_price': counter_trend_target,
+                'risk_percentage': abs(counter_trend_target - current_price) / current_price * 100
             }
         }
         
