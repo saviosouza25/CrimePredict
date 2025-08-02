@@ -95,68 +95,237 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for professional styling
+# Dynamic CSS based on theme
+def apply_theme_css():
+    theme = st.session_state.get('theme', 'light')
+    
+    if theme == 'dark':
+        st.markdown("""
+        <style>
+            /* Dark Theme */
+            .stApp {
+                background-color: #1e1e1e !important;
+                color: #ffffff !important;
+            }
+            .main-header {
+                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                padding: 1rem;
+                border-radius: 10px;
+                margin-bottom: 2rem;
+            }
+            .main-header h1 {
+                color: white;
+                text-align: center;
+                margin: 0;
+                font-size: 2.5rem;
+            }
+            .metric-card {
+                background: #2d2d2d !important;
+                padding: 1rem;
+                border-radius: 10px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                border-left: 4px solid #667eea;
+                color: #ffffff !important;
+            }
+            .success-alert {
+                background-color: #1b5e20 !important;
+                border: 1px solid #4caf50;
+                color: #e8f5e8 !important;
+                padding: 0.75rem;
+                border-radius: 0.25rem;
+                margin: 1rem 0;
+            }
+            .error-alert {
+                background-color: #b71c1c !important;
+                border: 1px solid #f44336;
+                color: #ffebee !important;
+                padding: 0.75rem;
+                border-radius: 0.25rem;
+                margin: 1rem 0;
+            }
+            .warning-alert {
+                background-color: #e65100 !important;
+                border: 1px solid #ff9800;
+                color: #fff3e0 !important;
+                padding: 0.75rem;
+                border-radius: 0.25rem;
+                margin: 1rem 0;
+            }
+            .sidebar .stSelectbox label {
+                font-weight: bold;
+                color: #ffffff !important;
+            }
+            .stButton > button {
+                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 0.5rem 1rem;
+                font-weight: bold;
+                width: 100%;
+            }
+            .stButton > button:hover {
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                transform: translateY(-2px);
+            }
+            
+            /* Dark theme sidebar and components */
+            .css-1d391kg, .css-1lcbmhc, .css-1outpf7 {
+                background-color: #2d2d2d !important;
+            }
+            
+            /* Dark theme text */
+            .stMarkdown, .stText, h1, h2, h3, h4, h5, h6, p, div, span {
+                color: #ffffff !important;
+            }
+            
+            /* Dark theme input fields */
+            .stSelectbox > div > div, .stTextInput > div > div > input, .stSlider > div > div {
+                background-color: #2d2d2d !important;
+                color: #ffffff !important;
+                border: 1px solid #444 !important;
+            }
+            
+            /* Dark theme expanders */
+            .streamlit-expanderHeader {
+                background-color: #2d2d2d !important;
+                color: #ffffff !important;
+            }
+            
+            /* Dark theme tabs */
+            .stTabs [data-baseweb="tab-list"] {
+                background-color: #2d2d2d !important;
+            }
+            
+            .stTabs [data-baseweb="tab"] {
+                color: #ffffff !important;
+                background-color: #2d2d2d !important;
+            }
+            
+            .stTabs [data-baseweb="tab-panel"] {
+                background-color: #1e1e1e !important;
+                color: #ffffff !important;
+            }
+            
+            /* Dark theme for tutorial sections */
+            .css-1kyxreq {
+                background-color: #1e1e1e !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <style>
+            /* Light Theme */
+            .stApp {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+            }
+            .main-header {
+                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                padding: 1rem;
+                border-radius: 10px;
+                margin-bottom: 2rem;
+            }
+            .main-header h1 {
+                color: white;
+                text-align: center;
+                margin: 0;
+                font-size: 2.5rem;
+            }
+            .metric-card {
+                background: white !important;
+                padding: 1rem;
+                border-radius: 10px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                border-left: 4px solid #667eea;
+                color: #000000 !important;
+            }
+            .success-alert {
+                background-color: #d4edda !important;
+                border: 1px solid #c3e6cb;
+                color: #155724 !important;
+                padding: 0.75rem;
+                border-radius: 0.25rem;
+                margin: 1rem 0;
+            }
+            .error-alert {
+                background-color: #f8d7da !important;
+                border: 1px solid #f5c6cb;
+                color: #721c24 !important;
+                padding: 0.75rem;
+                border-radius: 0.25rem;
+                margin: 1rem 0;
+            }
+            .warning-alert {
+                background-color: #fff3cd !important;
+                border: 1px solid #ffeaa7;
+                color: #856404 !important;
+                padding: 0.75rem;
+                border-radius: 0.25rem;
+                margin: 1rem 0;
+            }
+            .sidebar .stSelectbox label {
+                font-weight: bold;
+                color: #333 !important;
+            }
+            .stButton > button {
+                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 0.5rem 1rem;
+                font-weight: bold;
+                width: 100%;
+            }
+            .stButton > button:hover {
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                transform: translateY(-2px);
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
+# Apply theme CSS
+apply_theme_css()
+
+# Common CSS for both themes
 st.markdown("""
 <style>
-    .main-header {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-        padding: 1rem;
-        border-radius: 10px;
-        margin-bottom: 2rem;
-    }
-    .main-header h1 {
+    /* Buy/Sell/Hold signals - consistent across themes */
+    .buy-signal {
+        background: linear-gradient(135deg, #4CAF50, #45a049);
         color: white;
+        padding: 1rem;
+        border-radius: 8px;
         text-align: center;
-        margin: 0;
-        font-size: 2.5rem;
-    }
-    .metric-card {
-        background: white;
-        padding: 1rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        border-left: 4px solid #667eea;
-    }
-    .success-alert {
-        background-color: #d4edda;
-        border: 1px solid #c3e6cb;
-        color: #155724;
-        padding: 0.75rem;
-        border-radius: 0.25rem;
-        margin: 1rem 0;
-    }
-    .error-alert {
-        background-color: #f8d7da;
-        border: 1px solid #f5c6cb;
-        color: #721c24;
-        padding: 0.75rem;
-        border-radius: 0.25rem;
-        margin: 1rem 0;
-    }
-    .warning-alert {
-        background-color: #fff3cd;
-        border: 1px solid #ffeaa7;
-        color: #856404;
-        padding: 0.75rem;
-        border-radius: 0.25rem;
-        margin: 1rem 0;
-    }
-    .sidebar .stSelectbox label {
         font-weight: bold;
-        color: #333;
+        margin: 1rem 0;
     }
-    .stButton > button {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    .sell-signal {
+        background: linear-gradient(135deg, #f44336, #da190b);
         color: white;
-        border: none;
-        border-radius: 5px;
-        padding: 0.5rem 1rem;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
         font-weight: bold;
-        width: 100%;
+        margin: 1rem 0;
     }
-    .stButton > button:hover {
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        transform: translateY(-2px);
+    .hold-signal {
+        background: linear-gradient(135deg, #ff9800, #f57c00);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+        margin: 1rem 0;
+    }
+    .info-alert {
+        background-color: #e3f2fd;
+        border: 1px solid #2196f3;
+        color: #0d47a1;
+        padding: 0.75rem;
+        border-radius: 0.25rem;
+        margin: 1rem 0;
     }
     
     /* Hide Streamlit's default loading indicators completely */
@@ -272,6 +441,20 @@ def main():
     # Simplified sidebar configuration
     with st.sidebar:
         st.markdown("## 📊 Análise de Trading")
+        
+        # Theme selector
+        theme = st.selectbox(
+            "🎨 Tema da Interface",
+            ["Light (Claro)", "Dark (Escuro)"],
+            index=0 if st.session_state.get('theme', 'light') == 'light' else 1,
+            help="Escolha entre tema claro ou escuro"
+        )
+        
+        # Update theme in session state
+        current_theme = 'light' if theme == "Light (Claro)" else 'dark'
+        if st.session_state.get('theme', 'light') != current_theme:
+            st.session_state['theme'] = current_theme
+            st.rerun()
         
         # Tutorial button
         if st.button("📚 Tutorial Completo", help="Abrir guia detalhado de todas as funções"):
