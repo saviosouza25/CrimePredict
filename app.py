@@ -1203,7 +1203,7 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
             if analysis_mode == 'unified':
                 results.update(run_unified_analysis(current_price, pair, risk_level, sentiment_score, df_with_indicators, interval, horizon))
             elif analysis_mode == 'technical':
-                results.update(run_technical_analysis(current_price, df_with_indicators, risk_level, interval, horizon))
+                results.update(run_technical_analysis(current_price, df_with_indicators, risk_level))
             elif analysis_mode == 'sentiment':
                 results.update(run_sentiment_analysis(current_price, pair, sentiment_score, risk_level, interval, horizon))
             elif analysis_mode == 'risk':
