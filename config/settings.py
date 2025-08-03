@@ -6,16 +6,16 @@ API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
 
 # Trading Pairs
 PAIRS: List[str] = [
-    # Majors (Major Currency Pairs)
-    'EUR/USD',  # Euro/US Dollar
-    'USD/JPY',  # US Dollar/Japanese Yen
-    'GBP/USD',  # British Pound/US Dollar
-    'AUD/USD',  # Australian Dollar/US Dollar
-    'USD/CAD',  # US Dollar/Canadian Dollar
-    'USD/CHF',  # US Dollar/Swiss Franc
-    'NZD/USD',  # New Zealand Dollar/US Dollar
+    # Major Currency Pairs (100% Alpha Vantage Compatible)
+    'EUR/USD',  # Euro/US Dollar - Most liquid pair
+    'USD/JPY',  # US Dollar/Japanese Yen - Second most liquid
+    'GBP/USD',  # British Pound/US Dollar - Cable
+    'AUD/USD',  # Australian Dollar/US Dollar - Aussie
+    'USD/CAD',  # US Dollar/Canadian Dollar - Loonie
+    'USD/CHF',  # US Dollar/Swiss Franc - Swissy
+    'NZD/USD',  # New Zealand Dollar/US Dollar - Kiwi
     
-    # Minor Crosses (Cross Currency Pairs)
+    # Minor Cross Currency Pairs (Alpha Vantage Compatible)
     'EUR/GBP',  # Euro/British Pound
     'EUR/JPY',  # Euro/Japanese Yen
     'EUR/CHF',  # Euro/Swiss Franc
@@ -38,10 +38,10 @@ PAIRS: List[str] = [
     'NZD/CHF',  # New Zealand Dollar/Swiss Franc
     'NZD/CAD',  # New Zealand Dollar/Canadian Dollar
     
-    # Exotic Pairs (Major vs Emerging Market Currencies)
+    # Select Exotic Pairs (Alpha Vantage Supported)
     'USD/SEK',  # US Dollar/Swedish Krona
     'USD/NOK',  # US Dollar/Norwegian Krone
-    'USD/DKK',  # US Dollar/Danish Krone
+    'USD/DKK',  # US Dollar/Danish Krone  
     'USD/PLN',  # US Dollar/Polish Zloty
     'USD/TRY',  # US Dollar/Turkish Lira
     'USD/ZAR',  # US Dollar/South African Rand
@@ -54,22 +54,6 @@ PAIRS: List[str] = [
     'GBP/SEK',  # British Pound/Swedish Krona
     'GBP/NOK',  # British Pound/Norwegian Krone
     'GBP/PLN',  # British Pound/Polish Zloty
-    
-    # Commodities
-    'XAU/USD',  # Gold/US Dollar
-    'XAG/USD',  # Silver/US Dollar
-    'XPT/USD',  # Platinum/US Dollar
-    'XPD/USD',  # Palladium/US Dollar
-    
-    # Cryptocurrency Major Pairs
-    'BTC/USD',  # Bitcoin/US Dollar
-    'ETH/USD',  # Ethereum/US Dollar
-    'LTC/USD',  # Litecoin/US Dollar
-    'XRP/USD',  # Ripple/US Dollar
-    
-    # Oil and Energy
-    'WTI/USD',  # West Texas Intermediate Oil/US Dollar
-    'BRT/USD',  # Brent Crude Oil/US Dollar
 ]
 
 # Time Intervals
