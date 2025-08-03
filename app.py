@@ -1328,22 +1328,22 @@ def get_enhanced_recommendation(combined_signal, confidence, components):
     sentiment_signal = components.get('sentiment', {}).get('signal', 0)
     ai_signal = components.get('ai', {}).get('signal', 0)
     
-    # Força dos sinais individuais
-    strong_buy_threshold = 0.008
-    moderate_buy_threshold = 0.004
-    strong_sell_threshold = -0.008
-    moderate_sell_threshold = -0.004
+    # Força dos sinais individuais - Ajustados para maior sensibilidade
+    strong_buy_threshold = 0.003      # Reduzido de 0.008 para 0.003
+    moderate_buy_threshold = 0.001    # Reduzido de 0.004 para 0.001
+    strong_sell_threshold = -0.003    # Ajustado de -0.008 para -0.003
+    moderate_sell_threshold = -0.001  # Ajustado de -0.004 para -0.001
     
-    # Consenso entre componentes
+    # Consenso entre componentes - Reduzido limite
     signal_alignment = abs(technical_signal + sentiment_signal + ai_signal) / 3
     
-    if combined_signal > strong_buy_threshold and confidence > 0.75 and signal_alignment > 0.006:
+    if combined_signal > strong_buy_threshold and confidence > 0.65 and signal_alignment > 0.002:
         return "📈 COMPRA FORTE"
-    elif combined_signal > moderate_buy_threshold and confidence > 0.65:
+    elif combined_signal > moderate_buy_threshold and confidence > 0.55:
         return "📈 COMPRA"
-    elif combined_signal < strong_sell_threshold and confidence > 0.75 and signal_alignment > 0.006:
+    elif combined_signal < strong_sell_threshold and confidence > 0.65 and signal_alignment > 0.002:
         return "📉 VENDA FORTE"
-    elif combined_signal < moderate_sell_threshold and confidence > 0.65:
+    elif combined_signal < moderate_sell_threshold and confidence > 0.55:
         return "📉 VENDA"
     else:
         return "⚪ INDECISÃO"
@@ -1360,18 +1360,18 @@ def get_recommendation_explanation(combined_signal, confidence, components):
     dominant_component = max(signals, key=lambda x: abs(signals[x]))
     dominant_strength = abs(signals[dominant_component])
     
-    # Análise de consenso
-    positive_signals = sum(1 for s in signals.values() if s > 0.002)
-    negative_signals = sum(1 for s in signals.values() if s < -0.002)
-    neutral_signals = sum(1 for s in signals.values() if abs(s) <= 0.002)
+    # Análise de consenso - Ajustados para maior sensibilidade
+    positive_signals = sum(1 for s in signals.values() if s > 0.0005)
+    negative_signals = sum(1 for s in signals.values() if s < -0.0005)
+    neutral_signals = sum(1 for s in signals.values() if abs(s) <= 0.0005)
     
-    if combined_signal > 0.008:
+    if combined_signal > 0.003:
         return f"🟢 **FORTE CONSENSO DE COMPRA** - Análise {dominant_component.lower()} lidera ({dominant_strength:.1%}). {positive_signals} sinais positivos convergindo."
-    elif combined_signal > 0.004:
+    elif combined_signal > 0.001:
         return f"🟢 **COMPRA MODERADA** - Tendência positiva com análise {dominant_component.lower()} favorável. Confiança: {confidence:.0%}."
-    elif combined_signal < -0.008:
+    elif combined_signal < -0.003:
         return f"🔴 **FORTE CONSENSO DE VENDA** - Análise {dominant_component.lower()} indica queda ({dominant_strength:.1%}). {negative_signals} sinais negativos alinhados."
-    elif combined_signal < -0.004:
+    elif combined_signal < -0.001:
         return f"🔴 **VENDA MODERADA** - Tendência negativa predominante. Análise {dominant_component.lower()} sugere cautela."
     else:
         return f"⚪ **MERCADO INDECISO** - Sinais contraditórios: {positive_signals} positivos, {negative_signals} negativos, {neutral_signals} neutros. Aguardar definição clara do mercado."
