@@ -275,7 +275,7 @@ def main():
     
     # Display results if available
     if st.session_state.get('analysis_results'):
-        display_analysis_results()
+        display_analysis_results_with_tabs()
     
     # Footer
     st.markdown("---")
@@ -354,6 +354,9 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
             # Análise padrão
             results.update(run_basic_analysis(current_price, is_quick, sentiment_score))
         
+        # Store results with additional data for tabs
+        results['df_with_indicators'] = df_with_indicators
+        results['sentiment_score'] = sentiment_score
         st.session_state.analysis_results = results
         st.success("✅ Análise concluída com sucesso!")
         
@@ -571,6 +574,357 @@ def add_technical_indicators(df):
     df_copy['sma_50'] = df_copy['close'].rolling(window=50).mean()
     
     return df_copy
+
+def display_analysis_results_with_tabs():
+    """Display analysis results with detailed tabs"""
+    if not st.session_state.get('analysis_results'):
+        return
+    
+    results = st.session_state.analysis_results
+    analysis_mode = results.get('analysis_mode', 'unified')
+    
+    st.markdown("## 📊 Resultados da Análise")
+    
+    # Create tabs
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "📋 Resumo", 
+        "📈 Gráficos", 
+        "🔍 Detalhes Técnicos", 
+        "📰 Sentimento", 
+        "📊 Métricas"
+    ])
+    
+    with tab1:
+        display_summary_tab(results, analysis_mode)
+    
+    with tab2:
+        display_charts_tab(results)
+    
+    with tab3:
+        display_technical_tab(results)
+    
+    with tab4:
+        display_sentiment_tab(results)
+    
+    with tab5:
+        display_metrics_tab(results)
+
+def display_summary_tab(results, analysis_mode):
+    """Display summary tab content"""
+    mode_names = {
+        'unified': '🧠 Análise Unificada Inteligente',
+        'technical': '📊 Análise Técnica',
+        'sentiment': '📰 Análise de Sentimento',
+        'risk': '⚖️ Análise de Risco',
+        'ai_lstm': '🤖 Análise IA/LSTM',
+        'volume': '📈 Análise de Volume',
+        'trend': '📉 Análise de Tendência'
+    }
+    
+    st.markdown(f"### {mode_names.get(analysis_mode, 'Análise Padrão')}")
+    
+    if 'analysis_focus' in results:
+        st.info(f"**Foco:** {results['analysis_focus']}")
+    
+    # Main recommendation card
+    if 'final_recommendation' in results:
+        recommendation = results['final_recommendation']
+    else:
+        recommendation = "📈 COMPRA" if results['price_change'] > 0 else "📉 VENDA" if results['price_change'] < 0 else "🔄 MANTER"
+    
+    confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
+    
+    st.markdown(f"""
+    <div class="metric-card">
+        <h2 style="color: {confidence_color}; margin: 0; text-align: center;">{recommendation}</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+            <div>
+                <p><strong>Preço Atual:</strong> {results['current_price']:.5f}</p>
+                <p><strong>Preço Previsto:</strong> {results['predicted_price']:.5f}</p>
+            </div>
+            <div>
+                <p><strong>Variação:</strong> {results['price_change_pct']:+.2f}%</p>
+                <p><strong>Confiança:</strong> {results['model_confidence']:.0%}</p>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Show unified analysis components if available
+    if analysis_mode == 'unified' and 'components' in results:
+        st.markdown("### 🔍 Componentes da Análise Unificada")
+        
+        for component, data in results['components'].items():
+            signal_pct = data['signal'] * 100
+            weight_pct = data['weight'] * 100
+            color = "🟢" if data['signal'] > 0 else "🔴" if data['signal'] < 0 else "🟡"
+            details = data.get('details', '')
+            
+            with st.expander(f"{color} **{component.title()}:** {signal_pct:+.2f}% (peso: {weight_pct:.0f}%)"):
+                if details:
+                    st.write(f"**Detalhes:** {details}")
+                st.write(f"**Sinal:** {signal_pct:+.3f}%")
+                st.write(f"**Peso na análise:** {weight_pct:.0f}%")
+
+def display_charts_tab(results):
+    """Display charts tab content"""
+    st.markdown("### 📈 Gráficos de Análise")
+    
+    if 'df_with_indicators' not in results:
+        st.warning("Dados de indicadores não disponíveis para exibir gráficos.")
+        return
+    
+    df = results['df_with_indicators']
+    
+    try:
+        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots
+        
+        # Create main price chart
+        fig = make_subplots(
+            rows=3, cols=1,
+            row_heights=[0.6, 0.2, 0.2],
+            subplot_titles=('Preço e Médias Móveis', 'RSI', 'MACD'),
+            vertical_spacing=0.05
+        )
+        
+        # Price and moving averages
+        fig.add_trace(go.Scatter(
+            x=df.index, y=df['close'],
+            name='Preço de Fechamento',
+            line=dict(color='blue', width=2)
+        ), row=1, col=1)
+        
+        if 'sma_20' in df.columns:
+            fig.add_trace(go.Scatter(
+                x=df.index, y=df['sma_20'],
+                name='SMA 20',
+                line=dict(color='orange', width=1)
+            ), row=1, col=1)
+        
+        if 'sma_50' in df.columns:
+            fig.add_trace(go.Scatter(
+                x=df.index, y=df['sma_50'],
+                name='SMA 50',
+                line=dict(color='red', width=1)
+            ), row=1, col=1)
+        
+        # RSI
+        if 'rsi' in df.columns:
+            fig.add_trace(go.Scatter(
+                x=df.index, y=df['rsi'],
+                name='RSI',
+                line=dict(color='purple')
+            ), row=2, col=1)
+            
+            fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
+            fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
+        
+        # MACD
+        if 'macd' in df.columns:
+            fig.add_trace(go.Scatter(
+                x=df.index, y=df['macd'],
+                name='MACD',
+                line=dict(color='blue')
+            ), row=3, col=1)
+            
+            if 'macd_signal' in df.columns:
+                fig.add_trace(go.Scatter(
+                    x=df.index, y=df['macd_signal'],
+                    name='MACD Signal',
+                    line=dict(color='red')
+                ), row=3, col=1)
+        
+        fig.update_layout(
+            height=800,
+            title=f"Análise Técnica - {results['pair']}",
+            showlegend=True
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+    except ImportError:
+        st.error("Plotly não está disponível para gráficos interativos.")
+        
+        # Fallback to simple metrics
+        st.markdown("**Dados dos Últimos Períodos:**")
+        
+        if len(df) > 10:
+            recent_data = df.tail(10)[['close', 'rsi', 'macd']].round(5)
+            st.dataframe(recent_data)
+
+def display_technical_tab(results):
+    """Display technical analysis tab content"""
+    st.markdown("### 🔍 Análise Técnica Detalhada")
+    
+    if 'df_with_indicators' not in results:
+        st.warning("Dados técnicos não disponíveis.")
+        return
+    
+    df = results['df_with_indicators']
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Indicadores Atuais:**")
+        
+        if 'rsi' in df.columns:
+            rsi_current = df['rsi'].iloc[-1]
+            rsi_status = "Sobrecomprado" if rsi_current > 70 else "Sobrevendido" if rsi_current < 30 else "Neutro"
+            st.metric("RSI", f"{rsi_current:.1f}", rsi_status)
+        
+        if 'macd' in df.columns:
+            macd_current = df['macd'].iloc[-1]
+            st.metric("MACD", f"{macd_current:.5f}")
+        
+        if 'sma_20' in df.columns:
+            sma20 = df['sma_20'].iloc[-1]
+            st.metric("SMA 20", f"{sma20:.5f}")
+        
+        if 'sma_50' in df.columns:
+            sma50 = df['sma_50'].iloc[-1]
+            st.metric("SMA 50", f"{sma50:.5f}")
+    
+    with col2:
+        st.markdown("**Sinais de Trading:**")
+        
+        current_price = results['current_price']
+        
+        # Price vs moving averages
+        if 'sma_20' in df.columns:
+            sma20 = df['sma_20'].iloc[-1]
+            price_vs_sma20 = "Acima" if current_price > sma20 else "Abaixo"
+            st.write(f"**Preço vs SMA20:** {price_vs_sma20}")
+        
+        if 'sma_50' in df.columns:
+            sma50 = df['sma_50'].iloc[-1]
+            price_vs_sma50 = "Acima" if current_price > sma50 else "Abaixo"
+            st.write(f"**Preço vs SMA50:** {price_vs_sma50}")
+        
+        # RSI signals
+        if 'rsi' in df.columns:
+            rsi_current = df['rsi'].iloc[-1]
+            if rsi_current > 70:
+                st.write("🔴 **RSI:** Sinal de Venda (Sobrecomprado)")
+            elif rsi_current < 30:
+                st.write("🟢 **RSI:** Sinal de Compra (Sobrevendido)")
+            else:
+                st.write("🟡 **RSI:** Neutro")
+        
+        # Volatility
+        volatility = df['close'].tail(20).std() / current_price
+        st.metric("Volatilidade (20p)", f"{volatility:.4f}")
+
+def display_sentiment_tab(results):
+    """Display sentiment analysis tab content"""
+    st.markdown("### 📰 Análise de Sentimento")
+    
+    sentiment_score = results.get('sentiment_score', 0)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Sentiment gauge
+        if sentiment_score > 0.1:
+            sentiment_color = "green"
+            sentiment_label = "Positivo"
+            sentiment_icon = "📈"
+        elif sentiment_score < -0.1:
+            sentiment_color = "red"
+            sentiment_label = "Negativo"
+            sentiment_icon = "📉"
+        else:
+            sentiment_color = "orange"
+            sentiment_label = "Neutro"
+            sentiment_icon = "➖"
+        
+        st.markdown(f"""
+        <div style="text-align: center; padding: 1rem; border: 2px solid {sentiment_color}; border-radius: 10px;">
+            <h2 style="color: {sentiment_color}; margin: 0;">{sentiment_icon} {sentiment_label}</h2>
+            <p style="font-size: 1.5em; margin: 0.5rem 0;">{sentiment_score:.3f}</p>
+            <p style="margin: 0;">Score de Sentimento</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("**Interpretação:**")
+        
+        if sentiment_score > 0.3:
+            st.success("Sentimento muito positivo - Forte pressão de compra esperada")
+        elif sentiment_score > 0.1:
+            st.info("Sentimento positivo - Leve pressão de compra")
+        elif sentiment_score < -0.3:
+            st.error("Sentimento muito negativo - Forte pressão de venda esperada")
+        elif sentiment_score < -0.1:
+            st.warning("Sentimento negativo - Leve pressão de venda")
+        else:
+            st.info("Sentimento neutro - Mercado equilibrado")
+        
+        st.markdown("**Escala:**")
+        st.write("• +1.0 = Extremamente Positivo")
+        st.write("• +0.5 = Muito Positivo")
+        st.write("• +0.1 = Levemente Positivo")
+        st.write("• 0.0 = Neutro")
+        st.write("• -0.1 = Levemente Negativo")
+        st.write("• -0.5 = Muito Negativo")
+        st.write("• -1.0 = Extremamente Negativo")
+
+def display_metrics_tab(results):
+    """Display detailed metrics tab content"""
+    st.markdown("### 📊 Métricas Detalhadas")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("**Preços:**")
+        st.metric("Preço Atual", f"{results['current_price']:.5f}")
+        st.metric("Preço Previsto", f"{results['predicted_price']:.5f}")
+        st.metric("Variação Absoluta", f"{results['price_change']:+.5f}")
+    
+    with col2:
+        st.markdown("**Percentuais:**")
+        st.metric("Variação %", f"{results['price_change_pct']:+.2f}%")
+        st.metric("Confiança", f"{results['model_confidence']:.1%}")
+        
+        if 'sentiment_score' in results:
+            st.metric("Sentimento", f"{results['sentiment_score']:+.3f}")
+    
+    with col3:
+        st.markdown("**Informações da Análise:**")
+        st.write(f"**Par:** {results['pair']}")
+        st.write(f"**Intervalo:** {results['interval']}")
+        st.write(f"**Horizonte:** {results['horizon']}")
+        st.write(f"**Horário:** {results['timestamp'].strftime('%H:%M:%S')}")
+        
+        analysis_mode = results.get('analysis_mode', 'unified')
+        mode_names = {
+            'unified': 'Unificada',
+            'technical': 'Técnica',
+            'sentiment': 'Sentimento',
+            'risk': 'Risco',
+            'ai_lstm': 'IA/LSTM',
+            'volume': 'Volume',
+            'trend': 'Tendência'
+        }
+        st.write(f"**Tipo:** {mode_names.get(analysis_mode, 'Padrão')}")
+    
+    # Show component breakdown for unified analysis
+    if results.get('analysis_mode') == 'unified' and 'components' in results:
+        st.markdown("---")
+        st.markdown("**Breakdown dos Componentes (Análise Unificada):**")
+        
+        components_data = []
+        for component, data in results['components'].items():
+            components_data.append({
+                'Componente': component.title(),
+                'Sinal (%)': f"{data['signal']*100:+.3f}%",
+                'Peso (%)': f"{data['weight']*100:.0f}%",
+                'Contribuição': f"{data['signal']*data['weight']*100:+.3f}%"
+            })
+        
+        import pandas as pd
+        df_components = pd.DataFrame(components_data)
+        st.dataframe(df_components, use_container_width=True)
 
 def run_basic_analysis(current_price, is_quick, sentiment_score=0):
     """Análise básica/rápida"""
