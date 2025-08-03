@@ -679,11 +679,11 @@ def display_main_summary(results, analysis_mode):
         'trend': '📉 Análise de Tendência'
     }
     
-    # Replace main header with analysis title
+    # Replace main header with analysis title in a rectangle
     st.markdown(f"""
-    <div style="text-align: center; padding: 1rem 0;">
-        <h1 style="margin: 0; color: #2E86AB;">{mode_names.get(analysis_mode, 'Análise Padrão')}</h1>
-        <p style="margin: 0.5rem 0; color: #666; font-style: italic;">Resultados da Análise • {results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
+    <div style="text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2.5rem 3rem; border-radius: 15px; margin-bottom: 2rem; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3); color: white; width: 100%; max-width: 1200px; margin-left: auto; margin-right: auto;">
+        <h1 style="margin: 0; color: white; font-size: 2.5rem; font-weight: bold;">{mode_names.get(analysis_mode, 'Análise Padrão')}</h1>
+        <p style="margin: 0.8rem 0 0 0; color: rgba(255,255,255,0.9); font-size: 1.2em;">Resultados da Análise • {results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
     </div>
     """, unsafe_allow_html=True)
     
