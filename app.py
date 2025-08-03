@@ -585,9 +585,13 @@ def display_analysis_results_with_tabs():
     
     st.markdown("## 📊 Resultados da Análise")
     
-    # Create tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📋 Resumo", 
+    # Display main summary immediately after title
+    display_main_summary(results, analysis_mode)
+    
+    st.markdown("---")
+    
+    # Create tabs for detailed analysis
+    tab1, tab2, tab3, tab4 = st.tabs([
         "📈 Gráficos", 
         "🔍 Detalhes Técnicos", 
         "📰 Sentimento", 
@@ -595,19 +599,90 @@ def display_analysis_results_with_tabs():
     ])
     
     with tab1:
-        display_summary_tab(results, analysis_mode)
-    
-    with tab2:
         display_charts_tab(results)
     
-    with tab3:
+    with tab2:
         display_technical_tab(results)
     
-    with tab4:
+    with tab3:
         display_sentiment_tab(results)
     
-    with tab5:
+    with tab4:
         display_metrics_tab(results)
+
+def display_main_summary(results, analysis_mode):
+    """Display main summary panel right after results title"""
+    mode_names = {
+        'unified': '🧠 Análise Unificada Inteligente',
+        'technical': '📊 Análise Técnica',
+        'sentiment': '📰 Análise de Sentimento',
+        'risk': '⚖️ Análise de Risco',
+        'ai_lstm': '🤖 Análise IA/LSTM',
+        'volume': '📈 Análise de Volume',
+        'trend': '📉 Análise de Tendência'
+    }
+    
+    st.markdown(f"### {mode_names.get(analysis_mode, 'Análise Padrão')}")
+    
+    # Main recommendation card
+    if 'final_recommendation' in results:
+        recommendation = results['final_recommendation']
+    else:
+        recommendation = "📈 COMPRA" if results['price_change'] > 0 else "📉 VENDA" if results['price_change'] < 0 else "🔄 MANTER"
+    
+    confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
+    
+    # Create columns for better layout
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.markdown(f"""
+        <div style="
+            text-align: center; 
+            padding: 2rem; 
+            border: 3px solid {confidence_color}; 
+            border-radius: 15px; 
+            background: linear-gradient(135deg, rgba(0,0,0,0.1), rgba(255,255,255,0.1));
+            margin: 1rem 0;
+        ">
+            <h1 style="color: {confidence_color}; margin: 0; font-size: 2.5em;">{recommendation}</h1>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; text-align: left;">
+                <div>
+                    <p style="margin: 0.5rem 0;"><strong>Preço Atual:</strong> {results['current_price']:.5f}</p>
+                    <p style="margin: 0.5rem 0;"><strong>Preço Previsto:</strong> {results['predicted_price']:.5f}</p>
+                </div>
+                <div>
+                    <p style="margin: 0.5rem 0;"><strong>Variação:</strong> <span style="color: {confidence_color};">{results['price_change_pct']:+.2f}%</span></p>
+                    <p style="margin: 0.5rem 0;"><strong>Confiança:</strong> {results['model_confidence']:.0%}</p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Show unified analysis components if available
+    if analysis_mode == 'unified' and 'components' in results:
+        st.markdown("### 🔍 Componentes da Análise Unificada")
+        
+        # Create columns for components
+        cols = st.columns(2)
+        components_list = list(results['components'].items())
+        
+        for i, (component, data) in enumerate(components_list):
+            col_idx = i % 2
+            with cols[col_idx]:
+                signal_pct = data['signal'] * 100
+                weight_pct = data['weight'] * 100
+                color = "🟢" if data['signal'] > 0 else "🔴" if data['signal'] < 0 else "🟡"
+                details = data.get('details', '')
+                
+                with st.expander(f"{color} **{component.title()}:** {signal_pct:+.2f}% (peso: {weight_pct:.0f}%)"):
+                    if details:
+                        st.write(f"**Detalhes:** {details}")
+                    st.write(f"**Sinal:** {signal_pct:+.3f}%")
+                    st.write(f"**Peso na análise:** {weight_pct:.0f}%")
+    
+    if 'analysis_focus' in results:
+        st.info(f"**Foco da Análise:** {results['analysis_focus']}")
 
 def display_summary_tab(results, analysis_mode):
     """Display summary tab content"""
