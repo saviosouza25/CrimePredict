@@ -682,7 +682,7 @@ def display_main_summary(results, analysis_mode):
     # Replace main header with analysis title
     st.markdown(f"""
     <div style="text-align: center; padding: 1rem 0;">
-        <h1 style="margin: 0; color: #2E86AB;">📊 {mode_names.get(analysis_mode, 'Análise Padrão')}</h1>
+        <h1 style="margin: 0; color: #2E86AB;">{mode_names.get(analysis_mode, 'Análise Padrão')}</h1>
         <p style="margin: 0.5rem 0; color: #666; font-style: italic;">Resultados da Análise • {results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
     </div>
     """, unsafe_allow_html=True)
