@@ -1199,21 +1199,21 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
                 'components': {}
             }
             
-            # Executar análises baseadas no modo selecionado - TODAS integradas com configuração temporal
+            # Executar análises baseadas no modo selecionado - argumentos corretos
             if analysis_mode == 'unified':
-                results.update(run_unified_analysis(current_price, pair, risk_level, sentiment_score, df_with_indicators, interval, horizon))
+                results.update(run_unified_analysis(current_price, pair, risk_level, sentiment_score, df_with_indicators))
             elif analysis_mode == 'technical':
                 results.update(run_technical_analysis(current_price, df_with_indicators, risk_level))
             elif analysis_mode == 'sentiment':
-                results.update(run_sentiment_analysis(current_price, pair, sentiment_score, risk_level, interval, horizon))
+                results.update(run_sentiment_analysis(current_price, pair, sentiment_score, risk_level))
             elif analysis_mode == 'risk':
-                results.update(run_risk_analysis(current_price, risk_level, interval, horizon))
+                results.update(run_risk_analysis(current_price, risk_level))
             elif analysis_mode == 'ai_lstm':
-                results.update(run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators, risk_level, interval, horizon))
+                results.update(run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators, risk_level))
             elif analysis_mode == 'volume':
-                results.update(run_volume_analysis(current_price, df_with_indicators, risk_level, interval, horizon))
+                results.update(run_volume_analysis(current_price, df_with_indicators, risk_level))
             elif analysis_mode == 'trend':
-                results.update(run_trend_analysis(current_price, df_with_indicators, risk_level, interval, horizon))
+                results.update(run_trend_analysis(current_price, df_with_indicators, risk_level))
             else:
                 results.update(run_basic_analysis(current_price, is_quick, sentiment_score, risk_level, interval, horizon))
             
