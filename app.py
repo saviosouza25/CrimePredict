@@ -289,6 +289,9 @@ def display_main_header():
     </div>
     """, unsafe_allow_html=True)
     
+    # Instruction message
+    st.markdown("👈 Configure seus parâmetros na sidebar e clique em um dos botões de análise para começar.")
+    
     # Add spacing before footer
     st.markdown("<br><br><br>", unsafe_allow_html=True)
     
@@ -689,34 +692,42 @@ def display_main_summary(results, analysis_mode):
     
     confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
     
-    # Create columns for better layout - much wider center panel
-    col1, col2, col3 = st.columns([0.2, 4, 0.2])
+    # Create columns for better layout - narrower center panel
+    col1, col2, col3 = st.columns([1, 2.5, 1])
     
     with col2:
         st.markdown(f"""
         <div style="
             text-align: center; 
-            padding: 2rem 4rem; 
+            padding: 1.5rem 2rem; 
             border: 3px solid {confidence_color}; 
             border-radius: 15px; 
             background: linear-gradient(135deg, rgba(0,0,0,0.1), rgba(255,255,255,0.1));
             margin: 1rem 0;
             width: 100%;
-            max-width: 1100px;
+            max-width: 700px;
             margin-left: auto;
             margin-right: auto;
         ">
-            <h3 style="color: #666; margin: 0 0 0.5rem 0; font-size: 1.1rem;">{mode_names.get(analysis_mode, 'Análise Padrão')}</h3>
-            <p style="color: #888; margin: 0 0 1.5rem 0; font-size: 0.9rem;">Resultados da Análise • {results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
-            <h1 style="color: {confidence_color}; margin: 0; font-size: 2.5em;">{recommendation}</h1>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; text-align: left;">
-                <div>
-                    <p style="margin: 0.5rem 0;"><strong>Preço Atual:</strong> {results['current_price']:.5f}</p>
-                    <p style="margin: 0.5rem 0;"><strong>Preço Previsto:</strong> {results['predicted_price']:.5f}</p>
+            <h3 style="color: #666; margin: 0 0 0.3rem 0; font-size: 1rem;">{mode_names.get(analysis_mode, 'Análise Padrão')}</h3>
+            <p style="color: #888; margin: 0 0 1rem 0; font-size: 0.85rem;">{results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
+            <h1 style="color: {confidence_color}; margin: 0 0 1rem 0; font-size: 2.2em;">{recommendation}</h1>
+            <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 0.5rem; text-align: center;">
+                <div style="min-width: 120px;">
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Atual</strong></p>
+                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results['current_price']:.5f}</p>
                 </div>
-                <div>
-                    <p style="margin: 0.5rem 0;"><strong>Variação:</strong> <span style="color: {confidence_color};">{results['price_change_pct']:+.2f}%</span></p>
-                    <p style="margin: 0.5rem 0;"><strong>Confiança:</strong> {results['model_confidence']:.0%}</p>
+                <div style="min-width: 120px;">
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Previsto</strong></p>
+                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results['predicted_price']:.5f}</p>
+                </div>
+                <div style="min-width: 100px;">
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Variação</strong></p>
+                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results['price_change_pct']:+.2f}%</p>
+                </div>
+                <div style="min-width: 100px;">
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Confiança</strong></p>
+                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results['model_confidence']:.0%}</p>
                 </div>
             </div>
         </div>
