@@ -719,7 +719,7 @@ def display_main_summary(results, analysis_mode):
             <h3 style="color: #666; margin: 0 0 0.3rem 0; font-size: 1rem;">{mode_names.get(analysis_mode, 'Análise Padrão')}</h3>
             <p style="color: #888; margin: 0 0 1rem 0; font-size: 0.85rem;">{results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
             <h1 style="color: {confidence_color}; margin: 0 0 1rem 0; font-size: 2.2em;">{recommendation}</h1>
-            <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 0.5rem; text-align: center;">
+            <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 0.5rem; text-align: center; margin-bottom: 1.5rem;">
                 <div style="min-width: 120px;">
                     <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Atual</strong></p>
                     <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results['current_price']:.5f}</p>
@@ -736,6 +736,70 @@ def display_main_summary(results, analysis_mode):
                     <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Confiança</strong></p>
                     <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results['model_confidence']:.0%}</p>
                 </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Calculate and display risk information
+        current_price = results['current_price']
+        predicted_price = results['predicted_price']
+        confidence = results['model_confidence']
+        
+        # Calculate potential reversal levels and risk
+        price_change = abs(predicted_price - current_price)
+        volatility_factor = 1 - confidence  # Higher volatility when confidence is lower
+        
+        # Estimate support/resistance levels based on analysis
+        if predicted_price > current_price:  # COMPRA
+            stop_loss_level = current_price - (price_change * 0.5 * (1 + volatility_factor))
+            take_profit_level = predicted_price + (price_change * 0.3)
+            risk_direction = "abaixo"
+            reward_direction = "acima"
+        else:  # VENDA
+            stop_loss_level = current_price + (price_change * 0.5 * (1 + volatility_factor))
+            take_profit_level = predicted_price - (price_change * 0.3)
+            risk_direction = "acima"
+            reward_direction = "abaixo"
+        
+        risk_percentage = abs((stop_loss_level - current_price) / current_price) * 100
+        reward_percentage = abs((take_profit_level - current_price) / current_price) * 100
+        risk_reward_ratio = reward_percentage / risk_percentage if risk_percentage > 0 else 0
+        
+        # Risk analysis panel
+        risk_color = "red" if risk_percentage > 2 else "orange" if risk_percentage > 1 else "green"
+        
+        st.markdown(f"""
+        <div style="
+            background: linear-gradient(135deg, rgba(255,193,7,0.1), rgba(255,87,34,0.1));
+            border-left: 4px solid #FF9800;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        ">
+            <h4 style="color: #FF9800; margin: 0 0 1rem 0; font-size: 1.1rem;">⚠️ Análise de Risco e Reversão</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; text-align: center;">
+                <div>
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Nível de Stop Loss</strong></p>
+                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: {risk_color};">{stop_loss_level:.5f}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.8rem;">Risco: {risk_percentage:.2f}%</p>
+                </div>
+                <div>
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Alvo de Lucro</strong></p>
+                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: green;">{take_profit_level:.5f}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.8rem;">Potencial: {reward_percentage:.2f}%</p>
+                </div>
+                <div>
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Razão Risco/Retorno</strong></p>
+                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: {'green' if risk_reward_ratio > 2 else 'orange' if risk_reward_ratio > 1 else 'red'};">1:{risk_reward_ratio:.1f}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.8rem;">{'Excelente' if risk_reward_ratio > 2 else 'Aceitável' if risk_reward_ratio > 1 else 'Alto Risco'}</p>
+                </div>
+            </div>
+            <div style="margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.05); border-radius: 6px;">
+                <p style="margin: 0; color: #555; font-size: 0.9rem; text-align: center;">
+                    <strong>Cenário de Reversão:</strong> Se o mercado reverter {risk_direction} de <strong>{current_price:.5f}</strong>, 
+                    considere sair da posição próximo ao nível <strong>{stop_loss_level:.5f}</strong> para limitar perdas. 
+                    Confiança da análise: <strong>{confidence:.0%}</strong>
+                </p>
             </div>
         </div>
         """, unsafe_allow_html=True)
