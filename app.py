@@ -198,51 +198,91 @@ def main():
             help="Digite o valor real da sua conta de trading"
         )
         
+        # Configuração de alavancagem
+        leverage_options = [1, 10, 20, 30, 50, 100, 200, 300, 400, 500, 1000]
+        leverage = st.selectbox(
+            "Alavancagem:",
+            leverage_options,
+            index=6,  # Default 200:1
+            help="Selecione a alavancagem oferecida pela sua corretora"
+        )
+        
         # Modo de configuração
         config_mode = st.radio(
             "Modo de Configuração:",
             ["Automático por Perfil", "Manual por Lote"],
-            help="Automático: calcula lote baseado no perfil de risco\nManual: você define o tamanho do lote"
+            help="Automático: calcula lote baseado no perfil de risco\nManual: você define o lote real do forex"
         )
         
         if config_mode == "Manual por Lote":
-            # Configuração manual do lote
-            lot_size = st.number_input(
-                "Tamanho do Lote (USD):",
-                min_value=10.0,
-                max_value=float(account_balance),
-                value=min(1000.0, account_balance * 0.02),
-                step=50.0,
-                help="Digite o valor em USD que deseja investir nesta operação"
+            # Configuração manual com lotes reais do forex
+            lot_options = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0]
+            
+            # Sugerir lote baseado na banca e alavancagem
+            max_safe_lot = (account_balance * 0.02) / (100000 / leverage)  # 2% risk rule
+            suggested_lot = min(lot_options, key=lambda x: abs(x - max_safe_lot))
+            
+            lot_size_real = st.selectbox(
+                "Tamanho do Lote (Forex):",
+                lot_options,
+                index=lot_options.index(suggested_lot) if suggested_lot in lot_options else 3,
+                help="1.0 = Lote padrão (100,000 unidades), 0.1 = Mini lote (10,000), 0.01 = Micro lote (1,000)"
             )
             
+            # Calcular valor da posição em USD
+            position_value = lot_size_real * 100000  # Valor notional da posição
+            margin_required = position_value / leverage  # Margem necessária
+            
             # Calcular percentual da banca
-            position_percentage = (lot_size / account_balance) * 100
+            margin_percentage = (margin_required / account_balance) * 100
             
-            st.info(f"📊 **Posição:** {position_percentage:.1f}% da sua banca")
+            st.info(f"📊 **Lote:** {lot_size_real} | **Margem:** ${margin_required:,.0f} ({margin_percentage:.1f}% da banca)")
             
-            # Alertas de risco
-            if position_percentage > 10:
-                st.error("⚠️ **Alto Risco:** Posição muito grande para a banca!")
-            elif position_percentage > 5:
+            # Alertas de risco baseados na margem
+            if margin_percentage > 50:
+                st.error("⚠️ **Alto Risco:** Margem muito alta para a banca!")
+            elif margin_percentage > 20:
                 st.warning("⚠️ **Risco Moderado:** Considere reduzir o lote")
             else:
-                st.success("✅ **Risco Controlado:** Tamanho adequado")
+                st.success("✅ **Risco Controlado:** Margem adequada")
+                
+            # Mostrar informações adicionais
+            pip_value = lot_size_real * 10  # Para pares USD (aproximado)
+            st.caption(f"💡 **Valor do Pip:** ~${pip_value:.2f} | **Posição:** ${position_value:,.0f}")
+            
         else:
             # Cálculo automático baseado no perfil
             risk_percentages = {
-                'Conservative': 1.0,
-                'Moderate': 2.5,
-                'Aggressive': 5.0
+                'Conservative': 0.5,   # 0.5% de margem
+                'Moderate': 2.0,       # 2% de margem  
+                'Aggressive': 5.0      # 5% de margem
             }
-            auto_percentage = risk_percentages[risk_level_en]
-            lot_size = (account_balance * auto_percentage) / 100
             
-            st.info(f"📊 **Lote Automático:** ${lot_size:,.0f} ({auto_percentage}% da banca)")
+            auto_margin_percentage = risk_percentages[risk_level_en]
+            target_margin = (account_balance * auto_margin_percentage) / 100
+            
+            # Calcular lote baseado na margem alvo
+            max_position_value = target_margin * leverage
+            lot_size_real = max_position_value / 100000
+            
+            # Arredondar para lotes padrão
+            standard_lots = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0]
+            lot_size_real = min(standard_lots, key=lambda x: abs(x - lot_size_real))
+            
+            # Recalcular valores com lote arredondado
+            position_value = lot_size_real * 100000
+            margin_required = position_value / leverage
+            pip_value = lot_size_real * 10
+            
+            st.info(f"📊 **Lote Automático:** {lot_size_real} | **Margem:** ${margin_required:,.0f} ({auto_margin_percentage}% da banca)")
         
         # Armazenar nas configurações
         st.session_state.account_balance = account_balance
-        st.session_state.lot_size = lot_size
+        st.session_state.leverage = leverage
+        st.session_state.lot_size_real = lot_size_real
+        st.session_state.position_value = position_value
+        st.session_state.margin_required = margin_required
+        st.session_state.pip_value = pip_value
         st.session_state.config_mode = config_mode
         
         # Configurações de IA colapsáveis
@@ -1088,22 +1128,29 @@ def display_main_summary(results, analysis_mode):
         
         risk_reward_ratio = reward_percentage / risk_percentage if risk_percentage > 0 else 0
         
-        # Enhanced money management with user-configured values
+        # Enhanced money management with real forex calculations
         banca_base = getattr(st.session_state, 'account_balance', 10000)
+        leverage = getattr(st.session_state, 'leverage', 200)
+        lot_size_real = getattr(st.session_state, 'lot_size_real', 0.1)
+        pip_value = getattr(st.session_state, 'pip_value', 1.0)
+        position_value = getattr(st.session_state, 'position_value', 10000)
+        margin_required = getattr(st.session_state, 'margin_required', 50)
         
-        # Use configured lot size or calculate from profile
-        if hasattr(st.session_state, 'lot_size') and st.session_state.lot_size:
-            posicao_size = st.session_state.lot_size
-        else:
-            posicao_size = (banca_base * profile['banca_risk']) / 100
-            
-        # Calculate pip value for forex (approximately $1 per pip for standard lot)
-        pip_value = posicao_size / 100000  # Approximate pip value
+        # Calculate pip movements for stop loss, take profit, and extension
+        current_price_pips = current_price * 10000  # Convert to pips
+        stop_loss_pips = stop_loss_level * 10000
+        take_profit_pips = take_profit_level * 10000
+        extension_pips = max_extension * 10000
         
-        # Enhanced calculations based on price movements
-        risco_monetario = abs(stop_loss_level - current_price) * pip_value * 100000
-        potencial_lucro = abs(take_profit_level - current_price) * pip_value * 100000
-        potencial_extensao = abs(max_extension - current_price) * pip_value * 100000
+        # Calculate pip differences
+        stop_loss_pip_diff = abs(current_price_pips - stop_loss_pips)
+        take_profit_pip_diff = abs(current_price_pips - take_profit_pips)
+        extension_pip_diff = abs(current_price_pips - extension_pips)
+        
+        # Calculate monetary values using real pip value
+        risco_monetario = stop_loss_pip_diff * pip_value
+        potencial_lucro = take_profit_pip_diff * pip_value
+        potencial_extensao = extension_pip_diff * pip_value
         
         # Ensure minimum meaningful values for display
         if risco_monetario < 1:
@@ -1148,27 +1195,27 @@ def display_main_summary(results, analysis_mode):
                 </div>
             </div>
             <div style="background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
-                <h5 style="margin: 0 0 0.8rem 0; color: #333; text-align: center;">💰 Gestão de Banca (Conta: ${banca_base:,.0f} | Lote: ${posicao_size:,.0f})</h5>
+                <h5 style="margin: 0 0 0.8rem 0; color: #333; text-align: center;">💰 Gestão de Banca (Conta: ${banca_base:,.0f} | Lote: {lot_size_real} | Alavancagem: {leverage}:1)</h5>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; text-align: center;">
                     <div>
-                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Tamanho Posição</strong></p>
-                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">${posicao_size:,.0f}</p>
-                        <p style="margin: 0; color: #888; font-size: 0.75rem;">{(posicao_size/banca_base*100):.1f}% da banca</p>
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Lote/Margem</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">{lot_size_real} / ${margin_required:,.0f}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">{(margin_required/banca_base*100):.1f}% margem</p>
                     </div>
                     <div>
                         <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Risco Monetário</strong></p>
-                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: red;">-${risco_monetario:,.0f}</p>
-                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Se stop atingido</p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: red;">-${risco_monetario:,.2f}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">{stop_loss_pip_diff:.1f} pips</p>
                     </div>
                     <div>
                         <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Lucro Potencial</strong></p>
-                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: green;">+${potencial_lucro:,.0f}</p>
-                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Se take atingido</p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: green;">+${potencial_lucro:,.2f}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">{take_profit_pip_diff:.1f} pips</p>
                     </div>
                     <div>
                         <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Potencial Máximo</strong></p>
-                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: blue;">+${potencial_extensao:,.0f}</p>
-                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Se extensão atingida</p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: blue;">+${potencial_extensao:,.2f}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">{extension_pip_diff:.1f} pips</p>
                     </div>
                 </div>
             </div>
