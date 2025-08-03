@@ -5,7 +5,72 @@ from typing import Dict, List
 API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
 
 # Trading Pairs
-PAIRS: List[str] = ['EUR/USD', 'USD/JPY', 'GBP/USD', 'AUD/USD', 'USD/CAD', 'NZD/USD', 'GBP/JPY', 'EUR/GBP']
+PAIRS: List[str] = [
+    # Majors (Major Currency Pairs)
+    'EUR/USD',  # Euro/US Dollar
+    'USD/JPY',  # US Dollar/Japanese Yen
+    'GBP/USD',  # British Pound/US Dollar
+    'AUD/USD',  # Australian Dollar/US Dollar
+    'USD/CAD',  # US Dollar/Canadian Dollar
+    'USD/CHF',  # US Dollar/Swiss Franc
+    'NZD/USD',  # New Zealand Dollar/US Dollar
+    
+    # Minor Crosses (Cross Currency Pairs)
+    'EUR/GBP',  # Euro/British Pound
+    'EUR/JPY',  # Euro/Japanese Yen
+    'EUR/CHF',  # Euro/Swiss Franc
+    'EUR/AUD',  # Euro/Australian Dollar
+    'EUR/CAD',  # Euro/Canadian Dollar
+    'EUR/NZD',  # Euro/New Zealand Dollar
+    'GBP/JPY',  # British Pound/Japanese Yen
+    'GBP/CHF',  # British Pound/Swiss Franc
+    'GBP/AUD',  # British Pound/Australian Dollar
+    'GBP/CAD',  # British Pound/Canadian Dollar
+    'GBP/NZD',  # British Pound/New Zealand Dollar
+    'CHF/JPY',  # Swiss Franc/Japanese Yen
+    'AUD/JPY',  # Australian Dollar/Japanese Yen
+    'AUD/CHF',  # Australian Dollar/Swiss Franc
+    'AUD/CAD',  # Australian Dollar/Canadian Dollar
+    'AUD/NZD',  # Australian Dollar/New Zealand Dollar
+    'CAD/JPY',  # Canadian Dollar/Japanese Yen
+    'CAD/CHF',  # Canadian Dollar/Swiss Franc
+    'NZD/JPY',  # New Zealand Dollar/Japanese Yen
+    'NZD/CHF',  # New Zealand Dollar/Swiss Franc
+    'NZD/CAD',  # New Zealand Dollar/Canadian Dollar
+    
+    # Exotic Pairs (Major vs Emerging Market Currencies)
+    'USD/SEK',  # US Dollar/Swedish Krona
+    'USD/NOK',  # US Dollar/Norwegian Krone
+    'USD/DKK',  # US Dollar/Danish Krone
+    'USD/PLN',  # US Dollar/Polish Zloty
+    'USD/TRY',  # US Dollar/Turkish Lira
+    'USD/ZAR',  # US Dollar/South African Rand
+    'USD/MXN',  # US Dollar/Mexican Peso
+    'EUR/SEK',  # Euro/Swedish Krona
+    'EUR/NOK',  # Euro/Norwegian Krone
+    'EUR/DKK',  # Euro/Danish Krone
+    'EUR/PLN',  # Euro/Polish Zloty
+    'EUR/TRY',  # Euro/Turkish Lira
+    'GBP/SEK',  # British Pound/Swedish Krona
+    'GBP/NOK',  # British Pound/Norwegian Krone
+    'GBP/PLN',  # British Pound/Polish Zloty
+    
+    # Commodities
+    'XAU/USD',  # Gold/US Dollar
+    'XAG/USD',  # Silver/US Dollar
+    'XPT/USD',  # Platinum/US Dollar
+    'XPD/USD',  # Palladium/US Dollar
+    
+    # Cryptocurrency Major Pairs
+    'BTC/USD',  # Bitcoin/US Dollar
+    'ETH/USD',  # Ethereum/US Dollar
+    'LTC/USD',  # Litecoin/US Dollar
+    'XRP/USD',  # Ripple/US Dollar
+    
+    # Oil and Energy
+    'WTI/USD',  # West Texas Intermediate Oil/US Dollar
+    'BRT/USD',  # Brent Crude Oil/US Dollar
+]
 
 # Time Intervals
 INTERVALS: Dict[str, str] = {

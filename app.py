@@ -1873,7 +1873,7 @@ def display_main_summary(results, analysis_mode):
         
         # Ensure minimum meaningful values for display
         if risco_monetario < 1:
-            risco_monetario = max(1, posicao_size * 0.01)
+            risco_monetario = max(1, position_value * 0.01)
         if potencial_lucro < 1:
             potencial_lucro = max(2, risco_monetario * risk_reward_ratio)
         if potencial_extensao < potencial_lucro:
