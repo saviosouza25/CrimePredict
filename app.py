@@ -299,7 +299,19 @@ def main():
                 st.caption(f"💾 {cache_count} em cache")
             with col2:
                 if st.button("🗑️", help="Limpar Cache"):
-                    CacheManager.clear_cache()
+                    # Limpar cache do session state
+                    for key in list(st.session_state.keys()):
+                        if isinstance(st.session_state.get(key), tuple):
+                            del st.session_state[key]
+                    
+                    # Limpar outras chaves de cache
+                    cache_keys = ['last_pair', 'last_interval', 'cached_data', 'model_cache', 
+                                  'sentiment_cache', 'indicators_cache', 'analysis_cache']
+                    for key in cache_keys:
+                        if key in st.session_state:
+                            del st.session_state[key]
+                    
+                    st.success("Cache limpo!")
                     st.rerun()
         
         st.markdown("---")
