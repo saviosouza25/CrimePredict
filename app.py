@@ -948,94 +948,150 @@ def main():
                 font-size: 16px !important;
             }
             
-            /* Mobile-specific responsive improvements + spinner removal */
+            /* MODERN MOBILE-FIRST RESPONSIVE DESIGN */
             @media (max-width: 768px) {
+                /* Force sidebar to be visible and accessible on mobile */
+                .css-1d391kg,
+                .st-emotion-cache-1d391kg,
+                section[data-testid="stSidebar"] {
+                    display: block !important;
+                    visibility: visible !important;
+                    position: relative !important;
+                    width: 100% !important;
+                    min-width: 100% !important;
+                    max-width: 100% !important;
+                    transform: none !important;
+                    margin: 0 !important;
+                    padding: 1rem !important;
+                    background: rgba(28, 131, 225, 0.1) !important;
+                    border-radius: 12px !important;
+                    margin-bottom: 1.5rem !important;
+                    border: 1px solid rgba(28, 131, 225, 0.2) !important;
+                }
+                
+                /* Modern sidebar styling for mobile */
+                .css-1d391kg > div,
+                .st-emotion-cache-1d391kg > div {
+                    padding: 0 !important;
+                    width: 100% !important;
+                }
+                
                 /* Better button sizing for mobile */
                 .stButton > button {
                     padding: 1rem !important;
                     font-size: 16px !important;
-                    min-height: 48px !important;
-                    border-radius: 10px !important;
+                    min-height: 52px !important;
+                    border-radius: 12px !important;
+                    width: 100% !important;
+                    margin: 0.5rem 0 !important;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+                    transition: all 0.2s ease !important;
                 }
                 
-                /* Larger touch targets for mobile selectors */
+                /* Enhanced mobile touch targets for selectors */
                 .stSelectbox > div > div,
                 .stSelectbox div[data-baseweb="select"] > div {
-                    min-height: 48px !important;
+                    min-height: 52px !important;
                     font-size: 16px !important;
-                    padding: 0.75rem !important;
+                    padding: 1rem !important;
+                    border-radius: 12px !important;
+                    border: 1px solid rgba(0,0,0,0.2) !important;
                 }
                 
-                /* Improve slider interaction on mobile */
+                /* Modern slider styling for mobile */
                 .stSlider {
-                    padding: 1rem 0 !important;
+                    padding: 1.5rem 0 !important;
                 }
                 
-                /* Better sidebar spacing on mobile */
-                .css-1d391kg,
-                .st-emotion-cache-1d391kg {
-                    padding: 1rem 0.5rem !important;
+                .stSlider > div > div {
+                    height: 8px !important;
+                    border-radius: 4px !important;
                 }
                 
-                /* Stack columns on mobile for better readability */
+                /* Stack columns beautifully on mobile */
                 div[data-testid="column"] {
                     min-width: 100% !important;
-                    margin-bottom: 1rem !important;
+                    margin-bottom: 1.5rem !important;
+                    padding: 0 0.5rem !important;
                 }
                 
-                /* Improve main container spacing */
+                /* Improved main container with modern spacing */
                 .block-container {
-                    padding: 1rem 0.5rem !important;
+                    padding: 1rem !important;
                     max-width: 100% !important;
                 }
                 
-                /* Better header responsiveness */
+                /* Modern header design for mobile */
                 .main-header {
-                    padding: 1rem 0.5rem !important;
+                    padding: 1.5rem 1rem !important;
                     text-align: center !important;
+                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)) !important;
+                    border-radius: 16px !important;
+                    margin-bottom: 1.5rem !important;
                 }
                 
                 .main-header h1 {
-                    font-size: 1.5rem !important;
+                    font-size: 1.8rem !important;
                     margin: 0.5rem 0 !important;
+                    font-weight: 700 !important;
                 }
                 
                 .main-header p {
-                    font-size: 0.9rem !important;
+                    font-size: 1rem !important;
                     margin: 0.5rem 0 !important;
+                    opacity: 0.9 !important;
                 }
                 
-                /* Improve tab navigation on mobile */
+                /* Modern tab navigation for mobile */
                 .stTabs > div > div > div {
                     overflow-x: auto !important;
                     white-space: nowrap !important;
+                    padding: 0.5rem 0 !important;
+                    -webkit-overflow-scrolling: touch !important;
                 }
                 
                 .stTabs > div > div > div > button {
-                    min-width: 120px !important;
-                    padding: 0.75rem 1rem !important;
-                    font-size: 14px !important;
+                    min-width: 140px !important;
+                    padding: 1rem 1.25rem !important;
+                    font-size: 15px !important;
+                    border-radius: 12px !important;
+                    margin: 0 0.25rem !important;
+                    font-weight: 600 !important;
                 }
                 
-                /* Better text sizing on mobile */
+                /* Modern typography for mobile */
                 h1, h2, h3, h4 {
-                    font-size: 1.2rem !important;
+                    font-size: 1.3rem !important;
                     line-height: 1.4 !important;
-                    margin: 0.75rem 0 !important;
+                    margin: 1rem 0 !important;
+                    font-weight: 600 !important;
                 }
                 
                 p, div, span {
-                    font-size: 14px !important;
-                    line-height: 1.5 !important;
+                    font-size: 15px !important;
+                    line-height: 1.6 !important;
                 }
                 
-                /* Improve metric cards on mobile */
+                /* Modern metric cards for mobile */
                 div[data-testid="metric-container"] {
-                    padding: 1rem !important;
-                    margin: 0.5rem 0 !important;
+                    padding: 1.5rem !important;
+                    margin: 1rem 0 !important;
+                    border-radius: 16px !important;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+                    border: 1px solid rgba(0,0,0,0.08) !important;
                 }
                 
-                /* Remove ALL spinners on mobile too */
+                /* Modern input styling */
+                .stTextInput > div > div > input,
+                .stNumberInput > div > div > input {
+                    min-height: 52px !important;
+                    font-size: 16px !important;
+                    border-radius: 12px !important;
+                    border: 1px solid rgba(0,0,0,0.2) !important;
+                    padding: 1rem !important;
+                }
+                
+                /* Remove ALL loading elements on mobile */
                 .stSpinner,
                 [data-testid="stSpinner"],
                 .streamlit-spinner,
@@ -1051,15 +1107,75 @@ def main():
                 }
             }
             
-            /* Tablet-specific improvements */
+            /* MODERN TABLET DESIGN */
             @media (min-width: 769px) and (max-width: 1024px) {
                 .block-container {
-                    padding: 1rem !important;
+                    padding: 1.5rem !important;
+                    max-width: 95% !important;
                 }
                 
                 .stButton > button {
-                    min-height: 46px !important;
+                    min-height: 48px !important;
                     font-size: 15px !important;
+                    border-radius: 10px !important;
+                    padding: 0.875rem 1.25rem !important;
+                }
+                
+                /* Enhanced sidebar for tablet */
+                section[data-testid="stSidebar"] {
+                    width: 320px !important;
+                    padding: 1.25rem !important;
+                }
+                
+                /* Better spacing for tablets */
+                .main-header {
+                    padding: 2rem 1.5rem !important;
+                    border-radius: 16px !important;
+                }
+                
+                div[data-testid="metric-container"] {
+                    padding: 1.25rem !important;
+                    border-radius: 12px !important;
+                }
+            }
+            
+            /* MODERN DESKTOP DESIGN */
+            @media (min-width: 1025px) {
+                /* Enhanced desktop sidebar */
+                section[data-testid="stSidebar"] {
+                    width: 350px !important;
+                    padding: 1.5rem !important;
+                    background: linear-gradient(145deg, #f8f9fa, #e9ecef) !important;
+                    border-right: 1px solid rgba(0,0,0,0.1) !important;
+                }
+                
+                /* Modern desktop buttons */
+                .stButton > button {
+                    min-height: 44px !important;
+                    border-radius: 8px !important;
+                    transition: all 0.2s ease !important;
+                }
+                
+                .stButton > button:hover {
+                    transform: translateY(-1px) !important;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+                }
+                
+                /* Desktop header styling */
+                .main-header {
+                    padding: 2.5rem 2rem !important;
+                    border-radius: 20px !important;
+                    margin-bottom: 2rem !important;
+                }
+                
+                /* Enhanced desktop typography */
+                .main-header h1 {
+                    font-size: 2.2rem !important;
+                    font-weight: 700 !important;
+                }
+                
+                .main-header p {
+                    font-size: 1.1rem !important;
                 }
             }
         </style>
@@ -1082,13 +1198,22 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Simplified sidebar configuration
+    # Modern mobile-first sidebar configuration
     with st.sidebar:
-        st.markdown("## 📊 Análise de Trading")
+        # Modern sidebar header
+        st.markdown("""
+        <div style="text-align: center; padding: 1rem 0; margin-bottom: 1.5rem; 
+                    background: linear-gradient(135deg, #667eea, #764ba2); 
+                    border-radius: 12px; color: white;">
+            <h2 style="margin: 0; font-size: 1.3rem; font-weight: 600;">⚙️ Configurações</h2>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">Ajuste sua análise</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Theme selector
+        # Theme selector with modern styling
+        st.markdown("### 🎨 Aparência")
         theme = st.selectbox(
-            "🎨 Tema da Interface",
+            "Tema da Interface",
             ["Light (Claro)", "Dark (Escuro)"],
             index=0 if st.session_state.get('theme', 'light') == 'light' else 1,
             help="Escolha entre tema claro ou escuro"
@@ -1111,16 +1236,19 @@ def main():
                 del st.session_state[key]
             st.rerun()
         
-        # Currency pair selection
+        # Trading Configuration Section
+        st.markdown("### 💱 Configuração de Trading")
+        
+        # Currency pair selection with modern styling
         pair = st.selectbox(
-            get_text("sidebar_currency_pair"),
+            "Par de Moedas",
             PAIRS,
             help=get_help_content("currency_pair")
         )
         
         # Time interval
         interval = st.selectbox(
-            get_text("sidebar_time_interval"),
+            "Intervalo de Tempo",
             list(INTERVALS.keys()),
             index=4,  # Default to 60min
             help=get_help_content("time_interval")
@@ -1128,15 +1256,80 @@ def main():
         
         # Prediction horizon
         horizon = st.selectbox(
-            "Período de Previsão",
+            "Horizonte de Previsão",
             HORIZONS,
             help=get_help_content("prediction_horizon")
         )
         
         st.markdown("---")
         
-        # Analysis buttons
+        # Risk Management Section
+        st.markdown("### ⚖️ Gestão de Risco")
+        
+        # Risk management level
+        risk_level = st.selectbox(
+            "Nível de Risco",
+            ["Conservativo", "Moderado", "Agressivo"],
+            index=1,
+            help=get_help_content("risk_level")
+        )
+        
         st.markdown("---")
+        
+        # AI Configuration Section
+        st.markdown("### 🧠 Configuração IA")
+        
+        with st.expander("⚙️ Opções Avançadas", expanded=False):
+            lookback_period = st.slider(
+                "Períodos de Análise",
+                min_value=30,
+                max_value=120,
+                value=LOOKBACK_PERIOD,
+                help="Períodos históricos para treinamento da IA"
+            )
+            
+            epochs = st.slider(
+                "Intensidade do Treinamento IA",
+                min_value=5,
+                max_value=20,
+                value=EPOCHS,
+                help="Mais épocas = melhor precisão mas mais lento"
+            )
+            
+            mc_samples = st.slider(
+                "Amostras de Previsão",
+                min_value=10,
+                max_value=50,
+                value=MC_SAMPLES,
+                help="Amostras para estimativa de incerteza"
+            )
+            
+            # Mobile-optimized cache button
+            st.markdown("""
+            <style>
+                @media (max-width: 768px) {
+                    .stButton > button:contains("Limpar") {
+                        min-height: 44px !important;
+                        font-size: 14px !important;
+                        padding: 0.75rem !important;
+                    }
+                }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            if st.button("Limpar Cache"):
+                CacheManager.clear_cache()
+                st.success("Cache limpo!")
+                st.rerun()
+        
+        # Simple status
+        cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
+        if cache_count > 0:
+            st.info(f"💾 {cache_count} análises em cache disponíveis")
+        
+        st.markdown("---")
+        
+        # Analysis buttons section
         
         # Enhanced mobile responsiveness for main buttons
         st.markdown("""
