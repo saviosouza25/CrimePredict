@@ -289,10 +289,6 @@ def display_main_header():
     </div>
     """, unsafe_allow_html=True)
     
-    # Instruction message right after header
-    st.markdown("---")
-    st.markdown("👈 Configure seus parâmetros na sidebar e clique em um dos botões de análise para começar.")
-    
     # Add spacing before footer
     st.markdown("<br><br><br>", unsafe_allow_html=True)
     
