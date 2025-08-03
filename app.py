@@ -273,9 +273,13 @@ def main():
             mc_samples, epochs, quick_analysis
         )
     
-    # Display results if available
+    # Display results if available, otherwise show instructions
     if st.session_state.get('analysis_results'):
         display_analysis_results_with_tabs()
+    else:
+        # Instructions - only show when no results
+        st.markdown("---")
+        st.markdown("👈 Configure seus parâmetros na sidebar e clique em um dos botões de análise para começar.")
     
     # Footer
     st.markdown("---")
