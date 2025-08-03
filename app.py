@@ -1870,10 +1870,13 @@ def display_main_summary(results, analysis_mode):
                 'low': [current_price - 0.002, current_price - 0.001, current_price - 0.0001]
             })
             
+            # Obter sentiment_score dos parâmetros da função ou usar valor padrão
+            sentiment_score_param = sentiment_score if 'sentiment_score' in locals() and sentiment_score is not None else 0.0
+            
             sentiment_data_for_ai = {
-                'overall_sentiment': sentiment_score,
+                'overall_sentiment': sentiment_score_param,
                 'news_count': 8,  # Simulated count
-                'sentiment_consistency': abs(sentiment_score) if sentiment_score != 0 else 0.5
+                'sentiment_consistency': abs(sentiment_score_param) if sentiment_score_param != 0 else 0.5
             }
             
             prediction_data_for_ai = {
@@ -1883,7 +1886,7 @@ def display_main_summary(results, analysis_mode):
             }
             
             # Executar análise unificada de IA com parâmetros temporais
-            horizon = results.get('horizon', '1 Hora')  # Obter horizonte selecionado
+            horizon = horizon if 'horizon' in locals() else '1 Hora'  # Usar parâmetro ou padrão
             ai_analysis = services['ai_unified_service'].run_unified_analysis(
                 price_data_for_ai, sentiment_data_for_ai, prediction_data_for_ai, profile,
                 horizon, pair_name
