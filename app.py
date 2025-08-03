@@ -731,7 +731,7 @@ def display_comprehensive_tutorial():
         **Recomendação Principal**:
         - **COMPRAR** 🟢: Expectativa de alta no preço
         - **VENDER** 🔴: Expectativa de queda no preço
-        - **MANTER** 🟡: Mercado neutro, aguardar melhor oportunidade
+        - **INDECISÃO** 🟡: Sinais contraditórios, aguardar confirmação do mercado
         
         ### 📈 Métricas Importantes
         
@@ -1306,8 +1306,75 @@ def run_unified_analysis(current_price, pair, risk_level, sentiment_score, df_wi
             'ai': {'signal': ai_signal, 'weight': ai_weight, 'details': f'Tendência: {price_trend:.3f}'},
             'risk': {'signal': risk_signal, 'weight': risk_weight, 'details': f'Volatilidade: {volatility:.3f}'}
         },
-        'final_recommendation': 'COMPRAR' if combined_signal > 0.005 else 'VENDER' if combined_signal < -0.005 else 'MANTER'
+        'final_recommendation': get_enhanced_recommendation(combined_signal, confidence, {
+            'technical': {'signal': technical_signal, 'weight': technical_weight},
+            'sentiment': {'signal': sentiment_signal, 'weight': sentiment_weight},
+            'ai': {'signal': ai_signal, 'weight': ai_weight},
+            'risk': {'signal': risk_signal, 'weight': risk_weight}
+        }),
+        'recommendation_details': get_recommendation_explanation(combined_signal, confidence, {
+            'technical': {'signal': technical_signal, 'weight': technical_weight},
+            'sentiment': {'signal': sentiment_signal, 'weight': sentiment_weight},
+            'ai': {'signal': ai_signal, 'weight': ai_weight},
+            'risk': {'signal': risk_signal, 'weight': risk_weight}
+        })
     }
+
+def get_enhanced_recommendation(combined_signal, confidence, components):
+    """Gerar recomendação melhorada com maior clareza"""
+    
+    # Análise detalhada dos componentes
+    technical_signal = components.get('technical', {}).get('signal', 0)
+    sentiment_signal = components.get('sentiment', {}).get('signal', 0)
+    ai_signal = components.get('ai', {}).get('signal', 0)
+    
+    # Força dos sinais individuais
+    strong_buy_threshold = 0.008
+    moderate_buy_threshold = 0.004
+    strong_sell_threshold = -0.008
+    moderate_sell_threshold = -0.004
+    
+    # Consenso entre componentes
+    signal_alignment = abs(technical_signal + sentiment_signal + ai_signal) / 3
+    
+    if combined_signal > strong_buy_threshold and confidence > 0.75 and signal_alignment > 0.006:
+        return "📈 COMPRA FORTE"
+    elif combined_signal > moderate_buy_threshold and confidence > 0.65:
+        return "📈 COMPRA"
+    elif combined_signal < strong_sell_threshold and confidence > 0.75 and signal_alignment > 0.006:
+        return "📉 VENDA FORTE"
+    elif combined_signal < moderate_sell_threshold and confidence > 0.65:
+        return "📉 VENDA"
+    else:
+        return "⚪ INDECISÃO"
+
+def get_recommendation_explanation(combined_signal, confidence, components):
+    """Gerar explicação detalhada da recomendação"""
+    
+    technical_signal = components.get('technical', {}).get('signal', 0)
+    sentiment_signal = components.get('sentiment', {}).get('signal', 0)
+    ai_signal = components.get('ai', {}).get('signal', 0)
+    
+    # Identificar componente dominante
+    signals = {'Técnica': technical_signal, 'Sentimento': sentiment_signal, 'IA': ai_signal}
+    dominant_component = max(signals, key=lambda x: abs(signals[x]))
+    dominant_strength = abs(signals[dominant_component])
+    
+    # Análise de consenso
+    positive_signals = sum(1 for s in signals.values() if s > 0.002)
+    negative_signals = sum(1 for s in signals.values() if s < -0.002)
+    neutral_signals = sum(1 for s in signals.values() if abs(s) <= 0.002)
+    
+    if combined_signal > 0.008:
+        return f"🟢 **FORTE CONSENSO DE COMPRA** - Análise {dominant_component.lower()} lidera ({dominant_strength:.1%}). {positive_signals} sinais positivos convergindo."
+    elif combined_signal > 0.004:
+        return f"🟢 **COMPRA MODERADA** - Tendência positiva com análise {dominant_component.lower()} favorável. Confiança: {confidence:.0%}."
+    elif combined_signal < -0.008:
+        return f"🔴 **FORTE CONSENSO DE VENDA** - Análise {dominant_component.lower()} indica queda ({dominant_strength:.1%}). {negative_signals} sinais negativos alinhados."
+    elif combined_signal < -0.004:
+        return f"🔴 **VENDA MODERADA** - Tendência negativa predominante. Análise {dominant_component.lower()} sugere cautela."
+    else:
+        return f"⚪ **MERCADO INDECISO** - Sinais contraditórios: {positive_signals} positivos, {negative_signals} negativos, {neutral_signals} neutros. Aguardar definição clara do mercado."
 
 def run_technical_analysis(current_price, df_with_indicators, risk_level):
     """Análise técnica especializada com indicadores múltiplos e perfil de risco"""
@@ -1724,7 +1791,7 @@ def display_main_summary(results, analysis_mode):
     if 'final_recommendation' in results:
         recommendation = results['final_recommendation']
     else:
-        recommendation = "📈 COMPRA" if results['price_change'] > 0 else "📉 VENDA" if results['price_change'] < 0 else "🔄 MANTER"
+        recommendation = "📈 COMPRA" if results['price_change'] > 0 else "📉 VENDA" if results['price_change'] < 0 else "⚪ INDECISÃO"
     
     confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
     
@@ -1747,6 +1814,18 @@ def display_main_summary(results, analysis_mode):
             <h3 style="color: #666; margin: 0 0 0.3rem 0; font-size: 1rem;">{mode_names.get(analysis_mode, 'Análise Padrão')}</h3>
             <p style="color: #888; margin: 0 0 1rem 0; font-size: 0.85rem;">{results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
             <h1 style="color: {confidence_color}; margin: 0 0 1rem 0; font-size: 2.2em;">{recommendation}</h1>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Adicionar detalhes da recomendação se disponível
+        if 'recommendation_details' in results:
+            st.markdown(f"""
+            <div style="text-align: center; margin-bottom: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 10px;">
+                <p style="color: #666; margin: 0; font-size: 0.95rem;">{results['recommendation_details']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown(f"""
             <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 0.5rem; text-align: center; margin-bottom: 1.5rem;">
                 <div style="min-width: 120px;">
                     <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Atual</strong></p>
@@ -1870,13 +1949,11 @@ def display_main_summary(results, analysis_mode):
                 'low': [current_price - 0.002, current_price - 0.001, current_price - 0.0001]
             })
             
-            # Obter sentiment_score dos parâmetros da função ou usar valor padrão
-            sentiment_score_param = sentiment_score if 'sentiment_score' in locals() and sentiment_score is not None else 0.0
-            
+            # Usar sentiment_score do parâmetro da função
             sentiment_data_for_ai = {
-                'overall_sentiment': sentiment_score_param,
+                'overall_sentiment': sentiment_score,
                 'news_count': 8,  # Simulated count
-                'sentiment_consistency': abs(sentiment_score_param) if sentiment_score_param != 0 else 0.5
+                'sentiment_consistency': abs(sentiment_score) if sentiment_score != 0 else 0.5
             }
             
             prediction_data_for_ai = {
@@ -1886,7 +1963,6 @@ def display_main_summary(results, analysis_mode):
             }
             
             # Executar análise unificada de IA com parâmetros temporais
-            horizon = horizon if 'horizon' in locals() else '1 Hora'  # Usar parâmetro ou padrão
             ai_analysis = services['ai_unified_service'].run_unified_analysis(
                 price_data_for_ai, sentiment_data_for_ai, prediction_data_for_ai, profile,
                 horizon, pair_name
@@ -2430,7 +2506,7 @@ def display_summary_tab(results, analysis_mode):
     if 'final_recommendation' in results:
         recommendation = results['final_recommendation']
     else:
-        recommendation = "📈 COMPRA" if results['price_change'] > 0 else "📉 VENDA" if results['price_change'] < 0 else "🔄 MANTER"
+        recommendation = "📈 COMPRA" if results['price_change'] > 0 else "📉 VENDA" if results['price_change'] < 0 else "⚪ INDECISÃO"
     
     confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
     
@@ -2770,7 +2846,7 @@ def display_analysis_results():
     if 'final_recommendation' in results:
         recommendation = results['final_recommendation']
     else:
-        recommendation = "📈 COMPRA" if results['price_change'] > 0 else "📉 VENDA" if results['price_change'] < 0 else "🔄 MANTER"
+        recommendation = "📈 COMPRA" if results['price_change'] > 0 else "📉 VENDA" if results['price_change'] < 0 else "⚪ INDECISÃO"
     
     confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
     
