@@ -990,10 +990,12 @@ def main():
                     padding-top: 4rem !important;
                 }
                 
-                /* Sidebar styling - initially hidden */
+                /* Sidebar styling - show by default, hide when closed */
                 .css-1d391kg,
                 .st-emotion-cache-1d391kg,
                 section[data-testid="stSidebar"] {
+                    display: block !important;
+                    visibility: visible !important;
                     position: fixed !important;
                     top: 0 !important;
                     left: 0 !important;
@@ -1002,21 +1004,21 @@ def main():
                     height: 100vh !important;
                     background: white !important;
                     box-shadow: 2px 0 10px rgba(0,0,0,0.1) !important;
-                    transform: translateX(-100%) !important;
-                    transition: transform 0.3s ease !important;
                     z-index: 9998 !important;
                     overflow-y: auto !important;
                     padding: 1rem !important;
-                }
-                
-                /* Show sidebar when open */
-                .sidebar-open .css-1d391kg,
-                .sidebar-open .st-emotion-cache-1d391kg,
-                .sidebar-open section[data-testid="stSidebar"] {
                     transform: translateX(0) !important;
+                    transition: transform 0.3s ease !important;
                 }
                 
-                /* Overlay for sidebar */
+                /* Hide sidebar when closed */
+                .sidebar-closed .css-1d391kg,
+                .sidebar-closed .st-emotion-cache-1d391kg,
+                .sidebar-closed section[data-testid="stSidebar"] {
+                    transform: translateX(-100%) !important;
+                }
+                
+                /* Overlay for sidebar - visible by default */
                 .sidebar-overlay {
                     position: fixed !important;
                     top: 0 !important;
@@ -1025,13 +1027,19 @@ def main():
                     height: 100vh !important;
                     background: rgba(0,0,0,0.5) !important;
                     z-index: 9997 !important;
-                    opacity: 0 !important;
-                    visibility: hidden !important;
+                    opacity: 1 !important;
+                    visibility: visible !important;
                     transition: all 0.3s ease !important;
                 }
                 
-                /* Show overlay when sidebar is open */
-                .sidebar-open .sidebar-overlay {
+                /* Hide overlay when sidebar is closed */
+                .sidebar-closed .sidebar-overlay {
+                    opacity: 0 !important;
+                    visibility: hidden !important;
+                }
+                
+                /* Show overlay when sidebar is open (default) */
+                .sidebar-overlay {
                     opacity: 1 !important;
                     visibility: visible !important;
                 }
@@ -1266,9 +1274,9 @@ def main():
         </style>
         """, unsafe_allow_html=True)
     
-    # Mobile sidebar toggle using Streamlit button
+    # Mobile sidebar toggle using Streamlit button - default open
     if 'sidebar_open' not in st.session_state:
-        st.session_state.sidebar_open = False
+        st.session_state.sidebar_open = True
     
     # Create mobile toggle button using columns for positioning
     col_toggle, col_spacer = st.columns([1, 20])
@@ -1313,22 +1321,22 @@ def main():
         <div class="mobile-toggle-button">
         """, unsafe_allow_html=True)
         
-        # Toggle button
+        # Toggle button - show close when open, hamburger when closed
         if st.button('✕' if st.session_state.sidebar_open else '☰', key="mobile_sidebar_toggle", help="Abrir/Fechar Menu"):
             st.session_state.sidebar_open = not st.session_state.sidebar_open
             st.rerun()
         
         st.markdown("</div>", unsafe_allow_html=True)
     
-    # Apply sidebar state with JavaScript
+    # Apply sidebar state with JavaScript - use sidebar-closed instead of sidebar-open
     sidebar_js_state = "true" if st.session_state.sidebar_open else "false"
     
     st.markdown(f"""
     <script>
-    // Apply sidebar state
-    document.body.className = document.body.className.replace(/sidebar-open/g, '');
-    if ({sidebar_js_state}) {{
-        document.body.classList.add('sidebar-open');
+    // Apply sidebar state - default is open, add closed class when needed
+    document.body.className = document.body.className.replace(/sidebar-closed/g, '');
+    if (!{sidebar_js_state}) {{
+        document.body.classList.add('sidebar-closed');
     }}
     </script>
     """, unsafe_allow_html=True)
