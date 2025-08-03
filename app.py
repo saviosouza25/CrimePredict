@@ -438,16 +438,87 @@ def apply_theme_css():
             }
             .stButton > button {
                 background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-                color: white;
+                color: white !important;
                 border: none;
-                border-radius: 5px;
-                padding: 0.5rem 1rem;
+                border-radius: 8px;
+                padding: 0.75rem 1rem;
                 font-weight: bold;
                 width: 100%;
+                min-height: 44px; /* iOS touch target minimum */
+                font-size: 16px; /* Prevent zoom on iOS */
+                touch-action: manipulation; /* Improve touch response */
+                transition: all 0.2s ease;
             }
             .stButton > button:hover {
                 box-shadow: 0 4px 8px rgba(0,0,0,0.2);
                 transform: translateY(-2px);
+            }
+            .stButton > button:active {
+                transform: translateY(0);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+            
+            /* Mobile-specific improvements for general interface */
+            @media (max-width: 768px) {
+                /* Enhanced button sizing for mobile */
+                .stButton > button {
+                    padding: 1rem !important;
+                    font-size: 16px !important;
+                    min-height: 48px !important;
+                    border-radius: 10px !important;
+                    margin: 0.5rem 0 !important;
+                }
+                
+                /* Improve selectbox touch targets */
+                .stSelectbox > div > div {
+                    min-height: 48px !important;
+                    font-size: 16px !important;
+                    padding: 0.75rem !important;
+                }
+                
+                /* Better sidebar organization */
+                .css-1d391kg {
+                    padding: 1rem 0.5rem !important;
+                }
+                
+                /* Stack columns for mobile readability */
+                div[data-testid="column"] {
+                    min-width: 100% !important;
+                    margin-bottom: 1rem !important;
+                }
+                
+                /* Optimize main content area */
+                .block-container {
+                    padding: 1rem 0.5rem !important;
+                    max-width: 100% !important;
+                }
+                
+                /* Responsive header design */
+                .main-header {
+                    padding: 1rem 0.5rem !important;
+                    text-align: center !important;
+                }
+                
+                .main-header h1 {
+                    font-size: 1.5rem !important;
+                    margin: 0.5rem 0 !important;
+                }
+                
+                .main-header p {
+                    font-size: 0.9rem !important;
+                }
+                
+                /* Better text readability */
+                h1, h2, h3, h4 {
+                    font-size: 1.2rem !important;
+                    line-height: 1.4 !important;
+                    margin: 0.75rem 0 !important;
+                }
+                
+                p, div, span {
+                    font-size: 14px !important;
+                    line-height: 1.5 !important;
+                }
             }
         </style>
         """, unsafe_allow_html=True)
@@ -767,18 +838,138 @@ def main():
                 color: #ffffff !important;
             }
             
-            /* Ensure buttons remain readable */
+            /* Ensure buttons remain readable and mobile-friendly */
             .stButton > button {
                 background: linear-gradient(90deg, #667eea 0%, #764ba2 100%) !important;
                 color: white !important;
                 border: none !important;
+                border-radius: 8px !important;
+                padding: 0.75rem 1rem !important;
+                font-weight: bold !important;
+                width: 100% !important;
+                min-height: 44px !important; /* iOS touch target minimum */
+                font-size: 16px !important; /* Prevent zoom on iOS */
+                touch-action: manipulation !important; /* Improve touch response */
+                transition: all 0.2s ease !important;
             }
             
-            /* Ensure dropdowns work properly */
+            .stButton > button:hover {
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+                transform: translateY(-2px) !important;
+            }
+            
+            .stButton > button:active {
+                transform: translateY(0) !important;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+            }
+            
+            /* Ensure dropdowns work properly and are mobile-friendly */
             .stSelectbox div[data-baseweb="select"] > div {
                 background-color: #2d2d2d !important;
                 color: #ffffff !important;
                 border: 1px solid #444 !important;
+                min-height: 44px !important;
+                font-size: 16px !important;
+            }
+            
+            /* Mobile-specific responsive improvements */
+            @media (max-width: 768px) {
+                /* Better button sizing for mobile */
+                .stButton > button {
+                    padding: 1rem !important;
+                    font-size: 16px !important;
+                    min-height: 48px !important;
+                    border-radius: 10px !important;
+                }
+                
+                /* Larger touch targets for mobile selectors */
+                .stSelectbox > div > div,
+                .stSelectbox div[data-baseweb="select"] > div {
+                    min-height: 48px !important;
+                    font-size: 16px !important;
+                    padding: 0.75rem !important;
+                }
+                
+                /* Improve slider interaction on mobile */
+                .stSlider {
+                    padding: 1rem 0 !important;
+                }
+                
+                /* Better sidebar spacing on mobile */
+                .css-1d391kg,
+                .st-emotion-cache-1d391kg {
+                    padding: 1rem 0.5rem !important;
+                }
+                
+                /* Stack columns on mobile for better readability */
+                div[data-testid="column"] {
+                    min-width: 100% !important;
+                    margin-bottom: 1rem !important;
+                }
+                
+                /* Improve main container spacing */
+                .block-container {
+                    padding: 1rem 0.5rem !important;
+                    max-width: 100% !important;
+                }
+                
+                /* Better header responsiveness */
+                .main-header {
+                    padding: 1rem 0.5rem !important;
+                    text-align: center !important;
+                }
+                
+                .main-header h1 {
+                    font-size: 1.5rem !important;
+                    margin: 0.5rem 0 !important;
+                }
+                
+                .main-header p {
+                    font-size: 0.9rem !important;
+                    margin: 0.5rem 0 !important;
+                }
+                
+                /* Improve tab navigation on mobile */
+                .stTabs > div > div > div {
+                    overflow-x: auto !important;
+                    white-space: nowrap !important;
+                }
+                
+                .stTabs > div > div > div > button {
+                    min-width: 120px !important;
+                    padding: 0.75rem 1rem !important;
+                    font-size: 14px !important;
+                }
+                
+                /* Better text sizing on mobile */
+                h1, h2, h3, h4 {
+                    font-size: 1.2rem !important;
+                    line-height: 1.4 !important;
+                    margin: 0.75rem 0 !important;
+                }
+                
+                p, div, span {
+                    font-size: 14px !important;
+                    line-height: 1.5 !important;
+                }
+                
+                /* Improve metric cards on mobile */
+                div[data-testid="metric-container"] {
+                    padding: 1rem !important;
+                    margin: 0.5rem 0 !important;
+                }
+            }
+            
+            /* Tablet-specific improvements */
+            @media (min-width: 769px) and (max-width: 1024px) {
+                .block-container {
+                    padding: 1rem !important;
+                }
+                
+                .stButton > button {
+                    min-height: 46px !important;
+                    font-size: 15px !important;
+                }
             }
         </style>
         """, unsafe_allow_html=True)
@@ -856,6 +1047,48 @@ def main():
         # Analysis buttons
         st.markdown("---")
         
+        # Enhanced mobile responsiveness for main buttons
+        st.markdown("""
+        <style>
+            /* Critical mobile improvements for buttons */
+            @media (max-width: 768px) {
+                /* Primary button styling for mobile */
+                .stButton > button[kind="primary"],
+                .stButton > button {
+                    width: 100% !important;
+                    min-height: 52px !important;
+                    font-size: 16px !important;
+                    padding: 1rem 1.5rem !important;
+                    border-radius: 12px !important;
+                    margin: 0.75rem 0 !important;
+                    touch-action: manipulation !important;
+                    -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+                }
+                
+                /* Enhanced touch feedback */
+                .stButton > button:active {
+                    transform: scale(0.98) !important;
+                    transition: transform 0.1s ease !important;
+                }
+                
+                /* Better spacing between buttons */
+                .element-container:has(.stButton) {
+                    margin: 0.5rem 0 !important;
+                }
+            }
+            
+            /* Tablet optimizations */
+            @media (min-width: 769px) and (max-width: 1024px) {
+                .stButton > button {
+                    min-height: 48px !important;
+                    font-size: 15px !important;
+                    padding: 0.875rem 1.25rem !important;
+                }
+            }
+        </style>
+        """, unsafe_allow_html=True)
+        
         analyze_button = st.button(
             "🎯 Obter Sinal de Trading", 
             type="primary", 
@@ -902,6 +1135,19 @@ def main():
                 value=MC_SAMPLES,
                 help="Amostras para estimativa de incerteza"
             )
+            
+            # Mobile-optimized cache button
+            st.markdown("""
+            <style>
+                @media (max-width: 768px) {
+                    .stButton > button:contains("Limpar") {
+                        min-height: 44px !important;
+                        font-size: 14px !important;
+                        padding: 0.75rem !important;
+                    }
+                }
+            </style>
+            """, unsafe_allow_html=True)
             
             if st.button("Limpar Cache"):
                 CacheManager.clear_cache()
