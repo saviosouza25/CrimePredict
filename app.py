@@ -985,23 +985,9 @@ def main():
             
             /* MODERN MOBILE-FIRST RESPONSIVE DESIGN WITH TOGGLE */
             @media (max-width: 768px) {
-                /* Mobile sidebar toggle button */
-                .mobile-sidebar-toggle {
-                    position: fixed !important;
-                    top: 1rem !important;
-                    left: 1rem !important;
-                    z-index: 9999 !important;
-                    background: linear-gradient(135deg, #667eea, #764ba2) !important;
-                    color: white !important;
-                    border: none !important;
-                    border-radius: 12px !important;
-                    padding: 0.75rem !important;
-                    font-size: 1.2rem !important;
-                    cursor: pointer !important;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
-                    min-width: 48px !important;
-                    min-height: 48px !important;
-                    touch-action: manipulation !important;
+                /* Main content adjustment for mobile toggle */
+                .main .block-container {
+                    padding-top: 4rem !important;
                 }
                 
                 /* Sidebar styling - initially hidden */
@@ -1238,9 +1224,9 @@ def main():
                     transform: none !important;
                 }
                 
-                /* Hide mobile toggle on desktop */
-                .mobile-sidebar-toggle {
-                    display: none !important;
+                /* Reset main content padding on desktop */
+                .main .block-container {
+                    padding-top: 1rem !important;
                 }
                 
                 /* Reset main content padding on desktop */
@@ -1280,34 +1266,70 @@ def main():
         </style>
         """, unsafe_allow_html=True)
     
-    # Mobile sidebar toggle and overlay
-    st.markdown("""
-    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
-    <button class="mobile-sidebar-toggle" onclick="toggleSidebar()">
-        <span id="sidebar-icon">☰</span>
-    </button>
+    # Mobile sidebar toggle using Streamlit button
+    if 'sidebar_open' not in st.session_state:
+        st.session_state.sidebar_open = False
     
-    <script>
-    function toggleSidebar() {
-        const body = document.body;
-        const icon = document.getElementById('sidebar-icon');
+    # Create mobile toggle button using columns for positioning
+    col_toggle, col_spacer = st.columns([1, 20])
+    
+    with col_toggle:
+        # Mobile toggle button with CSS styling
+        st.markdown("""
+        <style>
+        @media (max-width: 768px) {
+            .mobile-toggle-button {
+                position: fixed !important;
+                top: 1rem !important;
+                left: 1rem !important;
+                z-index: 9999 !important;
+                background: linear-gradient(135deg, #667eea, #764ba2) !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 12px !important;
+                min-width: 48px !important;
+                min-height: 48px !important;
+                font-size: 1.2rem !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+            }
+            
+            .mobile-toggle-button button {
+                background: transparent !important;
+                border: none !important;
+                color: white !important;
+                font-size: 1.2rem !important;
+                width: 100% !important;
+                height: 100% !important;
+            }
+        }
         
-        if (body.classList.contains('sidebar-open')) {
-            body.classList.remove('sidebar-open');
-            icon.innerHTML = '☰';
-        } else {
-            body.classList.add('sidebar-open');
-            icon.innerHTML = '✕';
+        @media (min-width: 769px) {
+            .mobile-toggle-button {
+                display: none !important;
+            }
         }
-    }
+        </style>
+        
+        <div class="mobile-toggle-button">
+        """, unsafe_allow_html=True)
+        
+        # Toggle button
+        if st.button('✕' if st.session_state.sidebar_open else '☰', key="mobile_sidebar_toggle", help="Abrir/Fechar Menu"):
+            st.session_state.sidebar_open = not st.session_state.sidebar_open
+            st.rerun()
+        
+        st.markdown("</div>", unsafe_allow_html=True)
     
-    // Close sidebar when clicking on overlay
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('sidebar-overlay')) {
-            document.body.classList.remove('sidebar-open');
-            document.getElementById('sidebar-icon').innerHTML = '☰';
-        }
-    });
+    # Apply sidebar state with JavaScript
+    sidebar_js_state = "true" if st.session_state.sidebar_open else "false"
+    
+    st.markdown(f"""
+    <script>
+    // Apply sidebar state
+    document.body.className = document.body.className.replace(/sidebar-open/g, '');
+    if ({sidebar_js_state}) {{
+        document.body.classList.add('sidebar-open');
+    }}
     </script>
     """, unsafe_allow_html=True)
     
