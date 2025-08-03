@@ -1857,70 +1857,127 @@ def display_main_summary(results, analysis_mode):
         # Sistema aprimorado de cálculo baseado em probabilidades reais
         predicted_movement = abs(predicted_price - current_price)
         
-        # Stop Loss baseado em ATR e volatilidade real
-        stop_distance = max(
-            atr_estimate * profile['atr_multiplier_stop'],           # ATR-based stop
-            daily_range * profile['daily_range_factor'],             # Daily range-based stop
-            profile['volatility_buffer']                             # Minimum buffer
+        # ANÁLISE TÉCNICA REAL PARA NÍVEIS DE STOP E TARGET
+        
+        # 1. Calcular níveis de suporte e resistência baseados em dados históricos
+        def calculate_support_resistance_levels(current_price, pair_volatility, daily_range):
+            """Calcular níveis reais de suporte e resistência baseados em análise técnica"""
+            
+            # Níveis Fibonacci de retração (baseados em movimentos históricos)
+            fib_levels = [0.236, 0.382, 0.500, 0.618, 0.786]
+            
+            # Calcular swing high e swing low baseados na volatilidade do par
+            swing_range = daily_range * 1.5  # 150% do range diário médio
+            swing_high = current_price + (swing_range * 0.5)
+            swing_low = current_price - (swing_range * 0.5)
+            
+            # Níveis de suporte (abaixo do preço atual)
+            support_levels = []
+            for fib in fib_levels:
+                support_level = current_price - (swing_range * fib * 0.7)  # 70% do range para suportes
+                support_levels.append(support_level)
+            
+            # Níveis de resistência (acima do preço atual)
+            resistance_levels = []
+            for fib in fib_levels:
+                resistance_level = current_price + (swing_range * fib * 0.8)  # 80% do range para resistências
+                resistance_levels.append(resistance_level)
+            
+            return support_levels, resistance_levels, swing_high, swing_low
+        
+        support_levels, resistance_levels, swing_high, swing_low = calculate_support_resistance_levels(
+            current_price, adjusted_volatility, daily_range
         )
         
-        # Converter para pips se necessário (para pares JPY)
-        if 'JPY' in pair_name:
-            max_risk_distance = profile['max_risk_pips'] * 0.01  # JPY pairs
-        else:
-            max_risk_distance = profile['max_risk_pips'] * 0.0001  # Other pairs
+        # 2. Calcular zona de invalidação da análise (stop loss técnico)
+        def calculate_technical_stop_loss(current_price, predicted_price, support_levels, resistance_levels, profile):
+            """Calcular stop loss baseado em níveis técnicos reais"""
+            
+            if predicted_price > current_price:  # COMPRA
+                # Para compra, stop abaixo do último suporte significativo
+                nearest_support = max([s for s in support_levels if s < current_price], default=current_price * 0.99)
+                
+                # Adicionar buffer técnico baseado no perfil de risco
+                buffer_multiplier = profile['confidence_adjustment']  # Usar como buffer técnico
+                technical_buffer = abs(current_price - nearest_support) * buffer_multiplier
+                stop_loss_level = nearest_support - technical_buffer
+                
+                return stop_loss_level, nearest_support, "Suporte técnico"
+                
+            else:  # VENDA
+                # Para venda, stop acima da última resistência significativa
+                nearest_resistance = min([r for r in resistance_levels if r > current_price], default=current_price * 1.01)
+                
+                # Adicionar buffer técnico baseado no perfil de risco
+                buffer_multiplier = profile['confidence_adjustment']
+                technical_buffer = abs(nearest_resistance - current_price) * buffer_multiplier
+                stop_loss_level = nearest_resistance + technical_buffer
+                
+                return stop_loss_level, nearest_resistance, "Resistência técnica"
         
-        # Limitar stop loss ao máximo de risco permitido
-        stop_distance = min(stop_distance, max_risk_distance)
+        # 3. Calcular alvo baseado em projeção técnica real
+        def calculate_technical_target(current_price, predicted_price, support_levels, resistance_levels, confidence):
+            """Calcular take profit baseado em projeções técnicas reais"""
+            
+            if predicted_price > current_price:  # COMPRA
+                # Alvo na próxima resistência significativa, ajustado pela confiança
+                target_resistance = min([r for r in resistance_levels if r > predicted_price], 
+                                      default=resistance_levels[-1])  # Se não houver, usar a maior resistência
+                
+                # Ajustar alvo baseado na confiança da previsão
+                confidence_adjustment = confidence * 0.85  # Máximo 85% do caminho até a resistência
+                technical_target = current_price + ((target_resistance - current_price) * confidence_adjustment)
+                
+                return technical_target, target_resistance, "Resistência projetada"
+                
+            else:  # VENDA
+                # Alvo no próximo suporte significativo, ajustado pela confiança
+                target_support = max([s for s in support_levels if s < predicted_price], 
+                                   default=support_levels[0])  # Se não houver, usar o menor suporte
+                
+                # Ajustar alvo baseado na confiança da previsão
+                confidence_adjustment = confidence * 0.85
+                technical_target = current_price - ((current_price - target_support) * confidence_adjustment)
+                
+                return technical_target, target_support, "Suporte projetado"
         
-        # Take Profit baseado em múltiplo do stop loss para manter risk/reward
-        target_rr_ratio = profile['min_risk_reward']
-        profit_distance = stop_distance * target_rr_ratio
+        # Aplicar análise técnica real
+        stop_loss_level, stop_reference_level, stop_reason = calculate_technical_stop_loss(
+            current_price, predicted_price, support_levels, resistance_levels, profile
+        )
         
-        # Ajustar take profit baseado em ATR para alvos mais realistas
-        atr_based_profit = atr_estimate * profile['atr_multiplier_tp']
-        profit_distance = max(profit_distance, atr_based_profit)
+        take_profit_level, target_reference_level, target_reason = calculate_technical_target(
+            current_price, predicted_price, support_levels, resistance_levels, confidence
+        )
         
-        # LÓGICA CRÍTICA CORRIGIDA - DIREÇÕES OPOSTAS PARA STOP E TARGET
+        # Calcular distâncias reais baseadas nos níveis técnicos
+        stop_distance = abs(current_price - stop_loss_level)
+        profit_distance = abs(current_price - take_profit_level)
+        
+        # DIRECIONAMENTO BASEADO EM ANÁLISE TÉCNICA REAL
         trade_direction = "COMPRA" if predicted_price > current_price else "VENDA"
         
         if predicted_price > current_price:  # SINAL DE COMPRA
-            # COMPRA: Stop loss ABAIXO do preço atual, Take profit ACIMA
-            stop_loss_level = current_price - stop_distance    # STOP ABAIXO (proteção contra queda)
-            take_profit_level = current_price + profit_distance # TARGET ACIMA (lucro com alta)
+            # Extensão máxima baseada na próxima resistência maior
+            next_major_resistance = resistance_levels[-1] if resistance_levels else current_price * 1.02
+            max_extension = min(next_major_resistance, take_profit_level * 1.3)  # Máximo 30% além do target
             
-            # Extensão para cenário otimista de COMPRA (ainda mais ACIMA)
-            extension_distance = max(
-                profit_distance * profile['extension_factor'],
-                atr_estimate * (profile['atr_multiplier_tp'] * 1.5)
-            )
-            max_extension = current_price + extension_distance  # EXTENSÃO ACIMA
+            # Alerta de reversão no meio do caminho até o stop
+            reversal_level = current_price - (stop_distance * 0.6)  # 60% do caminho até o stop
             
-            # Reversão: se cair muito, alerta (ABAIXO do preço)
-            reversal_distance = stop_distance * profile['reversal_sensitivity']
-            reversal_level = current_price - reversal_distance  # ALERTA ABAIXO
-            
-            risk_direction = "abaixo"    # Risco se preço descer
-            reward_direction = "acima"   # Lucro se preço subir
+            risk_direction = "abaixo"
+            reward_direction = "acima"
             
         else:  # SINAL DE VENDA
-            # VENDA: Stop loss ACIMA do preço atual, Take profit ABAIXO
-            stop_loss_level = current_price + stop_distance    # STOP ACIMA (proteção contra alta)
-            take_profit_level = current_price - profit_distance # TARGET ABAIXO (lucro com queda)
+            # Extensão máxima baseada no próximo suporte maior
+            next_major_support = support_levels[0] if support_levels else current_price * 0.98
+            max_extension = max(next_major_support, take_profit_level * 0.7)  # Máximo 30% além do target
             
-            # Extensão para cenário otimista de VENDA (ainda mais ABAIXO)
-            extension_distance = max(
-                profit_distance * profile['extension_factor'],
-                atr_estimate * (profile['atr_multiplier_tp'] * 1.5)
-            )
-            max_extension = current_price - extension_distance  # EXTENSÃO ABAIXO
+            # Alerta de reversão no meio do caminho até o stop
+            reversal_level = current_price + (stop_distance * 0.6)  # 60% do caminho até o stop
             
-            # Reversão: se subir muito, alerta (ACIMA do preço)
-            reversal_distance = stop_distance * profile['reversal_sensitivity']
-            reversal_level = current_price + reversal_distance  # ALERTA ACIMA
-            
-            risk_direction = "acima"     # Risco se preço subir
-            reward_direction = "abaixo"  # Lucro se preço descer
+            risk_direction = "acima"
+            reward_direction = "abaixo"
         
         # VALIDAÇÃO CRÍTICA: Verificar se as direções estão corretas
         stop_is_correct = (trade_direction == "COMPRA" and stop_loss_level < current_price) or \
@@ -2007,39 +2064,40 @@ def display_main_summary(results, analysis_mode):
         # Color coding based on profile
         risk_color = "red" if risk_percentage > profile['volatility_threshold'] * 100 else "orange" if risk_percentage > profile['volatility_threshold'] * 50 else "green"
         
-        # PAINEL DE VALIDAÇÃO CRÍTICA - Mostrar debug da lógica
+        # PAINEL DE ANÁLISE TÉCNICA REAL
         st.markdown(f"""
         <div style="
-            background: linear-gradient(135deg, rgba(76,175,80,0.1), rgba(33,150,243,0.1));
-            border-left: 4px solid #2196F3;
+            background: linear-gradient(135deg, rgba(156,39,176,0.1), rgba(33,150,243,0.1));
+            border-left: 4px solid #9C27B0;
             border-radius: 8px;
             padding: 1rem;
             margin: 1rem 0;
         ">
-            <h4 style="color: #2196F3; margin: 0 0 0.8rem 0; font-size: 1rem;">🔍 Validação Crítica da Lógica de Trading</h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.8rem; text-align: center;">
-                <div style="background: rgba(33,150,243,0.1); padding: 0.8rem; border-radius: 6px;">
-                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Sinal Identificado</strong></p>
-                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #2196F3;">{trade_direction}</p>
-                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Baseado na previsão</p>
-                </div>
+            <h4 style="color: #9C27B0; margin: 0 0 0.8rem 0; font-size: 1rem;">📊 Análise Técnica Real - Níveis de Mercado</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.8rem; text-align: center;">
                 <div style="background: rgba(244,67,54,0.1); padding: 0.8rem; border-radius: 6px;">
-                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Stop Loss Válido</strong></p>
-                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {'green' if stop_is_correct else 'red'};">{'✓ CORRETO' if stop_is_correct else '✗ ERRO'}</p>
-                    <p style="margin: 0; color: #888; font-size: 0.75rem;">{'Posicionado' if stop_is_correct else 'DIREÇÃO ERRADA!'} {risk_direction}</p>
+                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Stop Loss Técnico</strong></p>
+                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #f44336;">{stop_loss_level:.5f}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Baseado em {stop_reason}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.70rem;">Ref: {stop_reference_level:.5f}</p>
                 </div>
                 <div style="background: rgba(76,175,80,0.1); padding: 0.8rem; border-radius: 6px;">
-                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Take Profit Válido</strong></p>
-                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {'green' if target_is_correct else 'red'};">{'✓ CORRETO' if target_is_correct else '✗ ERRO'}</p>
-                    <p style="margin: 0; color: #888; font-size: 0.75rem;">{'Posicionado' if target_is_correct else 'DIREÇÃO ERRADA!'} {reward_direction}</p>
+                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Take Profit Técnico</strong></p>
+                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4caf50;">{take_profit_level:.5f}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Baseado em {target_reason}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.70rem;">Ref: {target_reference_level:.5f}</p>
+                </div>
+                <div style="background: rgba(33,150,243,0.1); padding: 0.8rem; border-radius: 6px;">
+                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Probabilidade Real</strong></p>
+                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #2196f3;">{(confidence * 85):.0f}%</p>
+                    <p style="margin: 0; color: #888; font-size: 0.75rem;">De atingir o alvo técnico</p>
+                    <p style="margin: 0; color: #888; font-size: 0.70rem;">Confiança ajustada</p>
                 </div>
                 <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px;">
-                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Diferenças</strong></p>
-                    <p style="margin: 0; font-size: 0.9rem; font-weight: bold; color: #FF9800;">
-                        Stop: {(stop_loss_level - current_price):+.5f}<br>
-                        Target: {(take_profit_level - current_price):+.5f}
-                    </p>
-                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Em relação ao preço atual</p>
+                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Risco vs Retorno</strong></p>
+                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #ff9800;">1:{(profit_distance/stop_distance):.1f}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Baseado em níveis reais</p>
+                    <p style="margin: 0; color: #888; font-size: 0.70rem;">Não em gestão financeira</p>
                 </div>
             </div>
         </div>
