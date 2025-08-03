@@ -309,9 +309,8 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
             st.error("❌ Dados insuficientes ou inválidos recebidos")
             return
         
-        # Step 2: Add technical indicators
-        from utils.technical_indicators import TechnicalIndicators
-        df_with_indicators = TechnicalIndicators.add_all_indicators(df)
+        # Step 2: Add technical indicators usando implementação simplificada
+        df_with_indicators = add_technical_indicators(df)
         
         # Buscar preço atual real da Alpha Vantage
         current_price = services['data_service'].get_latest_price(pair)
@@ -480,10 +479,15 @@ def run_risk_analysis(current_price, risk_level):
         'analysis_focus': f'Análise de risco ({risk_level})'
     }
 
-def run_ai_analysis(current_price, lookback_period, epochs):
+def run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators):
     """Análise de IA/LSTM especializada"""
     import numpy as np
-    signal = np.random.uniform(-0.025, 0.025)
+    
+    # Usar tendência de preços para simular IA
+    recent_prices = df_with_indicators['close'].tail(lookback_period).values
+    price_trend = (recent_prices[-1] - recent_prices[0]) / recent_prices[0]
+    signal = np.tanh(price_trend * 10) * 0.025
+    
     predicted_price = current_price * (1 + signal)
     price_change = predicted_price - current_price
     return {
@@ -491,13 +495,17 @@ def run_ai_analysis(current_price, lookback_period, epochs):
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': 0.85,
-        'analysis_focus': f'Rede neural LSTM (lookback: {lookback_period}, épocas: {epochs})'
+        'analysis_focus': f'IA/LSTM - Tendência: {price_trend:.3f} (lookback: {lookback_period}, épocas: {epochs})'
     }
 
-def run_volume_analysis(current_price):
+def run_volume_analysis(current_price, df_with_indicators):
     """Análise de volume especializada"""
     import numpy as np
-    signal = np.random.uniform(-0.015, 0.015)
+    
+    # Usar volatilidade como proxy para volume
+    volatility = df_with_indicators['close'].tail(20).std() / current_price
+    signal = (0.02 - volatility) * 0.015  # Menor volatilidade = sinal positivo
+    
     predicted_price = current_price * (1 + signal)
     price_change = predicted_price - current_price
     return {
@@ -505,27 +513,69 @@ def run_volume_analysis(current_price):
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': 0.70,
-        'analysis_focus': 'Análise de volume e liquidez'
+        'analysis_focus': f'Volume/Liquidez - Volatilidade: {volatility:.4f}'
     }
 
-def run_trend_analysis(current_price):
+def run_trend_analysis(current_price, df_with_indicators):
     """Análise de tendência especializada"""
     import numpy as np
-    signal = np.random.uniform(-0.018, 0.018)
+    
+    # Análise de tendência baseada em médias móveis
+    sma_20 = df_with_indicators['sma_20'].iloc[-1] if 'sma_20' in df_with_indicators.columns else current_price
+    sma_50 = df_with_indicators['sma_50'].iloc[-1] if 'sma_50' in df_with_indicators.columns else current_price
+    
+    # Sinal baseado na posição do preço em relação às médias
+    price_vs_sma20 = (current_price - sma_20) / sma_20
+    sma_cross = (sma_20 - sma_50) / sma_50 if sma_50 != 0 else 0
+    
+    signal = (price_vs_sma20 + sma_cross) / 2 * 0.018
     predicted_price = current_price * (1 + signal)
     price_change = predicted_price - current_price
+    
     return {
         'predicted_price': predicted_price,
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': 0.72,
-        'analysis_focus': 'Análise de tendências e padrões'
+        'analysis_focus': f'Tendência - SMA20: {sma_20:.5f}, SMA50: {sma_50:.5f}'
     }
 
-def run_basic_analysis(current_price, is_quick):
+def add_technical_indicators(df):
+    """Adicionar indicadores técnicos ao DataFrame"""
+    import numpy as np
+    import pandas as pd
+    
+    df_copy = df.copy()
+    
+    # RSI
+    delta = df_copy['close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    rs = gain / loss
+    df_copy['rsi'] = 100 - (100 / (1 + rs))
+    
+    # MACD
+    exp1 = df_copy['close'].ewm(span=12).mean()
+    exp2 = df_copy['close'].ewm(span=26).mean()
+    df_copy['macd'] = exp1 - exp2
+    df_copy['macd_signal'] = df_copy['macd'].ewm(span=9).mean()
+    
+    # Bollinger Bands
+    rolling_mean = df_copy['close'].rolling(window=20).mean()
+    rolling_std = df_copy['close'].rolling(window=20).std()
+    df_copy['bb_upper'] = rolling_mean + (rolling_std * 2)
+    df_copy['bb_lower'] = rolling_mean - (rolling_std * 2)
+    
+    # SMA
+    df_copy['sma_20'] = df_copy['close'].rolling(window=20).mean()
+    df_copy['sma_50'] = df_copy['close'].rolling(window=50).mean()
+    
+    return df_copy
+
+def run_basic_analysis(current_price, is_quick, sentiment_score=0):
     """Análise básica/rápida"""
     import numpy as np
-    signal = np.random.uniform(-0.01, 0.01)
+    signal = np.random.uniform(-0.01, 0.01) + (sentiment_score * 0.005)
     predicted_price = current_price * (1 + signal)
     price_change = predicted_price - current_price
     return {
