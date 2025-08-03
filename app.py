@@ -279,11 +279,11 @@ def main():
 def display_main_header():
     """Display the main platform header"""
     st.markdown("""
-    <div style="text-align: center; padding: 2rem 0;">
-        <h1 style="color: #2E86AB; margin-bottom: 0.5rem;">
+    <div class="main-header" style="text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 15px; margin-bottom: 2rem; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3); color: white;">
+        <h1 style="color: white; margin-bottom: 0.5rem; font-size: 2.5rem;">
             📊 Plataforma Avançada de Análise Forex
         </h1>
-        <p style="color: #666; font-size: 1.1em; margin: 0;">
+        <p style="color: rgba(255,255,255,0.9); font-size: 1.2em; margin: 0;">
             Previsões Forex com IA e Análise em Tempo Real
         </p>
     </div>
