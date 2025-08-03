@@ -2051,14 +2051,14 @@ def display_main_summary(results, analysis_mode):
                         <p style="margin: 0; color: #888; font-size: 0.75rem;">{'Excelente' if risk_reward_ratio > 2 else 'Aceitável' if risk_reward_ratio > 1 else 'Alto Risco'}</p>
                     </div>
                     <div>
-                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Fator Stop</strong></p>
-                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">{profile['stop_factor']:.1f}x</p>
-                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Distância do stop</p>
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>ATR Stop</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">{profile['atr_multiplier_stop']:.1f}x</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Múltiplo ATR stop</p>
                     </div>
                     <div>
-                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Fator Take</strong></p>
-                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">{profile['profit_factor']:.1f}x</p>
-                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Ambição do alvo</p>
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>ATR Target</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">{profile['atr_multiplier_tp']:.1f}x</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Múltiplo ATR target</p>
                     </div>
                     <div>
                         <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Extensão</strong></p>
