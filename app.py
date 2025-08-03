@@ -1882,9 +1882,11 @@ def display_main_summary(results, analysis_mode):
                 'confidence': confidence
             }
             
-            # Executar análise unificada de IA
+            # Executar análise unificada de IA com parâmetros temporais
+            horizon = results.get('horizon', '1 Hora')  # Obter horizonte selecionado
             ai_analysis = services['ai_unified_service'].run_unified_analysis(
-                price_data_for_ai, sentiment_data_for_ai, prediction_data_for_ai, profile
+                price_data_for_ai, sentiment_data_for_ai, prediction_data_for_ai, profile,
+                horizon, pair_name
             )
             
             # Extrair resultados da IA para usar nos cálculos
@@ -2334,6 +2336,43 @@ def display_main_summary(results, analysis_mode):
                 st.write(f"• Magnitude: {prob.get('magnitude_probability', 0)*100:.0f}%")
                 st.write(f"• Sucesso: {prob.get('success_probability', 0)*100:.0f}%")
                 st.write(f"• Confiança: {prob.get('confidence', 0)*100:.0f}%")
+            
+            # Mostrar parâmetros temporais específicos
+            st.markdown("#### ⏰ Parâmetros da Estratégia Temporal")
+            
+            horizon = results.get('temporal_horizon', '1 Hora')
+            pair = results.get('pair', 'EUR/USD')
+            
+            st.markdown(f"""
+            <div style="
+                background: linear-gradient(135deg, rgba(96,125,139,0.1), rgba(55,71,79,0.1));
+                border-left: 4px solid #607D8B;
+                border-radius: 8px;
+                padding: 1rem;
+                margin: 1rem 0;
+            ">
+                <h6 style="color: #607D8B; margin: 0 0 0.8rem 0;">Configuração Temporal: {horizon} | Par: {pair}</h6>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; text-align: center;">
+                    <div style="background: rgba(96,125,139,0.1); padding: 0.6rem; border-radius: 6px;">
+                        <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Períodos Históricos</strong></p>
+                        <p style="margin: 0; font-size: 0.9rem; font-weight: bold; color: #607D8B;">{ai_analysis.historical_analysis.get('periods_analyzed', 'N/A')}</p>
+                    </div>
+                    <div style="background: rgba(96,125,139,0.1); padding: 0.6rem; border-radius: 6px;">
+                        <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Volatilidade Adj.</strong></p>
+                        <p style="margin: 0; font-size: 0.9rem; font-weight: bold; color: #607D8B;">{ai_analysis.historical_analysis.get('volatility_adjustment', 1.0):.1f}x</p>
+                    </div>
+                    <div style="background: rgba(96,125,139,0.1); padding: 0.6rem; border-radius: 6px;">
+                        <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Boost Confiança</strong></p>
+                        <p style="margin: 0; font-size: 0.9rem; font-weight: bold; color: #607D8B;">{ai_analysis.historical_analysis.get('pair_adjustment', 1.0):.1f}x</p>
+                    </div>
+                    <div style="background: rgba(96,125,139,0.1); padding: 0.6rem; border-radius: 6px;">
+                        <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Confirm. Tendência</strong></p>
+                        <p style="margin: 0; font-size: 0.9rem; font-weight: bold; color: #607D8B;">{ai_analysis.historical_analysis.get('trend_confirmation_strength', 0)*100:.0f}%</p>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
         
         # Create columns for components
         cols = st.columns(2)

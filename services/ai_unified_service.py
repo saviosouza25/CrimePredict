@@ -23,14 +23,33 @@ class AIUnifiedService:
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        # Import temporal parameters
+        try:
+            from config.settings import TEMPORAL_AI_PARAMETERS, PAIR_AI_ADJUSTMENTS
+            self.temporal_params = TEMPORAL_AI_PARAMETERS
+            self.pair_adjustments = PAIR_AI_ADJUSTMENTS
+        except ImportError:
+            self.temporal_params = {}
+            self.pair_adjustments = {}
     
-    def analyze_historical_patterns(self, price_data: pd.DataFrame, profile: Dict) -> Dict:
+    def analyze_historical_patterns(self, price_data: pd.DataFrame, profile: Dict, 
+                                   horizon: str = '1 Hora', pair: str = 'EUR/USD') -> Dict:
         """
         Análise de padrões históricos com parâmetros específicos
         """
         try:
-            periods = profile['ai_historical_periods']
-            confidence_threshold = profile['ai_confidence_threshold']
+            # Obter parâmetros específicos para o horizonte temporal
+            temporal_params = self.temporal_params.get(horizon, {})
+            pair_adjustments = self.pair_adjustments.get(pair, {'volatility_multiplier': 1.0, 'prediction_confidence_boost': 1.0})
+            
+            # Ajustar períodos baseado na estratégia temporal
+            periods = temporal_params.get('ai_historical_periods', profile['ai_historical_periods'])
+            confidence_threshold = profile['ai_confidence_threshold'] * pair_adjustments['prediction_confidence_boost']
+            
+            # Parâmetros específicos do horizonte
+            volatility_sensitivity = temporal_params.get('ai_volatility_sensitivity', 1.0)
+            momentum_periods = temporal_params.get('ai_momentum_periods', 10)
+            trend_confirmation = temporal_params.get('ai_trend_confirmation', 5)
             
             # Calcular indicadores técnicos históricos
             prices = price_data['close'].values
@@ -42,17 +61,22 @@ class AIUnifiedService:
             trend_slope = np.polyfit(range(len(recent_prices)), recent_prices, 1)[0]
             trend_strength = abs(trend_slope) / np.std(recent_prices) if np.std(recent_prices) > 0 else 0
             
-            # Análise de volatilidade histórica
+            # Análise de volatilidade histórica ajustada por par e horizonte
             returns = np.diff(prices) / prices[:-1]
-            historical_volatility = np.std(returns[-periods:]) if len(returns) >= periods else np.std(returns)
+            base_volatility = np.std(returns[-periods:]) if len(returns) >= periods else np.std(returns)
+            historical_volatility = base_volatility * pair_adjustments['volatility_multiplier'] * volatility_sensitivity
             
             # Padrões de reversão/continuação
             price_changes = np.diff(recent_prices)
             bullish_periods = np.sum(price_changes > 0)
             bearish_periods = np.sum(price_changes < 0)
             
-            # Momentum histórico
-            momentum = (recent_prices[-1] - recent_prices[0]) / recent_prices[0] if recent_prices[0] != 0 else 0
+            # Momentum histórico ajustado para o horizonte temporal
+            momentum_range = min(momentum_periods, len(recent_prices))
+            if momentum_range > 1:
+                momentum = (recent_prices[-1] - recent_prices[-momentum_range]) / recent_prices[-momentum_range] if recent_prices[-momentum_range] != 0 else 0
+            else:
+                momentum = 0
             
             # Níveis de suporte e resistência históricos
             highs = []
@@ -68,9 +92,21 @@ class AIUnifiedService:
             resistance_level = np.mean(highs) if highs else recent_prices[-1] * 1.01
             support_level = np.mean(lows) if lows else recent_prices[-1] * 0.99
             
-            # Confiança baseada na consistência dos padrões
+            # Confiança baseada na consistência dos padrões e parâmetros temporais
+            trend_consistency = min(bullish_periods / len(price_changes), bearish_periods / len(price_changes)) if len(price_changes) > 0 else 0.5
             pattern_consistency = min(abs(trend_strength), 1.0) * profile['ai_volatility_adjustment']
-            historical_confidence = min(pattern_consistency, confidence_threshold)
+            
+            # Ajustar confiança baseado na confirmação de tendência específica do horizonte
+            confirmation_strength = 1.0
+            if len(price_changes) >= trend_confirmation:
+                recent_changes = price_changes[-trend_confirmation:]
+                same_direction = np.sum(recent_changes > 0) if trend_slope > 0 else np.sum(recent_changes < 0)
+                confirmation_strength = same_direction / trend_confirmation
+            
+            historical_confidence = min(
+                pattern_consistency * confirmation_strength * pair_adjustments['prediction_confidence_boost'],
+                confidence_threshold
+            )
             
             return {
                 'trend_direction': 'bullish' if trend_slope > 0 else 'bearish',
@@ -83,7 +119,12 @@ class AIUnifiedService:
                 'resistance_level': resistance_level,
                 'confidence': historical_confidence,
                 'periods_analyzed': periods,
-                'pattern_consistency': pattern_consistency
+                'pattern_consistency': pattern_consistency,
+                'temporal_horizon': horizon,
+                'pair_adjustment': pair_adjustments['prediction_confidence_boost'],
+                'volatility_adjustment': volatility_sensitivity,
+                'trend_confirmation_strength': confirmation_strength,
+                'momentum_periods_used': momentum_range
             }
             
         except Exception as e:
@@ -102,13 +143,21 @@ class AIUnifiedService:
                 'pattern_consistency': 0.3
             }
     
-    def analyze_market_sentiment(self, sentiment_data: Dict, profile: Dict) -> Dict:
+    def analyze_market_sentiment(self, sentiment_data: Dict, profile: Dict, 
+                                horizon: str = '1 Hora', pair: str = 'EUR/USD') -> Dict:
         """
         Análise de sentimento de mercado com parâmetros específicos
         """
         try:
+            # Obter parâmetros específicos para o horizonte temporal
+            temporal_params = self.temporal_params.get(horizon, {})
+            pair_adjustments = self.pair_adjustments.get(pair, {'volatility_multiplier': 1.0, 'prediction_confidence_boost': 1.0})
+            
+            # Ajustar sensibilidade e decay baseado no horizonte
             sensitivity = profile['ai_sentiment_sensitivity']
-            confidence_threshold = profile['ai_confidence_threshold']
+            confidence_threshold = profile['ai_confidence_threshold'] * pair_adjustments['prediction_confidence_boost']
+            sentiment_decay = temporal_params.get('ai_sentiment_decay', 0.7)
+            news_impact_weight = temporal_params.get('ai_news_impact_weight', 0.6)
             
             # Processar dados de sentimento
             if not sentiment_data or 'overall_sentiment' not in sentiment_data:
@@ -126,8 +175,9 @@ class AIUnifiedService:
             news_count = sentiment_data.get('news_count', 0)
             sentiment_consistency = sentiment_data.get('sentiment_consistency', 0.5)
             
-            # Ajustar sentimento pela sensibilidade do perfil
-            adjusted_sentiment = overall_sentiment * sensitivity
+            # Ajustar sentimento pela sensibilidade do perfil e decay temporal
+            time_adjusted_sentiment = overall_sentiment * sentiment_decay  # Aplicar decay temporal
+            adjusted_sentiment = time_adjusted_sentiment * sensitivity * news_impact_weight
             
             # Determinar direção do sentimento
             if adjusted_sentiment > 0.1:
@@ -182,13 +232,21 @@ class AIUnifiedService:
                 'consistency': 0.5
             }
     
-    def calculate_probability_metrics(self, prediction_data: Dict, profile: Dict) -> Dict:
+    def calculate_probability_metrics(self, prediction_data: Dict, profile: Dict,
+                                    horizon: str = '1 Hora', pair: str = 'EUR/USD') -> Dict:
         """
         Cálculo de métricas de probabilidade com parâmetros específicos
         """
         try:
-            confidence_threshold = profile['ai_confidence_threshold']
+            # Obter parâmetros específicos para o horizonte temporal
+            temporal_params = self.temporal_params.get(horizon, {})
+            pair_adjustments = self.pair_adjustments.get(pair, {'volatility_multiplier': 1.0, 'prediction_confidence_boost': 1.0})
+            
+            # Ajustar thresholds baseado no horizonte e par
+            confidence_threshold = profile['ai_confidence_threshold'] * pair_adjustments['prediction_confidence_boost']
             trend_strength_min = profile['ai_trend_strength_min']
+            probability_threshold = temporal_params.get('ai_probability_threshold', 0.7)
+            technical_weight = temporal_params.get('ai_technical_weight', 0.7)
             
             # Extrair dados de previsão
             predicted_price = prediction_data.get('predicted_price', 0.0)
@@ -209,9 +267,12 @@ class AIUnifiedService:
             price_change = (predicted_price - current_price) / current_price
             prediction_strength = abs(price_change)
             
-            # Probabilidade de direção (baseada na força da previsão)
-            if prediction_strength > trend_strength_min:
-                direction_probability = min(0.5 + (prediction_strength * 2), 0.85)
+            # Probabilidade de direção ajustada por horizonte temporal e par
+            base_threshold = trend_strength_min * pair_adjustments['volatility_multiplier']
+            if prediction_strength > base_threshold:
+                # Ajustar probabilidade baseado no peso técnico do horizonte
+                raw_probability = min(0.5 + (prediction_strength * 2), 0.85)
+                direction_probability = raw_probability * technical_weight + (0.5 * (1 - technical_weight))
             else:
                 direction_probability = 0.5  # Neutro se previsão muito fraca
             
@@ -224,9 +285,10 @@ class AIUnifiedService:
             # Probabilidade de risco (inverso do sucesso)
             risk_probability = 1.0 - success_probability
             
-            # Confiança ajustada pelo limiar do perfil
+            # Confiança ajustada pelo limiar do perfil e threshold temporal
+            base_confidence = (direction_probability + magnitude_probability) / 2
             probability_confidence = min(
-                (direction_probability + magnitude_probability) / 2,
+                base_confidence * (probability_threshold / 0.7),  # Normalizar para threshold base
                 confidence_threshold
             )
             
@@ -435,15 +497,17 @@ class AIUnifiedService:
                            price_data: pd.DataFrame,
                            sentiment_data: Dict,
                            prediction_data: Dict,
-                           profile: Dict) -> AIAnalysisComponents:
+                           profile: Dict,
+                           horizon: str = '1 Hora',
+                           pair: str = 'EUR/USD') -> AIAnalysisComponents:
         """
         Executar análise unificada completa
         """
         try:
-            # Executar cada componente de análise separadamente
-            historical = self.analyze_historical_patterns(price_data, profile)
-            sentiment = self.analyze_market_sentiment(sentiment_data, profile)
-            probability = self.calculate_probability_metrics(prediction_data, profile)
+            # Executar cada componente de análise separadamente com parâmetros temporais
+            historical = self.analyze_historical_patterns(price_data, profile, horizon, pair)
+            sentiment = self.analyze_market_sentiment(sentiment_data, profile, horizon, pair)
+            probability = self.calculate_probability_metrics(prediction_data, profile, horizon, pair)
             
             # Análise técnica (simplificada para este contexto)
             technical = {

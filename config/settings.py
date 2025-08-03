@@ -172,3 +172,115 @@ RISK_PROFILES = {
         'ai_trend_strength_min': 0.4     # Força mínima de tendência
     }
 }
+
+# Parâmetros de IA específicos por estratégia temporal
+TEMPORAL_AI_PARAMETERS = {
+    '5 Minutos': {  # Scalping - Ultra rápido
+        'ai_historical_periods': 12,      # Apenas 12 períodos (1 hora de dados)
+        'ai_volatility_sensitivity': 1.5, # Alta sensibilidade à volatilidade
+        'ai_news_impact_weight': 0.8,     # Notícias têm impacto imediato alto
+        'ai_technical_weight': 0.6,       # Foco maior em técnica
+        'ai_sentiment_decay': 0.9,        # Sentimento perde força rapidamente
+        'ai_probability_threshold': 0.6,   # Menor threshold para ação rápida
+        'ai_trend_confirmation': 3,        # Apenas 3 períodos para confirmar
+        'ai_support_resistance_range': 0.0005,  # Range muito pequeno para S/R
+        'ai_momentum_periods': 5,          # Momentum de curto prazo
+        'ai_reversal_sensitivity': 1.2    # Alta sensibilidade a reversões
+    },
+    '15 Minutos': {  # Scalping Avançado
+        'ai_historical_periods': 20,
+        'ai_volatility_sensitivity': 1.3,
+        'ai_news_impact_weight': 0.7,
+        'ai_technical_weight': 0.65,
+        'ai_sentiment_decay': 0.85,
+        'ai_probability_threshold': 0.65,
+        'ai_trend_confirmation': 5,
+        'ai_support_resistance_range': 0.0008,
+        'ai_momentum_periods': 8,
+        'ai_reversal_sensitivity': 1.1
+    },
+    '1 Hora': {  # Intraday
+        'ai_historical_periods': 48,      # 2 dias de dados horários
+        'ai_volatility_sensitivity': 1.0, # Sensibilidade normal
+        'ai_news_impact_weight': 0.6,     # Impacto moderado de notícias
+        'ai_technical_weight': 0.7,       # Balanceado técnica/fundamental
+        'ai_sentiment_decay': 0.7,        # Sentimento dura mais tempo
+        'ai_probability_threshold': 0.7,   # Threshold padrão
+        'ai_trend_confirmation': 8,        # 8 períodos para confirmação
+        'ai_support_resistance_range': 0.0015, # Range médio para S/R
+        'ai_momentum_periods': 12,         # Momentum médio prazo
+        'ai_reversal_sensitivity': 0.9     # Sensibilidade moderada
+    },
+    '4 Horas': {  # Swing Trading
+        'ai_historical_periods': 72,      # 12 dias de dados de 4h
+        'ai_volatility_sensitivity': 0.8,
+        'ai_news_impact_weight': 0.5,     # Menor impacto imediato
+        'ai_technical_weight': 0.75,
+        'ai_sentiment_decay': 0.6,        # Sentimento mais duradouro
+        'ai_probability_threshold': 0.75,
+        'ai_trend_confirmation': 6,
+        'ai_support_resistance_range': 0.003,  # Range maior
+        'ai_momentum_periods': 18,
+        'ai_reversal_sensitivity': 0.8
+    },
+    '1 Dia': {  # Position Trading
+        'ai_historical_periods': 100,     # ~3 meses de dados diários
+        'ai_volatility_sensitivity': 0.6,
+        'ai_news_impact_weight': 0.4,     # Foco em fundamentos
+        'ai_technical_weight': 0.8,       # Muito técnico
+        'ai_sentiment_decay': 0.5,        # Sentimento de longo prazo
+        'ai_probability_threshold': 0.8,   # Alto threshold
+        'ai_trend_confirmation': 5,        # Confirmação sólida
+        'ai_support_resistance_range': 0.008, # Range amplo
+        'ai_momentum_periods': 30,         # Momentum longo prazo
+        'ai_reversal_sensitivity': 0.6     # Baixa sensibilidade
+    },
+    '1 Semana': {  # Análise Semanal
+        'ai_historical_periods': 52,      # 1 ano de dados semanais
+        'ai_volatility_sensitivity': 0.4,
+        'ai_news_impact_weight': 0.3,
+        'ai_technical_weight': 0.85,
+        'ai_sentiment_decay': 0.3,
+        'ai_probability_threshold': 0.85,
+        'ai_trend_confirmation': 4,
+        'ai_support_resistance_range': 0.02,
+        'ai_momentum_periods': 12,
+        'ai_reversal_sensitivity': 0.4
+    },
+    '1 Mês': {  # Análise Mensal - Macro
+        'ai_historical_periods': 24,      # 2 anos de dados mensais
+        'ai_volatility_sensitivity': 0.3,
+        'ai_news_impact_weight': 0.2,     # Foco macro/fundamental
+        'ai_technical_weight': 0.9,       # Altamente técnico
+        'ai_sentiment_decay': 0.2,        # Tendências macro duradouras
+        'ai_probability_threshold': 0.9,   # Muito alto threshold
+        'ai_trend_confirmation': 3,        # Poucas confirmações necessárias
+        'ai_support_resistance_range': 0.05, # Range muito amplo
+        'ai_momentum_periods': 6,          # Momentum macro
+        'ai_reversal_sensitivity': 0.3     # Muito baixa sensibilidade
+    }
+}
+
+# Parâmetros específicos para pares da Alpha Vantage por volatilidade
+PAIR_AI_ADJUSTMENTS = {
+    # Majors - Baixa volatilidade, alta previsibilidade
+    'EUR/USD': {'volatility_multiplier': 0.8, 'prediction_confidence_boost': 1.2},
+    'USD/JPY': {'volatility_multiplier': 0.9, 'prediction_confidence_boost': 1.1},
+    'GBP/USD': {'volatility_multiplier': 1.1, 'prediction_confidence_boost': 1.0},
+    'USD/CHF': {'volatility_multiplier': 0.85, 'prediction_confidence_boost': 1.15},
+    
+    # Commodities - Volatilidade média
+    'AUD/USD': {'volatility_multiplier': 1.2, 'prediction_confidence_boost': 0.95},
+    'USD/CAD': {'volatility_multiplier': 1.1, 'prediction_confidence_boost': 1.0},
+    'NZD/USD': {'volatility_multiplier': 1.3, 'prediction_confidence_boost': 0.9},
+    
+    # Crosses - Volatilidade variável
+    'EUR/GBP': {'volatility_multiplier': 0.9, 'prediction_confidence_boost': 1.05},
+    'EUR/JPY': {'volatility_multiplier': 1.2, 'prediction_confidence_boost': 0.95},
+    'GBP/JPY': {'volatility_multiplier': 1.5, 'prediction_confidence_boost': 0.85},
+    
+    # Exotics - Alta volatilidade, menor previsibilidade
+    'USD/TRY': {'volatility_multiplier': 2.5, 'prediction_confidence_boost': 0.6},
+    'USD/ZAR': {'volatility_multiplier': 2.0, 'prediction_confidence_boost': 0.7},
+    'USD/MXN': {'volatility_multiplier': 1.8, 'prediction_confidence_boost': 0.75}
+}
