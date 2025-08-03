@@ -152,17 +152,11 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
-    # Main header
+    # Header compacto
     st.markdown(f"""
-    <div class="main-header">
-        <div style="text-align: center; color: white;">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 1rem;">
-                <h1 style="margin: 0;">{get_text("main_title")}</h1>
-                <p style="color: white; text-align: center; margin: 0; font-size: 1.1rem;">
-                    Previsões Forex com IA e Análise em Tempo Real
-                </p>
-            </div>
-        </div>
+    <div style="background: linear-gradient(135deg, #667eea, #764ba2); padding: 1rem; border-radius: 10px; margin-bottom: 1rem; text-align: center; color: white;">
+        <h2 style="margin: 0;">{get_text("main_title")}</h2>
+        <p style="margin: 0; font-size: 0.9rem; opacity: 0.9;">Previsões Forex com IA</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -176,140 +170,67 @@ def main():
     
     # Sidebar lateral simples como era antes
     with st.sidebar:
-        # Header da sidebar
-        st.markdown("""
-        <div style="text-align: center; padding: 1rem 0; margin-bottom: 1.5rem; 
-                    background: linear-gradient(135deg, #667eea, #764ba2); 
-                    border-radius: 12px; color: white;">
-            <h2 style="margin: 0; font-size: 1.3rem; font-weight: 600;">⚙️ Configurações</h2>
-            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">Ajuste sua análise</p>
-        </div>
-        """, unsafe_allow_html=True)
+        # Header da sidebar compacto
+        st.markdown("## ⚙️ Configurações")
         
-        # Trading Configuration Section
-        st.markdown("### 💱 Configuração de Trading")
+        # Configurações básicas compactas
+        pair = st.selectbox("💱 Par de Moedas", PAIRS)
         
-        # Currency pair selection
-        pair = st.selectbox(
-            "Par de Moedas",
-            PAIRS,
-            help="Selecione o par de moedas para análise"
-        )
+        col1, col2 = st.columns(2)
+        with col1:
+            interval = st.selectbox("⏰ Intervalo", list(INTERVALS.keys()), index=4)
+        with col2:
+            horizon = st.selectbox("🔮 Horizonte", HORIZONS)
         
-        # Time interval
-        interval = st.selectbox(
-            "Intervalo de Tempo",
-            list(INTERVALS.keys()),
-            index=4,  # Default to 60min
-            help="Intervalo de tempo para coleta de dados"
-        )
+        risk_level = st.selectbox("⚖️ Nível de Risco", ["Conservativo", "Moderado", "Agressivo"], index=1)
         
-        # Prediction horizon
-        horizon = st.selectbox(
-            "Horizonte de Previsão",
-            HORIZONS,
-            help="Período para previsões futuras"
-        )
+        # Configurações de IA colapsáveis
+        with st.expander("🤖 Configurações Avançadas de IA"):
+            lookback_period = st.slider("Histórico de Dados", 30, 120, LOOKBACK_PERIOD)
+            epochs = st.slider("Épocas de Treinamento", 5, 20, EPOCHS)
+            mc_samples = st.slider("Amostras Monte Carlo", 10, 50, MC_SAMPLES)
         
-        st.markdown("---")
-        
-        # Risk Management Section
-        st.markdown("### ⚖️ Gestão de Risco")
-        
-        risk_level = st.selectbox(
-            "Nível de Risco",
-            ["Conservativo", "Moderado", "Agressivo"],
-            index=1,  # Default to Moderate
-            help="Define a agressividade das recomendações"
-        )
-        
-        # Configuration status
+        # Cache compacto
         cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
         if cache_count > 0:
-            st.info(f"💾 {cache_count} análises em cache disponíveis")
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.caption(f"💾 {cache_count} em cache")
+            with col2:
+                if st.button("🗑️", help="Limpar Cache"):
+                    CacheManager.clear_cache()
+                    st.rerun()
         
         st.markdown("---")
         
-        # AI Configuration Section
-        st.markdown("### 🤖 Configuração de IA")
+        # Botões de análise compactos
+        st.markdown("**🎯 Análises**")
         
-        lookback_period = st.slider(
-            "Histórico de Dados",
-            min_value=30,
-            max_value=120,
-            value=LOOKBACK_PERIOD,
-            help="Períodos históricos para treinamento da IA"
-        )
+        analyze_button = st.button("📊 Análise Completa", type="primary", use_container_width=True)
+        quick_analysis = st.button("⚡ Análise Rápida", use_container_width=True)
         
-        epochs = st.slider(
-            "Épocas de Treinamento",
-            min_value=5,
-            max_value=20,
-            value=EPOCHS,
-            help="Número de épocas para treinamento da IA"
-        )
-        
-        mc_samples = st.slider(
-            "Amostras Monte Carlo",
-            min_value=10,
-            max_value=50,
-            value=MC_SAMPLES,
-            help="Amostras para estimativa de incerteza"
-        )
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🤖 IA", use_container_width=True):
+                st.session_state['analysis_mode'] = 'advanced_ai'
+                analyze_button = True
+        with col2:
+            if st.button("📈 Dashboard", use_container_width=True):
+                st.session_state['analysis_mode'] = 'dashboard'
+                analyze_button = True
         
         st.markdown("---")
         
-        # Cache Management Section
-        st.markdown("### 🗂️ Gerenciamento de Cache")
-        
-        if cache_count > 0:
-            st.success(f"💾 {cache_count} análises em cache")
-            if st.button("🗑️ Limpar Cache", help="Remove todas as análises do cache"):
-                CacheManager.clear_cache()
-                st.success("Cache limpo com sucesso!")
+        # Botões auxiliares compactos
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📚 Tutorial"):
+                st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
+        with col2:
+            if st.button("🚪 Sair"):
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
                 st.rerun()
-        else:
-            st.info("📂 Nenhuma análise em cache")
-        
-        st.markdown("---")
-        
-        # Analysis Buttons Section - MOVED HERE FROM MAIN CONTENT
-        st.markdown("### 🎯 Executar Análises")
-        
-        # Main analysis buttons
-        analyze_button = st.button(
-            "📊 Análise Técnica Completa",
-            type="primary",
-            use_container_width=True,
-            help="Executa análise técnica completa com indicadores e recomendações"
-        )
-        
-        quick_analysis = st.button(
-            "⚡ Análise Rápida",
-            use_container_width=True,
-            help="Análise rápida com dados em cache (se disponível)"
-        )
-        
-        # Additional analysis options
-        if st.button("🤖 Previsão IA Avançada", use_container_width=True):
-            st.session_state['analysis_mode'] = 'advanced_ai'
-            analyze_button = True
-        
-        if st.button("📈 Dashboard Completo", use_container_width=True):
-            st.session_state['analysis_mode'] = 'dashboard'
-            analyze_button = True
-        
-        st.markdown("---")
-        
-        # Tutorial button
-        if st.button("📚 Tutorial Completo", help="Abrir guia detalhado de todas as funções"):
-            st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
-        
-        # Add logout button
-        if st.button("🚪 Sair", help="Sair da plataforma"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
 
     # Analysis buttons are now in sidebar - this section removed
     
