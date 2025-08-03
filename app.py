@@ -703,27 +703,54 @@ def run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators, 
         }
     }
 
-def run_volume_analysis(current_price, df_with_indicators):
-    """Análise de volume especializada"""
+def run_volume_analysis(current_price, df_with_indicators, risk_level):
+    """Análise de volume especializada com perfil de risco"""
     import numpy as np
+    
+    # Ajustes baseados no perfil de risco
+    risk_configs = {
+        'Conservative': {'signal_factor': 0.8, 'volatility_threshold': 0.015, 'confidence': 0.75},
+        'Moderate': {'signal_factor': 1.0, 'volatility_threshold': 0.020, 'confidence': 0.70},
+        'Aggressive': {'signal_factor': 1.3, 'volatility_threshold': 0.030, 'confidence': 0.65}
+    }
+    
+    config = risk_configs.get(risk_level, risk_configs['Moderate'])
     
     # Usar volatilidade como proxy para volume
     volatility = df_with_indicators['close'].tail(20).std() / current_price
-    signal = (0.02 - volatility) * 0.015  # Menor volatilidade = sinal positivo
+    
+    # Ajustar sinal baseado no perfil de risco
+    base_signal = (config['volatility_threshold'] - volatility) * 0.015
+    signal = base_signal * config['signal_factor']
+    
+    # Para conservadores, penalizar alta volatilidade mais
+    if risk_level == 'Conservative' and volatility > config['volatility_threshold']:
+        signal *= 0.5
     
     predicted_price = current_price * (1 + signal)
     price_change = predicted_price - current_price
+    
     return {
         'predicted_price': predicted_price,
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
-        'model_confidence': 0.70,
-        'analysis_focus': f'Volume/Liquidez - Volatilidade: {volatility:.4f}'
+        'model_confidence': config['confidence'],
+        'analysis_focus': f'Volume/Liquidez ({risk_level}) - Volatilidade: {volatility:.4f}, Limite: {config["volatility_threshold"]:.3f}',
+        'risk_level_used': risk_level
     }
 
-def run_trend_analysis(current_price, df_with_indicators):
-    """Análise de tendência especializada"""
+def run_trend_analysis(current_price, df_with_indicators, risk_level):
+    """Análise de tendência especializada com perfil de risco"""
     import numpy as np
+    
+    # Configurações baseadas no perfil de risco
+    risk_settings = {
+        'Conservative': {'signal_multiplier': 0.7, 'trend_threshold': 0.005, 'confidence': 0.78},
+        'Moderate': {'signal_multiplier': 1.0, 'trend_threshold': 0.010, 'confidence': 0.72},
+        'Aggressive': {'signal_multiplier': 1.4, 'trend_threshold': 0.020, 'confidence': 0.68}
+    }
+    
+    settings = risk_settings.get(risk_level, risk_settings['Moderate'])
     
     # Análise de tendência baseada em médias móveis
     sma_20 = df_with_indicators['sma_20'].iloc[-1] if 'sma_20' in df_with_indicators.columns else current_price
@@ -733,7 +760,14 @@ def run_trend_analysis(current_price, df_with_indicators):
     price_vs_sma20 = (current_price - sma_20) / sma_20
     sma_cross = (sma_20 - sma_50) / sma_50 if sma_50 != 0 else 0
     
-    signal = (price_vs_sma20 + sma_cross) / 2 * 0.018
+    # Aplicar multiplicador de risco e limites
+    base_signal = (price_vs_sma20 + sma_cross) / 2 * 0.018
+    signal = base_signal * settings['signal_multiplier']
+    
+    # Para conservadores, limitar sinais fortes
+    if risk_level == 'Conservative' and abs(signal) > settings['trend_threshold']:
+        signal = np.sign(signal) * settings['trend_threshold']
+    
     predicted_price = current_price * (1 + signal)
     price_change = predicted_price - current_price
     
@@ -741,8 +775,40 @@ def run_trend_analysis(current_price, df_with_indicators):
         'predicted_price': predicted_price,
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
-        'model_confidence': 0.72,
-        'analysis_focus': f'Tendência - SMA20: {sma_20:.5f}, SMA50: {sma_50:.5f}'
+        'model_confidence': settings['confidence'],
+        'analysis_focus': f'Tendência ({risk_level}) - SMA20: {sma_20:.5f}, SMA50: {sma_50:.5f}, Força: {abs(signal):.4f}',
+        'risk_level_used': risk_level
+    }
+
+def run_basic_analysis(current_price, is_quick, sentiment_score, risk_level):
+    """Análise básica com perfil de risco"""
+    import numpy as np
+    
+    # Configurações por perfil de risco
+    risk_params = {
+        'Conservative': {'signal_range': 0.008, 'confidence': 0.80, 'factor': 0.6},
+        'Moderate': {'signal_range': 0.015, 'confidence': 0.75, 'factor': 1.0},
+        'Aggressive': {'signal_range': 0.025, 'confidence': 0.70, 'factor': 1.5}
+    }
+    
+    params = risk_params.get(risk_level, risk_params['Moderate'])
+    
+    # Gerar sinal baseado no perfil de risco e sentimento
+    base_signal = np.random.uniform(-params['signal_range'], params['signal_range'])
+    sentiment_influence = sentiment_score * 0.01 * params['factor']
+    
+    combined_signal = base_signal + sentiment_influence
+    
+    predicted_price = current_price * (1 + combined_signal)
+    price_change = predicted_price - current_price
+    
+    return {
+        'predicted_price': predicted_price,
+        'price_change': price_change,
+        'price_change_pct': (price_change / current_price) * 100,
+        'model_confidence': params['confidence'],
+        'analysis_focus': f'Análise Básica ({risk_level}) - Sentimento: {sentiment_score:.3f}',
+        'risk_level_used': risk_level
     }
 
 def add_technical_indicators(df):
@@ -877,19 +943,31 @@ def display_main_summary(results, analysis_mode):
         predicted_price = results['predicted_price']
         confidence = results['model_confidence']
         
+        # Get risk level from results if available
+        risk_level_used = results.get('risk_level_used', 'Moderate')
+        
+        # Risk adjustments based on investor profile
+        risk_adjustments = {
+            'Conservative': {'stop_factor': 0.3, 'profit_factor': 0.2, 'volatility_penalty': 1.5},
+            'Moderate': {'stop_factor': 0.5, 'profit_factor': 0.3, 'volatility_penalty': 1.0},
+            'Aggressive': {'stop_factor': 0.7, 'profit_factor': 0.4, 'volatility_penalty': 0.7}
+        }
+        
+        risk_config = risk_adjustments.get(risk_level_used, risk_adjustments['Moderate'])
+        
         # Calculate potential reversal levels and risk
         price_change = abs(predicted_price - current_price)
-        volatility_factor = 1 - confidence  # Higher volatility when confidence is lower
+        volatility_factor = (1 - confidence) * risk_config['volatility_penalty']
         
-        # Estimate support/resistance levels based on analysis
+        # Estimate support/resistance levels based on analysis and risk profile
         if predicted_price > current_price:  # COMPRA
-            stop_loss_level = current_price - (price_change * 0.5 * (1 + volatility_factor))
-            take_profit_level = predicted_price + (price_change * 0.3)
+            stop_loss_level = current_price - (price_change * risk_config['stop_factor'] * (1 + volatility_factor))
+            take_profit_level = predicted_price + (price_change * risk_config['profit_factor'])
             risk_direction = "abaixo"
             reward_direction = "acima"
         else:  # VENDA
-            stop_loss_level = current_price + (price_change * 0.5 * (1 + volatility_factor))
-            take_profit_level = predicted_price - (price_change * 0.3)
+            stop_loss_level = current_price + (price_change * risk_config['stop_factor'] * (1 + volatility_factor))
+            take_profit_level = predicted_price - (price_change * risk_config['profit_factor'])
             risk_direction = "acima"
             reward_direction = "abaixo"
         
@@ -908,7 +986,7 @@ def display_main_summary(results, analysis_mode):
             padding: 1.5rem;
             margin: 1rem 0;
         ">
-            <h4 style="color: #FF9800; margin: 0 0 1rem 0; font-size: 1.1rem;">⚠️ Análise de Risco e Reversão</h4>
+            <h4 style="color: #FF9800; margin: 0 0 1rem 0; font-size: 1.1rem;">⚠️ Análise de Risco e Reversão - Perfil: {risk_level_used}</h4>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; text-align: center;">
                 <div>
                     <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Nível de Stop Loss</strong></p>
@@ -927,10 +1005,16 @@ def display_main_summary(results, analysis_mode):
                 </div>
             </div>
             <div style="margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.05); border-radius: 6px;">
+                <p style="margin: 0 0 0.5rem 0; color: #555; font-size: 0.9rem; text-align: center;">
+                    <strong>Perfil {risk_level_used}:</strong> 
+                    {'Stop loss mais próximo (proteção)' if risk_level_used == 'Conservative' else 
+                     'Equilíbrio entre risco e retorno' if risk_level_used == 'Moderate' else 
+                     'Stop loss mais distante (maior exposição)'}
+                </p>
                 <p style="margin: 0; color: #555; font-size: 0.9rem; text-align: center;">
                     <strong>Cenário de Reversão:</strong> Se o mercado reverter {risk_direction} de <strong>{current_price:.5f}</strong>, 
-                    considere sair da posição próximo ao nível <strong>{stop_loss_level:.5f}</strong> para limitar perdas. 
-                    Confiança da análise: <strong>{confidence:.0%}</strong>
+                    considere sair próximo ao nível <strong>{stop_loss_level:.5f}</strong>. 
+                    Confiança: <strong>{confidence:.0%}</strong>
                 </p>
             </div>
         </div>
