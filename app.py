@@ -689,18 +689,22 @@ def display_main_summary(results, analysis_mode):
     
     confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
     
-    # Create columns for better layout
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Create columns for better layout - wider center panel
+    col1, col2, col3 = st.columns([0.5, 3, 0.5])
     
     with col2:
         st.markdown(f"""
         <div style="
             text-align: center; 
-            padding: 2rem; 
+            padding: 2.5rem 3rem; 
             border: 3px solid {confidence_color}; 
             border-radius: 15px; 
             background: linear-gradient(135deg, rgba(0,0,0,0.1), rgba(255,255,255,0.1));
             margin: 1rem 0;
+            width: 100%;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
         ">
             <h3 style="color: #666; margin: 0 0 0.5rem 0; font-size: 1.1rem;">{mode_names.get(analysis_mode, 'Análise Padrão')}</h3>
             <p style="color: #888; margin: 0 0 1.5rem 0; font-size: 0.9rem;">Resultados da Análise • {results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
