@@ -689,20 +689,20 @@ def display_main_summary(results, analysis_mode):
     
     confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
     
-    # Create columns for better layout - wider center panel
-    col1, col2, col3 = st.columns([0.5, 3, 0.5])
+    # Create columns for better layout - much wider center panel
+    col1, col2, col3 = st.columns([0.2, 4, 0.2])
     
     with col2:
         st.markdown(f"""
         <div style="
             text-align: center; 
-            padding: 2.5rem 3rem; 
+            padding: 2rem 4rem; 
             border: 3px solid {confidence_color}; 
             border-radius: 15px; 
             background: linear-gradient(135deg, rgba(0,0,0,0.1), rgba(255,255,255,0.1));
             margin: 1rem 0;
             width: 100%;
-            max-width: 900px;
+            max-width: 1100px;
             margin-left: auto;
             margin-right: auto;
         ">
