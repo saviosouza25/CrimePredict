@@ -418,7 +418,7 @@ def run_unified_analysis(current_price, pair, risk_level, sentiment_score, df_wi
         'model_confidence': confidence,
         'sentiment_score': sentiment_score,
         'components': {
-            'technical': {'signal': technical_signal, 'weight': technical_weight, 'details': f'RSI: {rsi:.1f}, MACD: {macd:.5f}'},
+            'technical': {'signal': technical_signal, 'weight': technical_weight, 'details': f'RSI(14): {rsi:.1f}, MACD(12,26,9): {macd:.5f}'},
             'sentiment': {'signal': sentiment_signal, 'weight': sentiment_weight, 'details': f'Score: {sentiment_score:.3f}'},
             'ai': {'signal': ai_signal, 'weight': ai_weight, 'details': f'Tendência: {price_trend:.3f}'},
             'risk': {'signal': risk_signal, 'weight': risk_weight, 'details': f'Volatilidade: {volatility:.3f}'}
@@ -447,7 +447,7 @@ def run_technical_analysis(current_price, df_with_indicators):
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': 0.75,
-        'analysis_focus': f'Indicadores técnicos - RSI: {rsi:.1f}, MACD: {macd:.5f}'
+        'analysis_focus': f'Indicadores técnicos - RSI(14): {rsi:.1f}, MACD(12,26,9): {macd:.5f}'
     }
 
 def run_sentiment_analysis(current_price, pair, sentiment_score):
@@ -550,28 +550,28 @@ def add_technical_indicators(df):
     
     df_copy = df.copy()
     
-    # RSI
+    # RSI (14 períodos)
     delta = df_copy['close'].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
     rs = gain / loss
     df_copy['rsi'] = 100 - (100 / (1 + rs))
     
-    # MACD
-    exp1 = df_copy['close'].ewm(span=12).mean()
-    exp2 = df_copy['close'].ewm(span=26).mean()
-    df_copy['macd'] = exp1 - exp2
-    df_copy['macd_signal'] = df_copy['macd'].ewm(span=9).mean()
+    # MACD (12, 26, 9)
+    exp1 = df_copy['close'].ewm(span=12).mean()  # EMA 12
+    exp2 = df_copy['close'].ewm(span=26).mean()  # EMA 26
+    df_copy['macd'] = exp1 - exp2               # Linha MACD
+    df_copy['macd_signal'] = df_copy['macd'].ewm(span=9).mean()  # Linha de Sinal (9)
     
-    # Bollinger Bands
+    # Bollinger Bands (20 períodos, 2 desvios)
     rolling_mean = df_copy['close'].rolling(window=20).mean()
     rolling_std = df_copy['close'].rolling(window=20).std()
     df_copy['bb_upper'] = rolling_mean + (rolling_std * 2)
     df_copy['bb_lower'] = rolling_mean - (rolling_std * 2)
     
-    # SMA
-    df_copy['sma_20'] = df_copy['close'].rolling(window=20).mean()
-    df_copy['sma_50'] = df_copy['close'].rolling(window=50).mean()
+    # SMA (Médias Móveis Simples)
+    df_copy['sma_20'] = df_copy['close'].rolling(window=20).mean()  # 20 períodos
+    df_copy['sma_50'] = df_copy['close'].rolling(window=50).mean()  # 50 períodos
     
     return df_copy
 
@@ -684,7 +684,7 @@ def display_charts_tab(results):
         fig = make_subplots(
             rows=3, cols=1,
             row_heights=[0.6, 0.2, 0.2],
-            subplot_titles=('Preço e Médias Móveis', 'RSI', 'MACD'),
+            subplot_titles=('Preço e Médias Móveis', 'RSI (14 períodos)', 'MACD (12,26,9)'),
             vertical_spacing=0.05
         )
         
@@ -698,14 +698,14 @@ def display_charts_tab(results):
         if 'sma_20' in df.columns:
             fig.add_trace(go.Scatter(
                 x=df.index, y=df['sma_20'],
-                name='SMA 20',
+                name='SMA 20 períodos',
                 line=dict(color='orange', width=1)
             ), row=1, col=1)
         
         if 'sma_50' in df.columns:
             fig.add_trace(go.Scatter(
                 x=df.index, y=df['sma_50'],
-                name='SMA 50',
+                name='SMA 50 períodos',
                 line=dict(color='red', width=1)
             ), row=1, col=1)
         
@@ -713,7 +713,7 @@ def display_charts_tab(results):
         if 'rsi' in df.columns:
             fig.add_trace(go.Scatter(
                 x=df.index, y=df['rsi'],
-                name='RSI',
+                name='RSI (14 períodos)',
                 line=dict(color='purple')
             ), row=2, col=1)
             
@@ -724,14 +724,14 @@ def display_charts_tab(results):
         if 'macd' in df.columns:
             fig.add_trace(go.Scatter(
                 x=df.index, y=df['macd'],
-                name='MACD',
+                name='MACD (12,26)',
                 line=dict(color='blue')
             ), row=3, col=1)
             
             if 'macd_signal' in df.columns:
                 fig.add_trace(go.Scatter(
                     x=df.index, y=df['macd_signal'],
-                    name='MACD Signal',
+                    name='Linha de Sinal (9)',
                     line=dict(color='red')
                 ), row=3, col=1)
         
@@ -771,19 +771,19 @@ def display_technical_tab(results):
         if 'rsi' in df.columns:
             rsi_current = df['rsi'].iloc[-1]
             rsi_status = "Sobrecomprado" if rsi_current > 70 else "Sobrevendido" if rsi_current < 30 else "Neutro"
-            st.metric("RSI", f"{rsi_current:.1f}", rsi_status)
+            st.metric("RSI (14 períodos)", f"{rsi_current:.1f}", rsi_status)
         
         if 'macd' in df.columns:
             macd_current = df['macd'].iloc[-1]
-            st.metric("MACD", f"{macd_current:.5f}")
+            st.metric("MACD (12,26,9)", f"{macd_current:.5f}")
         
         if 'sma_20' in df.columns:
             sma20 = df['sma_20'].iloc[-1]
-            st.metric("SMA 20", f"{sma20:.5f}")
+            st.metric("SMA (20 períodos)", f"{sma20:.5f}")
         
         if 'sma_50' in df.columns:
             sma50 = df['sma_50'].iloc[-1]
-            st.metric("SMA 50", f"{sma50:.5f}")
+            st.metric("SMA (50 períodos)", f"{sma50:.5f}")
     
     with col2:
         st.markdown("**Sinais de Trading:**")
@@ -813,7 +813,7 @@ def display_technical_tab(results):
         
         # Volatility
         volatility = df['close'].tail(20).std() / current_price
-        st.metric("Volatilidade (20p)", f"{volatility:.4f}")
+        st.metric("Volatilidade (20 períodos)", f"{volatility:.4f}")
 
 def display_sentiment_tab(results):
     """Display sentiment analysis tab content"""
