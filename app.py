@@ -152,21 +152,17 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
-    # Header compacto
-    st.markdown(f"""
-    <div style="background: linear-gradient(135deg, #667eea, #764ba2); padding: 1rem; border-radius: 10px; margin-bottom: 1rem; text-align: center; color: white;">
-        <h2 style="margin: 0;">{get_text("main_title")}</h2>
-        <p style="margin: 0; font-size: 0.9rem; opacity: 0.9;">Previsões Forex com IA</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Main content area - header controlled by display logic
     
-    # Main content area will show results only
-    st.markdown("## 📊 Resultados da Análise")
-    
-    if not st.session_state.get('analysis_results'):
-        st.info("👈 Configure seus parâmetros na sidebar e clique em um dos botões de análise para começar.")
-    
-    st.markdown("---")
+    # Initialize services if not already done
+    global services
+    if 'services' not in globals() or services is None:
+        from services.data_service import DataService
+        from services.sentiment_service import SentimentService
+        services = {
+            'data_service': DataService(),
+            'sentiment_service': SentimentService()
+        }
     
     # Sidebar lateral simples como era antes
     with st.sidebar:
@@ -273,13 +269,28 @@ def main():
             mc_samples, epochs, quick_analysis
         )
     
-    # Display results if available, otherwise show instructions
+    # Display results if available, otherwise show main header and instructions
     if st.session_state.get('analysis_results'):
         display_analysis_results_with_tabs()
     else:
+        # Show main header only when no results
+        display_main_header()
         # Instructions - only show when no results
         st.markdown("---")
         st.markdown("👈 Configure seus parâmetros na sidebar e clique em um dos botões de análise para começar.")
+
+def display_main_header():
+    """Display the main platform header"""
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem 0;">
+        <h1 style="color: #2E86AB; margin-bottom: 0.5rem;">
+            📊 Plataforma Avançada de Análise Forex
+        </h1>
+        <p style="color: #666; font-size: 1.1em; margin: 0;">
+            Previsões Forex com IA e Análise em Tempo Real
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Footer
     st.markdown("---")
@@ -297,74 +308,117 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
     try:
         analysis_mode = st.session_state.get('analysis_mode', 'unified')
         
-        if analysis_mode == 'unified':
-            st.info("🧠 Executando Análise Unificada Inteligente... Combinando todas as fontes de dados.")
-        else:
-            st.info(f"🔄 Executando análise {analysis_mode}... Aguarde alguns instantes.")
+        # Create progress container
+        progress_container = st.container()
         
-        # Step 1: Fetch data (sempre necessário)
-        df = services['data_service'].fetch_forex_data(
-            pair, 
-            INTERVALS[interval], 
-            'full' if not is_quick else 'compact'
-        )
+        with progress_container:
+            # Progress bar setup
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            # Step 1: Initialize
+            status_text.text("🔄 Inicializando análise...")
+            progress_bar.progress(10)
+            
+            if analysis_mode == 'unified':
+                status_text.text("🧠 Executando Análise Unificada Inteligente...")
+            else:
+                status_text.text(f"🔄 Executando análise {analysis_mode}...")
+            progress_bar.progress(20)
         
-        if not services['data_service'].validate_data(df):
-            st.error("❌ Dados insuficientes ou inválidos recebidos")
-            return
-        
-        # Step 2: Add technical indicators usando implementação simplificada
-        df_with_indicators = add_technical_indicators(df)
-        
-        # Buscar preço atual real da Alpha Vantage
-        current_price = services['data_service'].get_latest_price(pair)
-        
-        if current_price is None:
-            st.error(f"❌ Não foi possível obter o preço atual para {pair}. Verifique a conexão com Alpha Vantage.")
-            return
-        
-        st.info(f"💰 Preço atual de {pair}: {current_price:.5f} (dados em tempo real)")
-        
-        results = {
-            'pair': pair,
-            'interval': interval,
-            'horizon': horizon,
-            'current_price': current_price,
-            'timestamp': datetime.now(),
-            'analysis_mode': analysis_mode,
-            'components': {}
-        }
-        
-        # Buscar dados de sentimento real para todas as análises
-        sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
-        
-        # Executar análises baseadas no modo selecionado
-        if analysis_mode == 'unified':
-            # Análise unificada - combina todas as análises
-            results.update(run_unified_analysis(current_price, pair, risk_level, sentiment_score, df_with_indicators))
-        elif analysis_mode == 'technical':
-            results.update(run_technical_analysis(current_price, df_with_indicators))
-        elif analysis_mode == 'sentiment':
-            results.update(run_sentiment_analysis(current_price, pair, sentiment_score))
-        elif analysis_mode == 'risk':
-            results.update(run_risk_analysis(current_price, risk_level))
-        elif analysis_mode == 'ai_lstm':
-            results.update(run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators))
-        elif analysis_mode == 'volume':
-            results.update(run_volume_analysis(current_price, df_with_indicators))
-        elif analysis_mode == 'trend':
-            results.update(run_trend_analysis(current_price, df_with_indicators))
-        else:
-            # Análise padrão
-            results.update(run_basic_analysis(current_price, is_quick, sentiment_score))
-        
-        # Store results with additional data for tabs
-        results['df_with_indicators'] = df_with_indicators
-        results['sentiment_score'] = sentiment_score
-        st.session_state.analysis_results = results
-        st.success("✅ Análise concluída com sucesso!")
+            # Step 2: Fetch data
+            status_text.text("📊 Buscando dados do mercado...")
+            progress_bar.progress(30)
+            
+            df = services['data_service'].fetch_forex_data(
+                pair, 
+                INTERVALS[interval], 
+                'full' if not is_quick else 'compact'
+            )
+            
+            if not services['data_service'].validate_data(df):
+                progress_container.empty()
+                st.error("❌ Dados insuficientes ou inválidos recebidos")
+                return
+            
+            # Step 3: Technical indicators
+            status_text.text("🔧 Calculando indicadores técnicos...")
+            progress_bar.progress(50)
+            
+            df_with_indicators = add_technical_indicators(df)
+            
+            # Step 4: Current price
+            status_text.text("💰 Obtendo preço atual...")
+            progress_bar.progress(60)
+            
+            current_price = services['data_service'].get_latest_price(pair)
+            
+            if current_price is None:
+                progress_container.empty()
+                st.error(f"❌ Não foi possível obter o preço atual para {pair}. Verifique a conexão com Alpha Vantage.")
+                return
+            # Step 5: Sentiment analysis
+            status_text.text("📰 Analisando sentimento do mercado...")
+            progress_bar.progress(70)
+            
+            sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
+            
+            # Step 6: Running analysis
+            status_text.text("🤖 Processando análise...")
+            progress_bar.progress(80)
+            
+            results = {
+                'pair': pair,
+                'interval': interval,
+                'horizon': horizon,
+                'current_price': current_price,
+                'timestamp': datetime.now(),
+                'analysis_mode': analysis_mode,
+                'components': {}
+            }
+            
+            # Executar análises baseadas no modo selecionado
+            if analysis_mode == 'unified':
+                results.update(run_unified_analysis(current_price, pair, risk_level, sentiment_score, df_with_indicators))
+            elif analysis_mode == 'technical':
+                results.update(run_technical_analysis(current_price, df_with_indicators))
+            elif analysis_mode == 'sentiment':
+                results.update(run_sentiment_analysis(current_price, pair, sentiment_score))
+            elif analysis_mode == 'risk':
+                results.update(run_risk_analysis(current_price, risk_level))
+            elif analysis_mode == 'ai_lstm':
+                results.update(run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators))
+            elif analysis_mode == 'volume':
+                results.update(run_volume_analysis(current_price, df_with_indicators))
+            elif analysis_mode == 'trend':
+                results.update(run_trend_analysis(current_price, df_with_indicators))
+            else:
+                results.update(run_basic_analysis(current_price, is_quick, sentiment_score))
+            
+            # Step 7: Finalizing
+            status_text.text("✅ Finalizando análise...")
+            progress_bar.progress(90)
+            
+            # Store results with additional data for tabs
+            results['df_with_indicators'] = df_with_indicators
+            results['sentiment_score'] = sentiment_score
+            st.session_state.analysis_results = results
+            
+            # Complete progress
+            status_text.text("🎉 Análise concluída com sucesso!")
+            progress_bar.progress(100)
+            
+            # Clear progress after a moment
+            import time
+            time.sleep(1)
+            progress_container.empty()
+            
+            # Trigger rerun to show results
+            st.rerun()
         
     except Exception as e:
+        if 'progress_container' in locals():
+            progress_container.empty()
         st.error(f"❌ Erro durante a análise: {str(e)}")
         print(f"Analysis error: {e}")
 
@@ -613,7 +667,7 @@ def display_analysis_results_with_tabs():
         display_metrics_tab(results)
 
 def display_main_summary(results, analysis_mode):
-    """Display main summary panel right after results title"""
+    """Display main summary panel replacing the main header"""
     mode_names = {
         'unified': '🧠 Análise Unificada Inteligente',
         'technical': '📊 Análise Técnica',
@@ -624,7 +678,13 @@ def display_main_summary(results, analysis_mode):
         'trend': '📉 Análise de Tendência'
     }
     
-    st.markdown(f"### {mode_names.get(analysis_mode, 'Análise Padrão')}")
+    # Replace main header with analysis title
+    st.markdown(f"""
+    <div style="text-align: center; padding: 1rem 0;">
+        <h1 style="margin: 0; color: #2E86AB;">📊 {mode_names.get(analysis_mode, 'Análise Padrão')}</h1>
+        <p style="margin: 0.5rem 0; color: #666; font-style: italic;">Resultados da Análise • {results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Main recommendation card
     if 'final_recommendation' in results:
