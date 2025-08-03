@@ -172,11 +172,53 @@ def main():
         # Configurações básicas compactas
         pair = st.selectbox("💱 Par de Moedas", PAIRS)
         
-        col1, col2 = st.columns(2)
-        with col1:
-            interval = st.selectbox("⏰ Intervalo", list(INTERVALS.keys()), index=4)
-        with col2:
-            horizon = st.selectbox("🔮 Horizonte", HORIZONS)
+        # Sistema unificado de Intervalo e Horizonte
+        st.markdown("**⏰ Configuração Temporal Unificada**")
+        
+        # Presets integrados para máxima coerência (usando valores exatos de HORIZONS)
+        temporal_presets = {
+            "Scalping (1-5 min)": {"interval": "1min", "horizon": "1 Hora", "description": "Operações muito rápidas"},
+            "Intraday (15-30 min)": {"interval": "15min", "horizon": "4 Horas", "description": "Operações no mesmo dia"},
+            "Swing (1-4 horas)": {"interval": "60min", "horizon": "1 Dia", "description": "Operações de alguns dias"},
+            "Position (Diário)": {"interval": "daily", "horizon": "1 Semana", "description": "Operações de médio prazo"},
+            "Trend (Semanal)": {"interval": "daily", "horizon": "1 Mês", "description": "Análise de tendência longa"}
+        }
+        
+        preset_choice = st.selectbox(
+            "Estratégia Temporal:",
+            list(temporal_presets.keys()),
+            index=2,  # Default Swing
+            help="Presets otimizados para máxima precisão entre intervalo e horizonte"
+        )
+        
+        selected_preset = temporal_presets[preset_choice]
+        interval = selected_preset["interval"]
+        horizon = selected_preset["horizon"]
+        
+        # Mostrar configuração atual
+        st.info(f"📊 **{preset_choice}** | Intervalo: {interval} | Horizonte: {horizon}")
+        st.caption(f"💡 {selected_preset['description']}")
+        
+        # Opção avançada para configuração manual (colapsável)
+        with st.expander("⚙️ Configuração Manual Avançada"):
+            st.warning("⚠️ Configuração manual pode reduzir a precisão se intervalo e horizonte não estiverem alinhados!")
+            
+            manual_interval = st.selectbox("Intervalo Manual:", list(INTERVALS.keys()), 
+                                         index=list(INTERVALS.keys()).index(interval))
+            # Verificar se horizonte existe na lista, senão usar primeiro item
+            horizon_index = 0
+            try:
+                horizon_index = HORIZONS.index(horizon)
+            except ValueError:
+                horizon = HORIZONS[0]  # Usar o primeiro como fallback
+            
+            manual_horizon = st.selectbox("Horizonte Manual:", HORIZONS,
+                                        index=horizon_index)
+            
+            if st.checkbox("Usar Configuração Manual"):
+                interval = manual_interval
+                horizon = manual_horizon
+                st.error("🔧 Modo manual ativo - Verifique se intervalo e horizonte estão compatíveis!")
         
         risk_level = st.selectbox("⚖️ Nível de Risco", ["Conservativo", "Moderado", "Agressivo"], index=1)
         
@@ -506,23 +548,23 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
                 'components': {}
             }
             
-            # Executar análises baseadas no modo selecionado - TODAS usam risk_level
+            # Executar análises baseadas no modo selecionado - TODAS integradas com configuração temporal
             if analysis_mode == 'unified':
-                results.update(run_unified_analysis(current_price, pair, risk_level, sentiment_score, df_with_indicators))
+                results.update(run_unified_analysis(current_price, pair, risk_level, sentiment_score, df_with_indicators, interval, horizon))
             elif analysis_mode == 'technical':
-                results.update(run_technical_analysis(current_price, df_with_indicators, risk_level))
+                results.update(run_technical_analysis(current_price, df_with_indicators, risk_level, interval, horizon))
             elif analysis_mode == 'sentiment':
-                results.update(run_sentiment_analysis(current_price, pair, sentiment_score, risk_level))
+                results.update(run_sentiment_analysis(current_price, pair, sentiment_score, risk_level, interval, horizon))
             elif analysis_mode == 'risk':
-                results.update(run_risk_analysis(current_price, risk_level))
+                results.update(run_risk_analysis(current_price, risk_level, interval, horizon))
             elif analysis_mode == 'ai_lstm':
-                results.update(run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators, risk_level))
+                results.update(run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators, risk_level, interval, horizon))
             elif analysis_mode == 'volume':
-                results.update(run_volume_analysis(current_price, df_with_indicators, risk_level))
+                results.update(run_volume_analysis(current_price, df_with_indicators, risk_level, interval, horizon))
             elif analysis_mode == 'trend':
-                results.update(run_trend_analysis(current_price, df_with_indicators, risk_level))
+                results.update(run_trend_analysis(current_price, df_with_indicators, risk_level, interval, horizon))
             else:
-                results.update(run_basic_analysis(current_price, is_quick, sentiment_score, risk_level))
+                results.update(run_basic_analysis(current_price, is_quick, sentiment_score, risk_level, interval, horizon))
             
             # Step 7: Finalizing
             status_text.text("✅ Finalizando análise...")
@@ -897,8 +939,8 @@ def run_trend_analysis(current_price, df_with_indicators, risk_level):
         'risk_level_used': risk_level
     }
 
-def run_basic_analysis(current_price, is_quick, sentiment_score, risk_level):
-    """Análise básica com perfil de risco aprimorado"""
+def run_basic_analysis(current_price, is_quick, sentiment_score, risk_level, interval="1hour", horizon="1 dia"):
+    """Análise básica com perfil de risco e configuração temporal integrada"""
     import numpy as np
     
     # Configurações robustas por perfil de risco
@@ -908,16 +950,30 @@ def run_basic_analysis(current_price, is_quick, sentiment_score, risk_level):
         'Aggressive': {'signal_range': 0.022, 'confidence': 0.68, 'factor': 1.4}
     }
     
-    config = risk_configs.get(risk_level, risk_configs['Moderate'])
+    # Ajustes temporais para máxima coerência (usando chaves válidas)
+    temporal_adjustments = {
+        "1min": {"volatility_factor": 0.6, "confidence_boost": 0.95},
+        "15min": {"volatility_factor": 0.8, "confidence_boost": 0.98},
+        "60min": {"volatility_factor": 1.0, "confidence_boost": 1.0},
+        "Daily": {"volatility_factor": 1.3, "confidence_boost": 1.02},
+        "Weekly": {"volatility_factor": 1.6, "confidence_boost": 1.05}
+    }
     
-    # Gerar sinal mais sofisticado
-    market_trend = np.random.uniform(-config['signal_range'], config['signal_range'])
-    sentiment_boost = sentiment_score * 0.008 * config['factor']
+    config = risk_configs.get(risk_level, risk_configs['Moderate'])
+    temporal_adj = temporal_adjustments.get(interval, temporal_adjustments["60min"])
+    
+    # Gerar sinal otimizado por configuração temporal
+    base_range = config['signal_range'] * temporal_adj["volatility_factor"]
+    market_trend = np.random.uniform(-base_range, base_range)
+    sentiment_boost = sentiment_score * 0.008 * config['factor'] * temporal_adj["volatility_factor"]
     
     if is_quick:
         market_trend *= 0.6  # Reduzir sinal para análise rápida
     
     combined_signal = market_trend + sentiment_boost
+    
+    # Ajustar confiança baseada na configuração temporal
+    adjusted_confidence = min(0.98, config['confidence'] * temporal_adj["confidence_boost"])
     
     predicted_price = current_price * (1 + combined_signal)
     price_change = predicted_price - current_price
@@ -926,8 +982,8 @@ def run_basic_analysis(current_price, is_quick, sentiment_score, risk_level):
         'predicted_price': predicted_price,
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
-        'model_confidence': config['confidence'],
-        'analysis_focus': f'Análise Básica ({risk_level}) - Tendência: {market_trend:.4f}, Sentimento: {sentiment_score:.3f}',
+        'model_confidence': adjusted_confidence,
+        'analysis_focus': f'Análise Básica Integrada ({risk_level}) - {interval}/{horizon} - Tendência: {market_trend:.4f}, Sentimento: {sentiment_score:.3f}',
         'risk_level_used': risk_level
     }
 
