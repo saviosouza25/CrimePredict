@@ -273,11 +273,8 @@ def main():
     if st.session_state.get('analysis_results'):
         display_analysis_results_with_tabs()
     else:
-        # Show main header only when no results
+        # Show main header with instructions when no results
         display_main_header()
-        # Instructions - only show when no results
-        st.markdown("---")
-        st.markdown("👈 Configure seus parâmetros na sidebar e clique em um dos botões de análise para começar.")
 
 def display_main_header():
     """Display the main platform header"""
@@ -291,6 +288,10 @@ def display_main_header():
         </p>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Instruction message right after header
+    st.markdown("---")
+    st.markdown("👈 Configure seus parâmetros na sidebar e clique em um dos botões de análise para começar.")
     
     # Footer
     st.markdown("---")
