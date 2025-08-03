@@ -1,0 +1,97 @@
+<!-- Primeira linha: Métricas principais -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; text-align: center; margin-bottom: 1rem;">
+    <div style="background: rgba(244,67,54,0.1); padding: 0.8rem; border-radius: 6px;">
+        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Stop Loss</strong></p>
+        <p style="margin: 0; font-size: 0.95rem; font-weight: bold; color: green;">1.15773</p>
+        <p style="margin: 0; color: #888; font-size: 0.75rem;">Risco: 0.06%</p>
+    </div>
+    <div style="background: rgba(76,175,80,0.1); padding: 0.8rem; border-radius: 6px;">
+        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Take Profit</strong></p>
+        <p style="margin: 0; font-size: 0.95rem; font-weight: bold; color: green;">1.16119</p>
+        <p style="margin: 0; color: #888; font-size: 0.75rem;">Alvo: 0.24%</p>
+    </div>
+    <div style="background: rgba(33,150,243,0.1); padding: 0.8rem; border-radius: 6px;">
+        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Extensão Máxima</strong></p>
+        <p style="margin: 0; font-size: 0.95rem; font-weight: bold; color: blue;">1.16511</p>
+        <p style="margin: 0; color: #888; font-size: 0.75rem;">Potencial: 0.58%</p>
+    </div>
+    <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px;">
+        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Reversão Iminente</strong></p>
+        <p style="margin: 0; font-size: 0.95rem; font-weight: bold; color: orange;">1.15756</p>
+        <p style="margin: 0; color: #888; font-size: 0.75rem;">Alerta: 0.07%</p>
+    </div>
+</div>
+
+<!-- Segunda linha: Gestão de Banca -->
+<div style="background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+    <h5 style="margin: 0 0 0.8rem 0; color: #333; text-align: center;">💰 Gestão de Banca (Base: $10,000)</h5>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; text-align: center;">
+        <div>
+            <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Tamanho Posição</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">$250</p>
+            <p style="margin: 0; color: #888; font-size: 0.75rem;">2.5% da banca</p>
+        </div>
+        <div>
+            <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Risco Monetário</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: red;">-$2</p>
+            <p style="margin: 0; color: #888; font-size: 0.75rem;">Se stop atingido</p>
+        </div>
+        <div>
+            <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Lucro Potencial</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: green;">+$10</p>
+            <p style="margin: 0; color: #888; font-size: 0.75rem;">Se take atingido</p>
+        </div>
+        <div>
+            <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Potencial Máximo</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: blue;">+$16</p>
+            <p style="margin: 0; color: #888; font-size: 0.75rem;">Se extensão atingida</p>
+        </div>
+    </div>
+</div>
+
+<!-- Terceira linha: Análise comparativa por perfil -->
+<div style="background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 6px;">
+    <h5 style="margin: 0 0 0.8rem 0; color: #333; text-align: center;">📊 Análise Comparativa por Perfil</h5>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.8rem; text-align: center;">
+        <div>
+            <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Razão R:R</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: green;">1:4.2</p>
+            <p style="margin: 0; color: #888; font-size: 0.75rem;">Excelente</p>
+        </div>
+        <div>
+            <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Fator Stop</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">1.2x</p>
+            <p style="margin: 0; color: #888; font-size: 0.75rem;">Distância do stop</p>
+        </div>
+        <div>
+            <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Fator Take</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">2.0x</p>
+            <p style="margin: 0; color: #888; font-size: 0.75rem;">Ambição do alvo</p>
+        </div>
+        <div>
+            <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Extensão</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">2.8x</p>
+            <p style="margin: 0; color: #888; font-size: 0.75rem;">Potencial máximo</p>
+        </div>
+    </div>
+</div>
+
+<!-- Cenários detalhados baseados no perfil -->
+<div style="margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.05); border-radius: 6px;">
+    <h5 style="margin: 0 0 0.8rem 0; color: #333; text-align: center;">🎯 Cenários de Mercado para Perfil Moderado</h5>
+    <div style="text-align: center; line-height: 1.6;">
+        <p style="margin: 0 0 0.5rem 0; color: #555; font-size: 0.9rem;">
+            <strong>Características do Perfil:</strong> 
+            🚀 Maior exposição, stops distantes, busca máximos retornos
+        </p>
+        <p style="margin: 0 0 0.5rem 0; color: #555; font-size: 0.9rem;">
+            <strong>Expectativa de Movimento:</strong> O mercado pode se mover acima até <strong>1.16119</strong>, 
+            com potencial de extensão até <strong>1.16511</strong> em cenário otimista.
+        </p>
+        <p style="margin: 0; color: #555; font-size: 0.9rem;">
+            <strong>Alerta de Reversão:</strong> Se o preço se mover abaixo além de <strong>1.15756</strong>, 
+            considere revisar a posição. Stop definitivo em <strong>1.15773</strong>. 
+            Confiança: <strong>60%</strong>
+        </p>
+    </div>
+</div>

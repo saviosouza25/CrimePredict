@@ -1050,8 +1050,6 @@ def display_main_summary(results, analysis_mode):
             margin: 1rem 0;
         ">
             <h4 style="color: #FF9800; margin: 0 0 1rem 0; font-size: 1.1rem;">⚠️ Análise de Risco Avançada - Perfil: {risk_level_used}</h4>
-            
-            <!-- Primeira linha: Métricas principais -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; text-align: center; margin-bottom: 1rem;">
                 <div style="background: rgba(244,67,54,0.1); padding: 0.8rem; border-radius: 6px;">
                     <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Stop Loss</strong></p>
@@ -1074,8 +1072,6 @@ def display_main_summary(results, analysis_mode):
                     <p style="margin: 0; color: #888; font-size: 0.75rem;">Alerta: {reversal_percentage:.2f}%</p>
                 </div>
             </div>
-            
-            <!-- Segunda linha: Gestão de Banca -->
             <div style="background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
                 <h5 style="margin: 0 0 0.8rem 0; color: #333; text-align: center;">💰 Gestão de Banca (Base: ${banca_base:,.0f})</h5>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; text-align: center;">
@@ -1101,8 +1097,6 @@ def display_main_summary(results, analysis_mode):
                     </div>
                 </div>
             </div>
-            
-            <!-- Terceira linha: Análise comparativa por perfil -->
             <div style="background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 6px;">
                 <h5 style="margin: 0 0 0.8rem 0; color: #333; text-align: center;">📊 Análise Comparativa por Perfil</h5>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.8rem; text-align: center;">
@@ -1128,8 +1122,6 @@ def display_main_summary(results, analysis_mode):
                     </div>
                 </div>
             </div>
-            
-            <!-- Cenários detalhados baseados no perfil -->
             <div style="margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.05); border-radius: 6px;">
                 <h5 style="margin: 0 0 0.8rem 0; color: #333; text-align: center;">🎯 Cenários de Mercado para Perfil {risk_level_used}</h5>
                 <div style="text-align: center; line-height: 1.6;">
