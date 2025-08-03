@@ -180,6 +180,71 @@ def main():
         
         risk_level = st.selectbox("⚖️ Nível de Risco", ["Conservativo", "Moderado", "Agressivo"], index=1)
         
+        # Converter para inglês para compatibilidade
+        risk_mapping = {"Conservativo": "Conservative", "Moderado": "Moderate", "Agressivo": "Aggressive"}
+        risk_level_en = risk_mapping[risk_level]
+        
+        # Configurações de Banca e Lote
+        st.markdown("---")
+        st.markdown("**💰 Gestão de Banca**")
+        
+        # Valor da banca
+        account_balance = st.number_input(
+            "Valor da Banca (USD):",
+            min_value=100.0,
+            max_value=1000000.0,
+            value=10000.0,
+            step=500.0,
+            help="Digite o valor real da sua conta de trading"
+        )
+        
+        # Modo de configuração
+        config_mode = st.radio(
+            "Modo de Configuração:",
+            ["Automático por Perfil", "Manual por Lote"],
+            help="Automático: calcula lote baseado no perfil de risco\nManual: você define o tamanho do lote"
+        )
+        
+        if config_mode == "Manual por Lote":
+            # Configuração manual do lote
+            lot_size = st.number_input(
+                "Tamanho do Lote (USD):",
+                min_value=10.0,
+                max_value=float(account_balance),
+                value=min(1000.0, account_balance * 0.02),
+                step=50.0,
+                help="Digite o valor em USD que deseja investir nesta operação"
+            )
+            
+            # Calcular percentual da banca
+            position_percentage = (lot_size / account_balance) * 100
+            
+            st.info(f"📊 **Posição:** {position_percentage:.1f}% da sua banca")
+            
+            # Alertas de risco
+            if position_percentage > 10:
+                st.error("⚠️ **Alto Risco:** Posição muito grande para a banca!")
+            elif position_percentage > 5:
+                st.warning("⚠️ **Risco Moderado:** Considere reduzir o lote")
+            else:
+                st.success("✅ **Risco Controlado:** Tamanho adequado")
+        else:
+            # Cálculo automático baseado no perfil
+            risk_percentages = {
+                'Conservative': 1.0,
+                'Moderate': 2.5,
+                'Aggressive': 5.0
+            }
+            auto_percentage = risk_percentages[risk_level_en]
+            lot_size = (account_balance * auto_percentage) / 100
+            
+            st.info(f"📊 **Lote Automático:** ${lot_size:,.0f} ({auto_percentage}% da banca)")
+        
+        # Armazenar nas configurações
+        st.session_state.account_balance = account_balance
+        st.session_state.lot_size = lot_size
+        st.session_state.config_mode = config_mode
+        
         # Configurações de IA colapsáveis
         with st.expander("🤖 Configurações Avançadas de IA"):
             lookback_period = st.slider("Histórico de Dados", 30, 120, LOOKBACK_PERIOD)
@@ -1023,12 +1088,22 @@ def display_main_summary(results, analysis_mode):
         
         risk_reward_ratio = reward_percentage / risk_percentage if risk_percentage > 0 else 0
         
-        # Enhanced money management calculations
-        banca_base = 10000  # Base simulada
-        posicao_size = (banca_base * profile['banca_risk']) / 100
-        risco_monetario = posicao_size * (risk_percentage / 100)
-        potencial_lucro = posicao_size * (reward_percentage / 100)
-        potencial_extensao = posicao_size * (extension_percentage / 100)
+        # Enhanced money management with user-configured values
+        banca_base = getattr(st.session_state, 'account_balance', 10000)
+        
+        # Use configured lot size or calculate from profile
+        if hasattr(st.session_state, 'lot_size') and st.session_state.lot_size:
+            posicao_size = st.session_state.lot_size
+        else:
+            posicao_size = (banca_base * profile['banca_risk']) / 100
+            
+        # Calculate pip value for forex (approximately $1 per pip for standard lot)
+        pip_value = posicao_size / 100000  # Approximate pip value
+        
+        # Enhanced calculations based on price movements
+        risco_monetario = abs(stop_loss_level - current_price) * pip_value * 100000
+        potencial_lucro = abs(take_profit_level - current_price) * pip_value * 100000
+        potencial_extensao = abs(max_extension - current_price) * pip_value * 100000
         
         # Ensure minimum meaningful values for display
         if risco_monetario < 1:
@@ -1073,12 +1148,12 @@ def display_main_summary(results, analysis_mode):
                 </div>
             </div>
             <div style="background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
-                <h5 style="margin: 0 0 0.8rem 0; color: #333; text-align: center;">💰 Gestão de Banca (Base: ${banca_base:,.0f})</h5>
+                <h5 style="margin: 0 0 0.8rem 0; color: #333; text-align: center;">💰 Gestão de Banca (Conta: ${banca_base:,.0f} | Lote: ${posicao_size:,.0f})</h5>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; text-align: center;">
                     <div>
                         <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Tamanho Posição</strong></p>
                         <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">${posicao_size:,.0f}</p>
-                        <p style="margin: 0; color: #888; font-size: 0.75rem;">{profile['banca_risk']:.1f}% da banca</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">{(posicao_size/banca_base*100):.1f}% da banca</p>
                     </div>
                     <div>
                         <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Risco Monetário</strong></p>
