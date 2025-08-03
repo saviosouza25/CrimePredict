@@ -990,6 +990,30 @@ def main():
                     padding-top: 4rem !important;
                 }
                 
+                /* Enhanced mobile configuration panel */
+                .stColumns {
+                    gap: 1rem !important;
+                }
+                
+                .stColumns > div {
+                    padding: 1rem !important;
+                    background: rgba(255,255,255,0.05) !important;
+                    border-radius: 12px !important;
+                    margin-bottom: 1rem !important;
+                }
+                
+                /* Mobile responsive columns stack vertically */
+                @media (max-width: 480px) {
+                    .stColumns {
+                        flex-direction: column !important;
+                    }
+                    
+                    .stColumns > div {
+                        width: 100% !important;
+                        margin-bottom: 1rem !important;
+                    }
+                }
+                
                 /* Sidebar styling - show by default, hide when closed */
                 .css-1d391kg,
                 .st-emotion-cache-1d391kg,
@@ -1357,6 +1381,195 @@ def main():
         </div>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Responsive Configuration Panel - Always Visible
+    st.markdown("## ⚙️ Painel de Configurações")
+    
+    # Create responsive columns for configuration
+    col1, col2, col3 = st.columns([1, 1, 1])
+    
+    with col1:
+        st.markdown("### 💱 Trading")
+        
+        # Currency pair selection
+        currency_pair = st.selectbox(
+            "Par de Moedas",
+            ["EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CAD", "USD/CHF", "NZD/USD"],
+            index=0,
+            key="main_currency_pair",
+            help="Selecione o par de moedas para análise"
+        )
+        
+        # Time interval
+        interval = st.selectbox(
+            "Intervalo de Tempo",
+            ["1min", "5min", "15min", "30min", "60min", "Daily"],
+            index=4,
+            key="main_interval",
+            help="Intervalo de tempo para análise"
+        )
+        
+        # Prediction horizon
+        horizon = st.selectbox(
+            "Horizonte de Previsão",
+            ["1 hora", "4 horas", "1 dia", "1 semana"],
+            index=1,
+            key="main_horizon",
+            help="Período para previsões futuras"
+        )
+    
+    with col2:
+        st.markdown("### 🎯 Análise")
+        
+        # Risk level
+        risk_level = st.selectbox(
+            "Nível de Risco",
+            ["Conservativo", "Moderado", "Agressivo"],
+            index=1,
+            key="main_risk_level",
+            help="Define a agressividade das recomendações"
+        )
+        
+        # Analysis type
+        analysis_type = st.selectbox(
+            "Tipo de Análise",
+            ["Completa", "Técnica", "Sentimento", "IA Apenas"],
+            index=0,
+            key="main_analysis_type",
+            help="Selecione o tipo de análise desejada"
+        )
+        
+        # Theme selector
+        theme = st.selectbox(
+            "Tema",
+            ["Light (Claro)", "Dark (Escuro)"],
+            index=0 if st.session_state.get('theme', 'light') == 'light' else 1,
+            key="main_theme_selector",
+            help="Escolha entre tema claro ou escuro"
+        )
+        
+        # Apply theme change
+        current_theme = 'dark' if theme == "Dark (Escuro)" else 'light'
+        if st.session_state.get('theme', 'light') != current_theme:
+            st.session_state['theme'] = current_theme
+            apply_theme_css()
+            st.rerun()
+    
+    with col3:
+        st.markdown("### 🧠 IA & Cache")
+        
+        # AI Configuration
+        lookback_period = st.slider(
+            "Histórico de Dados",
+            min_value=30,
+            max_value=120,
+            value=LOOKBACK_PERIOD,
+            key="main_lookback_slider",
+            help="Períodos históricos para treinamento da IA"
+        )
+        
+        epochs = st.slider(
+            "Intensidade IA",
+            min_value=5,
+            max_value=20,
+            value=EPOCHS,
+            key="main_epochs_slider",
+            help="Épocas de treinamento da IA"
+        )
+        
+        mc_samples = st.slider(
+            "Amostras Previsão",
+            min_value=10,
+            max_value=50,
+            value=MC_SAMPLES,
+            key="main_mc_samples_slider",
+            help="Amostras para estimativa de incerteza"
+        )
+        
+        # Cache management
+        cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
+        if cache_count > 0:
+            st.info(f"💾 {cache_count} análises em cache")
+            
+        if st.button("🗑️ Limpar Cache", key="main_clear_cache", help="Limpar dados em cache"):
+            CacheManager.clear_cache()
+            st.success("Cache limpo!")
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # Main action buttons - Enhanced and responsive
+    st.markdown("## 🚀 Executar Análises")
+    
+    # Create responsive button layout
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("📊 Análise Técnica Completa", type="primary", use_container_width=True, key="btn_technical"):
+            # Use values from main panel
+            currency_pair = st.session_state.get('main_currency_pair', 'EUR/USD')
+            interval = st.session_state.get('main_interval', '60min')
+            st.session_state['show_analysis'] = True
+            st.session_state['analysis_type'] = 'technical'
+            st.session_state['selected_pair'] = currency_pair
+            st.session_state['selected_interval'] = interval
+    
+    with col2:
+        if st.button("🤖 Previsão com IA", type="primary", use_container_width=True, key="btn_ai"):
+            # Use values from main panel
+            currency_pair = st.session_state.get('main_currency_pair', 'EUR/USD')
+            interval = st.session_state.get('main_interval', '60min')
+            lookback = st.session_state.get('main_lookback_slider', LOOKBACK_PERIOD)
+            epochs_val = st.session_state.get('main_epochs_slider', EPOCHS)
+            st.session_state['show_analysis'] = True
+            st.session_state['analysis_type'] = 'prediction'
+            st.session_state['selected_pair'] = currency_pair
+            st.session_state['selected_interval'] = interval
+            st.session_state['lookback_period'] = lookback
+            st.session_state['epochs'] = epochs_val
+    
+    # Full dashboard button - spans both columns
+    if st.button("📈 Dashboard Completo com Todas as Análises", type="primary", use_container_width=True, key="btn_complete"):
+        # Use all values from main panel
+        currency_pair = st.session_state.get('main_currency_pair', 'EUR/USD')
+        interval = st.session_state.get('main_interval', '60min')
+        risk_level = st.session_state.get('main_risk_level', 'Moderado')
+        analysis_type = st.session_state.get('main_analysis_type', 'Completa')
+        lookback = st.session_state.get('main_lookback_slider', LOOKBACK_PERIOD)
+        epochs_val = st.session_state.get('main_epochs_slider', EPOCHS)
+        mc_val = st.session_state.get('main_mc_samples_slider', MC_SAMPLES)
+        
+        st.session_state['show_analysis'] = True
+        st.session_state['analysis_type'] = 'complete'
+        st.session_state['selected_pair'] = currency_pair
+        st.session_state['selected_interval'] = interval
+        st.session_state['risk_level'] = risk_level
+        st.session_state['lookback_period'] = lookback
+        st.session_state['epochs'] = epochs_val
+        st.session_state['mc_samples'] = mc_val
+    
+    # Quick actions row
+    col_actions1, col_actions2, col_actions3 = st.columns(3)
+    
+    with col_actions1:
+        if st.button("📰 Análise de Sentimento", use_container_width=True, key="btn_sentiment"):
+            currency_pair = st.session_state.get('main_currency_pair', 'EUR/USD')
+            st.session_state['show_analysis'] = True
+            st.session_state['analysis_type'] = 'sentiment'
+            st.session_state['selected_pair'] = currency_pair
+    
+    with col_actions2:
+        if st.button("⚡ Análise Rápida", use_container_width=True, key="btn_quick"):
+            currency_pair = st.session_state.get('main_currency_pair', 'EUR/USD')
+            interval = st.session_state.get('main_interval', '60min')
+            st.session_state['show_analysis'] = True
+            st.session_state['analysis_type'] = 'quick'
+            st.session_state['selected_pair'] = currency_pair
+            st.session_state['selected_interval'] = interval
+    
+    with col_actions3:
+        if st.button("📚 Tutorial", use_container_width=True, key="btn_tutorial"):
+            st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
     
     # Modern mobile-first sidebar configuration
     with st.sidebar:
