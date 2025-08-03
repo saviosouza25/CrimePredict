@@ -583,9 +583,7 @@ def display_analysis_results_with_tabs():
     results = st.session_state.analysis_results
     analysis_mode = results.get('analysis_mode', 'unified')
     
-    st.markdown("## 📊 Resultados da Análise")
-    
-    # Display main summary immediately after title
+    # Display main summary without additional title
     display_main_summary(results, analysis_mode)
     
     st.markdown("---")
