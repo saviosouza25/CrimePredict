@@ -110,6 +110,85 @@ def apply_theme_css():
         </style>
         """, unsafe_allow_html=True)
 
+def check_authentication():
+    """Check if user is authenticated"""
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
+    
+    if not st.session_state.authenticated:
+        st.markdown("""
+        <div style="
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 3rem;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            margin: 2rem auto;
+            max-width: 500px;
+        ">
+            <h1 style="color: white; margin-bottom: 1rem;">🔐 Acesso Restrito</h1>
+            <h2 style="color: white; margin-bottom: 2rem;">Plataforma Avançada de Análise Forex</h2>
+            <p style="color: rgba(255,255,255,0.9); margin-bottom: 2rem;">
+                Sistema profissional de trading com IA e análise em tempo real
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Formulário de login centralizado
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown("### 🔑 Digite a Senha de Acesso")
+            password = st.text_input("Senha:", type="password", placeholder="Digite sua senha...")
+            
+            col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+            with col_btn2:
+                if st.button("🚀 Entrar na Plataforma", type="primary", use_container_width=True):
+                    if password == "artec2025":
+                        st.session_state.authenticated = True
+                        st.success("✅ Acesso autorizado! Redirecionando...")
+                        st.rerun()
+                    else:
+                        st.error("❌ Senha incorreta. Tente novamente.")
+        
+        # Informações da plataforma
+        st.markdown("---")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("""
+            ### 🧠 Inteligência Artificial
+            - Rede neural LSTM avançada
+            - Análise de sentimento em tempo real
+            - Predições com alta precisão
+            """)
+        
+        with col2:
+            st.markdown("""
+            ### 📊 Análise Técnica
+            - 15+ indicadores técnicos
+            - Sinais automáticos de trading
+            - Múltiplos timeframes
+            """)
+        
+        with col3:
+            st.markdown("""
+            ### 💰 Gestão de Risco
+            - Cálculos MT4/MT5 reais
+            - Stop loss inteligente
+            - Múltiplos perfis de risco
+            """)
+        
+        st.markdown("""
+        <div style="text-align: center; color: #666; padding: 2rem; margin-top: 2rem;">
+            <p>🔒 Sistema seguro desenvolvido pela Artecinvesting</p>
+            <p>Para acesso, entre em contato com a administração</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        return False
+    
+    return True
+
 def main():
     """Main application function"""
     
@@ -123,6 +202,10 @@ def main():
     
     # Apply theme CSS
     apply_theme_css()
+    
+    # Check authentication first
+    if not check_authentication():
+        return
     
     # Custom CSS for styling
     st.markdown("""
@@ -172,6 +255,13 @@ def main():
             for key in ['analysis_results', 'show_analysis', 'analysis_mode']:
                 if key in st.session_state:
                     del st.session_state[key]
+            st.rerun()
+        
+        # Botão de logout
+        if st.button("🚪 Logout", type="secondary", use_container_width=True):
+            # Limpar sessão e autenticação
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
             st.rerun()
         
         st.markdown("---")
