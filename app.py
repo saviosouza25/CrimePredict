@@ -166,25 +166,11 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Quick action buttons in main content area
-    st.markdown("## 🚀 Análises Rápidas")
+    # Main content area will show results only
+    st.markdown("## 📊 Resultados da Análise")
     
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("📊 Análise Técnica", type="primary", use_container_width=True):
-            st.session_state['show_analysis'] = True
-            st.session_state['analysis_type'] = 'technical'
-    
-    with col2:
-        if st.button("🤖 Previsão IA", type="primary", use_container_width=True):
-            st.session_state['show_analysis'] = True
-            st.session_state['analysis_type'] = 'prediction'
-    
-    with col3:
-        if st.button("📈 Dashboard Completo", type="primary", use_container_width=True):
-            st.session_state['show_analysis'] = True
-            st.session_state['analysis_type'] = 'complete'
+    if not st.session_state.get('analysis_results'):
+        st.info("👈 Configure seus parâmetros na sidebar e clique em um dos botões de análise para começar.")
     
     st.markdown("---")
     
@@ -287,6 +273,34 @@ def main():
         
         st.markdown("---")
         
+        # Analysis Buttons Section - MOVED HERE FROM MAIN CONTENT
+        st.markdown("### 🎯 Executar Análises")
+        
+        # Main analysis buttons
+        analyze_button = st.button(
+            "📊 Análise Técnica Completa",
+            type="primary",
+            use_container_width=True,
+            help="Executa análise técnica completa com indicadores e recomendações"
+        )
+        
+        quick_analysis = st.button(
+            "⚡ Análise Rápida",
+            use_container_width=True,
+            help="Análise rápida com dados em cache (se disponível)"
+        )
+        
+        # Additional analysis options
+        if st.button("🤖 Previsão IA Avançada", use_container_width=True):
+            st.session_state['analysis_mode'] = 'advanced_ai'
+            analyze_button = True
+        
+        if st.button("📈 Dashboard Completo", use_container_width=True):
+            st.session_state['analysis_mode'] = 'dashboard'
+            analyze_button = True
+        
+        st.markdown("---")
+        
         # Tutorial button
         if st.button("📚 Tutorial Completo", help="Abrir guia detalhado de todas as funções"):
             st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
@@ -297,30 +311,14 @@ def main():
                 del st.session_state[key]
             st.rerun()
 
-    # Quick Analysis Button
-    col1, col2 = st.columns(2)
+    # Analysis buttons are now in sidebar - this section removed
     
-    with col1:
-        analyze_button = st.button(
-            "📊 Análise Técnica Completa",
-            type="primary",
-            use_container_width=True,
-            help="Executa análise técnica completa com indicadores e recomendações"
-        )
-    
-    with col2:
-        quick_analysis = st.button(
-            "⚡ Análise Rápida",
-            use_container_width=True,
-            help="Análise rápida com dados em cache (se disponível)"
-        )
-    
-    # Main content area
-    if analyze_button or quick_analysis:
-        run_analysis(
-            pair, interval, horizon, risk_level, lookback_period, 
-            mc_samples, epochs, quick_analysis
-        )
+        # Process analysis requests from sidebar buttons
+        if analyze_button or quick_analysis:
+            run_analysis(
+                pair, interval, horizon, risk_level, lookback_period, 
+                mc_samples, epochs, quick_analysis
+            )
     
     # Display results if available
     if st.session_state.get('analysis_results'):
