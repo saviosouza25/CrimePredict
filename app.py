@@ -757,15 +757,65 @@ st.markdown("""
         animation: spin 0.8s linear infinite;
     }
     
-    /* Additional cleanup - hide any remaining Streamlit status elements */
+    /* COMPREHENSIVE REMOVAL OF ALL STREAMLIT LOADING ELEMENTS */
+    /* Remove all spinners, progress bars, status messages, and loading indicators */
     .stApp [data-testid="stHeader"],
     .stApp .stSpinner,
+    .stSpinner,
+    [data-testid="stSpinner"],
     .css-1outpf7,
     .css-164nlkn,
     .css-12oz5g7,
     .css-1n76uvr,
-    [data-baseweb="notification"] {
+    [data-baseweb="notification"],
+    .streamlit-spinner,
+    .stProgress,
+    [data-testid="stProgress"],
+    .stAlert,
+    [data-testid="stAlert"],
+    .stStatus,
+    [data-testid="stStatus"],
+    .stToast,
+    [data-testid="stToast"],
+    .element-container:has(.stSpinner),
+    .element-container:has([data-testid="stSpinner"]),
+    div:has(> .stSpinner),
+    div:has(> [data-testid="stSpinner"]),
+    .st-emotion-cache-*:has(.stSpinner),
+    .block-container .stSpinner,
+    .main .stSpinner,
+    [class*="spinner"],
+    [class*="loading"],
+    [class*="status"],
+    [class*="progress"],
+    .css-*:has(.stSpinner),
+    .st-*:has(.stSpinner),
+    .st-emotion-cache-*,
+    [data-testid="stLoading"],
+    [data-testid="stProgressBar"],
+    .stProgress > *,
+    .stStatus > *,
+    .stSpinner > *,
+    div[data-testid="element-container"]:has(.stSpinner),
+    div[data-testid="element-container"]:has(.stProgress),
+    div[data-testid="element-container"]:has(.stStatus),
+    .css-1wrcr25,
+    .css-12oz5g7,
+    .css-5uatcg,
+    .st-emotion-cache-1wrcr25,
+    .st-emotion-cache-12oz5g7,
+    .st-emotion-cache-5uatcg {
         display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        position: absolute !important;
+        left: -9999px !important;
+        z-index: -1 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -838,7 +888,7 @@ def main():
                 color: #ffffff !important;
             }
             
-            /* Ensure buttons remain readable and mobile-friendly */
+            /* Ensure buttons remain readable and mobile-friendly + remove spinners */
             .stButton > button {
                 background: linear-gradient(90deg, #667eea 0%, #764ba2 100%) !important;
                 color: white !important;
@@ -851,6 +901,32 @@ def main():
                 font-size: 16px !important; /* Prevent zoom on iOS */
                 touch-action: manipulation !important; /* Improve touch response */
                 transition: all 0.2s ease !important;
+            }
+            
+            /* Aggressive spinner removal for Dark theme */
+            .stSpinner,
+            [data-testid="stSpinner"],
+            .streamlit-spinner,
+            .stProgress,
+            [data-testid="stProgress"],
+            .stAlert,
+            [data-testid="stAlert"],
+            .stStatus,
+            [data-testid="stStatus"],
+            .stToast,
+            [data-testid="stToast"],
+            [class*="spinner"],
+            [class*="loading"],
+            [class*="status"],
+            .element-container:has(.stSpinner),
+            div:has(> .stSpinner) {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                width: 0 !important;
+                position: absolute !important;
+                left: -9999px !important;
             }
             
             .stButton > button:hover {
@@ -872,7 +948,7 @@ def main():
                 font-size: 16px !important;
             }
             
-            /* Mobile-specific responsive improvements */
+            /* Mobile-specific responsive improvements + spinner removal */
             @media (max-width: 768px) {
                 /* Better button sizing for mobile */
                 .stButton > button {
@@ -957,6 +1033,21 @@ def main():
                 div[data-testid="metric-container"] {
                     padding: 1rem !important;
                     margin: 0.5rem 0 !important;
+                }
+                
+                /* Remove ALL spinners on mobile too */
+                .stSpinner,
+                [data-testid="stSpinner"],
+                .streamlit-spinner,
+                .stProgress,
+                [data-testid="stProgress"],
+                .stStatus,
+                [data-testid="stStatus"],
+                [class*="spinner"],
+                [class*="loading"] {
+                    display: none !important;
+                    visibility: hidden !important;
+                    opacity: 0 !important;
                 }
             }
             
@@ -1385,24 +1476,12 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
     """Run the complete forex analysis"""
     
     # Custom loading display
-    loading_container = st.container()
-    with loading_container:
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            spinner_placeholder = st.empty()
-            spinner_placeholder.markdown("""
-            <div class="custom-spinner">
-                <div class="spinner"></div>
-            </div>
-            """, unsafe_allow_html=True)
+    # Removed loading spinner - run silently without visual feedback
     
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+    # Removed all progress indicators - analysis runs silently
     
     try:
-        # Step 1: Fetch data
-        status_text.text("📥 Buscando dados forex...")
-        progress_bar.progress(10)
+        # Step 1: Fetch data silently
         
         df = services['data_service'].fetch_forex_data(
             pair, 
@@ -1414,25 +1493,16 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
             st.error("❌ Dados insuficientes ou inválidos recebidos")
             return
         
-        progress_bar.progress(25)
-        
-        # Step 2: Fetch sentiment
-        status_text.text("📰 Analisando sentimento do mercado...")
+        # Step 2: Fetch sentiment silently
         sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
         sentiment_signal = services['sentiment_service'].get_sentiment_signal(sentiment_score)
         sentiment_strength = services['sentiment_service'].get_sentiment_strength(sentiment_score)
         
-        progress_bar.progress(40)
-        
-        # Step 3: Add technical indicators
-        status_text.text("📊 Calculando indicadores técnicos...")
+        # Step 3: Add technical indicators silently
         df_with_indicators = TechnicalIndicators.add_all_indicators(df)
         trading_signals = TechnicalIndicators.get_trading_signals(df_with_indicators)
         
-        progress_bar.progress(60)
-        
-        # Step 4: Train model and predict
-        status_text.text("🧠 Training AI model...")
+        # Step 4: Train model and predict silently
         predictor = ForexPredictor(
             lookback=lookback_period,
             hidden_size=HIDDEN_SIZE,
@@ -1451,10 +1521,7 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
             learning_rate=LEARNING_RATE
         )
         
-        progress_bar.progress(80)
-        
-        # Step 5: Make predictions
-        status_text.text("🔮 Generating predictions...")
+        # Step 5: Make predictions silently
         steps = HORIZON_STEPS[horizon]
         predictions, uncertainties = predictor.predict_future(
             train_data, 
@@ -1466,10 +1533,7 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
         # Calculate confidence
         model_confidence = predictor.get_model_confidence(train_data, sentiment_score)
         
-        progress_bar.progress(95)
-        
-        # Step 6: Store results
-        status_text.text("💾 Finalizing analysis...")
+        # Step 6: Store results silently
         
         current_price = float(df_with_indicators['close'].iloc[-1])
         predicted_price = predictions[-1] if predictions and len(predictions) > 0 else current_price
@@ -1549,35 +1613,12 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
             }
         }
         
-        progress_bar.progress(100)
-        status_text.text("✅ Análise completa!")
-        
-        # Remove the loading spinner
-        spinner_placeholder.empty()
-        
-        st.markdown("""
-        <div class="success-alert">
-            <strong>Análise concluída com sucesso!</strong> 
-            Verifique os resultados abaixo.
-        </div>
-        """, unsafe_allow_html=True)
-        
-        time.sleep(1)
-        progress_bar.empty()
-        status_text.empty()
+        # Analysis completed silently
         
     except Exception as e:
         # Remove spinner on error too
-        spinner_placeholder.empty()
-        
-        st.markdown(f"""
-        <div class="error-alert">
-            <strong>Falha na análise:</strong> {str(e)}
-        </div>
-        """, unsafe_allow_html=True)
-        
-        progress_bar.empty()
-        status_text.empty()
+        # Error handling silently - show minimal error
+        st.error(f"Erro na análise: {str(e)}")
 
 def get_trading_recommendation(results):
     """Calculate overall trading recommendation based on all signals"""
