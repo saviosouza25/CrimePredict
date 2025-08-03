@@ -946,37 +946,83 @@ def display_main_summary(results, analysis_mode):
         # Get risk level from results if available
         risk_level_used = results.get('risk_level_used', 'Moderate')
         
-        # Risk adjustments based on investor profile
-        risk_adjustments = {
-            'Conservative': {'stop_factor': 0.3, 'profit_factor': 0.2, 'volatility_penalty': 1.5},
-            'Moderate': {'stop_factor': 0.5, 'profit_factor': 0.3, 'volatility_penalty': 1.0},
-            'Aggressive': {'stop_factor': 0.7, 'profit_factor': 0.4, 'volatility_penalty': 0.7}
+        # Enhanced risk management system based on investor profile
+        risk_profiles = {
+            'Conservative': {
+                'stop_factor': 0.6,        # Stop loss mais próximo (60% da variação)
+                'profit_factor': 0.8,      # Take profit menor (80% da variação)
+                'banca_risk': 1.0,         # Máximo 1% da banca por operação
+                'extension_factor': 1.2,   # Potencial de extensão limitado
+                'reversal_sensitivity': 0.3, # Alta sensibilidade a reversões
+                'volatility_threshold': 0.015
+            },
+            'Moderate': {
+                'stop_factor': 1.0,        # Stop loss moderado (100% da variação)
+                'profit_factor': 1.5,      # Take profit moderado (150% da variação)
+                'banca_risk': 2.0,         # Máximo 2% da banca por operação
+                'extension_factor': 1.8,   # Potencial de extensão moderado
+                'reversal_sensitivity': 0.5, # Sensibilidade moderada a reversões
+                'volatility_threshold': 0.025
+            },
+            'Aggressive': {
+                'stop_factor': 1.8,        # Stop loss mais distante (180% da variação)
+                'profit_factor': 2.5,      # Take profit mais ambicioso (250% da variação)
+                'banca_risk': 5.0,         # Máximo 5% da banca por operação
+                'extension_factor': 3.0,   # Alto potencial de extensão
+                'reversal_sensitivity': 0.8, # Menor sensibilidade a reversões
+                'volatility_threshold': 0.040
+            }
         }
         
-        risk_config = risk_adjustments.get(risk_level_used, risk_adjustments['Moderate'])
+        profile = risk_profiles.get(risk_level_used, risk_profiles['Moderate'])
         
-        # Calculate potential reversal levels and risk
+        # Calculate enhanced risk metrics
         price_change = abs(predicted_price - current_price)
-        volatility_factor = (1 - confidence) * risk_config['volatility_penalty']
+        volatility_factor = max(0.1, 1 - confidence)  # Fator de volatilidade
         
-        # Estimate support/resistance levels based on analysis and risk profile
+        # Base calculations with profile-specific factors
         if predicted_price > current_price:  # COMPRA
-            stop_loss_level = current_price - (price_change * risk_config['stop_factor'] * (1 + volatility_factor))
-            take_profit_level = predicted_price + (price_change * risk_config['profit_factor'])
+            stop_loss_level = current_price - (price_change * profile['stop_factor'] * volatility_factor)
+            take_profit_level = predicted_price + (price_change * profile['profit_factor'])
+            
+            # Extensão potencial baseada no perfil
+            max_extension = take_profit_level + (price_change * profile['extension_factor'])
+            
+            # Reversão iminente baseada na sensibilidade
+            reversal_level = current_price - (price_change * profile['reversal_sensitivity'])
+            
             risk_direction = "abaixo"
             reward_direction = "acima"
         else:  # VENDA
-            stop_loss_level = current_price + (price_change * risk_config['stop_factor'] * (1 + volatility_factor))
-            take_profit_level = predicted_price - (price_change * risk_config['profit_factor'])
+            stop_loss_level = current_price + (price_change * profile['stop_factor'] * volatility_factor)
+            take_profit_level = predicted_price - (price_change * profile['profit_factor'])
+            
+            # Extensão potencial baseada no perfil
+            max_extension = take_profit_level - (price_change * profile['extension_factor'])
+            
+            # Reversão iminente baseada na sensibilidade
+            reversal_level = current_price + (price_change * profile['reversal_sensitivity'])
+            
             risk_direction = "acima"
             reward_direction = "abaixo"
         
+        # Enhanced risk calculations
         risk_percentage = abs((stop_loss_level - current_price) / current_price) * 100
         reward_percentage = abs((take_profit_level - current_price) / current_price) * 100
+        extension_percentage = abs((max_extension - current_price) / current_price) * 100
+        reversal_percentage = abs((reversal_level - current_price) / current_price) * 100
+        
         risk_reward_ratio = reward_percentage / risk_percentage if risk_percentage > 0 else 0
         
-        # Risk analysis panel
-        risk_color = "red" if risk_percentage > 2 else "orange" if risk_percentage > 1 else "green"
+        # Gestão de banca (simulação com base de $10,000)
+        banca_base = 10000  # Base simulada
+        posicao_size = (banca_base * profile['banca_risk']) / 100
+        risco_monetario = posicao_size * (risk_percentage / 100)
+        potencial_lucro = posicao_size * (reward_percentage / 100)
+        potencial_extensao = posicao_size * (extension_percentage / 100)
+        
+        # Color coding based on profile
+        risk_color = "red" if risk_percentage > profile['volatility_threshold'] * 100 else "orange" if risk_percentage > profile['volatility_threshold'] * 50 else "green"
         
         st.markdown(f"""
         <div style="
@@ -986,36 +1032,106 @@ def display_main_summary(results, analysis_mode):
             padding: 1.5rem;
             margin: 1rem 0;
         ">
-            <h4 style="color: #FF9800; margin: 0 0 1rem 0; font-size: 1.1rem;">⚠️ Análise de Risco e Reversão - Perfil: {risk_level_used}</h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; text-align: center;">
-                <div>
-                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Nível de Stop Loss</strong></p>
-                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: {risk_color};">{stop_loss_level:.5f}</p>
-                    <p style="margin: 0; color: #888; font-size: 0.8rem;">Risco: {risk_percentage:.2f}%</p>
+            <h4 style="color: #FF9800; margin: 0 0 1rem 0; font-size: 1.1rem;">⚠️ Análise de Risco Avançada - Perfil: {risk_level_used}</h4>
+            
+            <!-- Primeira linha: Métricas principais -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; text-align: center; margin-bottom: 1rem;">
+                <div style="background: rgba(244,67,54,0.1); padding: 0.8rem; border-radius: 6px;">
+                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Stop Loss</strong></p>
+                    <p style="margin: 0; font-size: 0.95rem; font-weight: bold; color: {risk_color};">{stop_loss_level:.5f}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Risco: {risk_percentage:.2f}%</p>
                 </div>
-                <div>
-                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Alvo de Lucro</strong></p>
-                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: green;">{take_profit_level:.5f}</p>
-                    <p style="margin: 0; color: #888; font-size: 0.8rem;">Potencial: {reward_percentage:.2f}%</p>
+                <div style="background: rgba(76,175,80,0.1); padding: 0.8rem; border-radius: 6px;">
+                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Take Profit</strong></p>
+                    <p style="margin: 0; font-size: 0.95rem; font-weight: bold; color: green;">{take_profit_level:.5f}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Alvo: {reward_percentage:.2f}%</p>
                 </div>
-                <div>
-                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Razão Risco/Retorno</strong></p>
-                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: {'green' if risk_reward_ratio > 2 else 'orange' if risk_reward_ratio > 1 else 'red'};">1:{risk_reward_ratio:.1f}</p>
-                    <p style="margin: 0; color: #888; font-size: 0.8rem;">{'Excelente' if risk_reward_ratio > 2 else 'Aceitável' if risk_reward_ratio > 1 else 'Alto Risco'}</p>
+                <div style="background: rgba(33,150,243,0.1); padding: 0.8rem; border-radius: 6px;">
+                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Extensão Máxima</strong></p>
+                    <p style="margin: 0; font-size: 0.95rem; font-weight: bold; color: blue;">{max_extension:.5f}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Potencial: {extension_percentage:.2f}%</p>
+                </div>
+                <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px;">
+                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Reversão Iminente</strong></p>
+                    <p style="margin: 0; font-size: 0.95rem; font-weight: bold; color: orange;">{reversal_level:.5f}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Alerta: {reversal_percentage:.2f}%</p>
                 </div>
             </div>
+            
+            <!-- Segunda linha: Gestão de Banca -->
+            <div style="background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+                <h5 style="margin: 0 0 0.8rem 0; color: #333; text-align: center;">💰 Gestão de Banca (Base: ${banca_base:,.0f})</h5>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; text-align: center;">
+                    <div>
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Tamanho Posição</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">${posicao_size:,.0f}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">{profile['banca_risk']:.1f}% da banca</p>
+                    </div>
+                    <div>
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Risco Monetário</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: red;">-${risco_monetario:,.0f}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Se stop atingido</p>
+                    </div>
+                    <div>
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Lucro Potencial</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: green;">+${potencial_lucro:,.0f}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Se take atingido</p>
+                    </div>
+                    <div>
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Potencial Máximo</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: blue;">+${potencial_extensao:,.0f}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Se extensão atingida</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Terceira linha: Análise comparativa por perfil -->
+            <div style="background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 6px;">
+                <h5 style="margin: 0 0 0.8rem 0; color: #333; text-align: center;">📊 Análise Comparativa por Perfil</h5>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.8rem; text-align: center;">
+                    <div>
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Razão R:R</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: {'green' if risk_reward_ratio > 2 else 'orange' if risk_reward_ratio > 1 else 'red'};">1:{risk_reward_ratio:.1f}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">{'Excelente' if risk_reward_ratio > 2 else 'Aceitável' if risk_reward_ratio > 1 else 'Alto Risco'}</p>
+                    </div>
+                    <div>
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Fator Stop</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">{profile['stop_factor']:.1f}x</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Distância do stop</p>
+                    </div>
+                    <div>
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Fator Take</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">{profile['profit_factor']:.1f}x</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Ambição do alvo</p>
+                    </div>
+                    <div>
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Extensão</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #333;">{profile['extension_factor']:.1f}x</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Potencial máximo</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cenários detalhados baseados no perfil -->
             <div style="margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.05); border-radius: 6px;">
-                <p style="margin: 0 0 0.5rem 0; color: #555; font-size: 0.9rem; text-align: center;">
-                    <strong>Perfil {risk_level_used}:</strong> 
-                    {'Stop loss mais próximo (proteção)' if risk_level_used == 'Conservative' else 
-                     'Equilíbrio entre risco e retorno' if risk_level_used == 'Moderate' else 
-                     'Stop loss mais distante (maior exposição)'}
-                </p>
-                <p style="margin: 0; color: #555; font-size: 0.9rem; text-align: center;">
-                    <strong>Cenário de Reversão:</strong> Se o mercado reverter {risk_direction} de <strong>{current_price:.5f}</strong>, 
-                    considere sair próximo ao nível <strong>{stop_loss_level:.5f}</strong>. 
-                    Confiança: <strong>{confidence:.0%}</strong>
-                </p>
+                <h5 style="margin: 0 0 0.8rem 0; color: #333; text-align: center;">🎯 Cenários de Mercado para Perfil {risk_level_used}</h5>
+                <div style="text-align: center; line-height: 1.6;">
+                    <p style="margin: 0 0 0.5rem 0; color: #555; font-size: 0.9rem;">
+                        <strong>Características do Perfil:</strong> 
+                        {'🛡️ Proteção máxima, stops próximos, menor exposição' if risk_level_used == 'Conservative' else 
+                         '⚖️ Equilíbrio entre segurança e potencial de retorno' if risk_level_used == 'Moderate' else 
+                         '🚀 Maior exposição, stops distantes, busca máximos retornos'}
+                    </p>
+                    <p style="margin: 0 0 0.5rem 0; color: #555; font-size: 0.9rem;">
+                        <strong>Expectativa de Movimento:</strong> O mercado pode se mover {reward_direction} até <strong>{take_profit_level:.5f}</strong>, 
+                        com potencial de extensão até <strong>{max_extension:.5f}</strong> em cenário otimista.
+                    </p>
+                    <p style="margin: 0; color: #555; font-size: 0.9rem;">
+                        <strong>Alerta de Reversão:</strong> Se o preço se mover {risk_direction} além de <strong>{reversal_level:.5f}</strong>, 
+                        considere revisar a posição. Stop definitivo em <strong>{stop_loss_level:.5f}</strong>. 
+                        Confiança: <strong>{confidence:.0%}</strong>
+                    </p>
+                </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
