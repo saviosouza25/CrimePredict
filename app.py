@@ -275,12 +275,15 @@ def main():
             mc_samples, epochs, quick_analysis
         )
     
-    # Display results if available, otherwise show main header and instructions
+    # Always show main header
+    display_main_header()
+    
+    # Display results if available
     if st.session_state.get('analysis_results'):
         display_analysis_results_with_tabs()
     else:
-        # Show main header with instructions when no results
-        display_main_header()
+        # Show footer when no analysis is active
+        display_footer()
 
 def display_main_header():
     """Display the main platform header"""
@@ -294,7 +297,9 @@ def display_main_header():
         </p>
     </div>
     """, unsafe_allow_html=True)
-    
+
+def display_footer():
+    """Display the footer section"""
     # Add spacing before footer
     st.markdown("<br><br><br>", unsafe_allow_html=True)
     
