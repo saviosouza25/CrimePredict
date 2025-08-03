@@ -293,13 +293,17 @@ def display_main_header():
     st.markdown("---")
     st.markdown("👈 Configure seus parâmetros na sidebar e clique em um dos botões de análise para começar.")
     
-    # Footer
+    # Add spacing before footer
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    
+    # Footer with more spacing
     st.markdown("---")
+    st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""
-    <div style="text-align: center; color: #666; padding: 1rem;">
-        <p>⚠️ <strong>Aviso Legal:</strong> Esta plataforma é apenas para fins educacionais. 
+    <div style="text-align: center; color: #666; padding: 2rem; margin-top: 3rem;">
+        <p style="margin-bottom: 1rem;">⚠️ <strong>Aviso Legal:</strong> Esta plataforma é apenas para fins educacionais. 
         Trading forex envolve riscos substanciais e pode não ser adequado para todos os investidores.</p>
-        <p>Desenvolvido pela Artecinvesting • Última atualização: {}</p>
+        <p style="margin: 0;">Desenvolvido pela Artecinvesting • Última atualização: {}</p>
     </div>
     """.format(datetime.now().strftime("%d-%m-%Y %H:%M")), unsafe_allow_html=True)
 
