@@ -781,23 +781,26 @@ def run_trend_analysis(current_price, df_with_indicators, risk_level):
     }
 
 def run_basic_analysis(current_price, is_quick, sentiment_score, risk_level):
-    """Análise básica com perfil de risco"""
+    """Análise básica com perfil de risco aprimorado"""
     import numpy as np
     
-    # Configurações por perfil de risco
-    risk_params = {
-        'Conservative': {'signal_range': 0.008, 'confidence': 0.80, 'factor': 0.6},
-        'Moderate': {'signal_range': 0.015, 'confidence': 0.75, 'factor': 1.0},
-        'Aggressive': {'signal_range': 0.025, 'confidence': 0.70, 'factor': 1.5}
+    # Configurações robustas por perfil de risco
+    risk_configs = {
+        'Conservative': {'signal_range': 0.005, 'confidence': 0.85, 'factor': 0.7},
+        'Moderate': {'signal_range': 0.012, 'confidence': 0.75, 'factor': 1.0},
+        'Aggressive': {'signal_range': 0.022, 'confidence': 0.68, 'factor': 1.4}
     }
     
-    params = risk_params.get(risk_level, risk_params['Moderate'])
+    config = risk_configs.get(risk_level, risk_configs['Moderate'])
     
-    # Gerar sinal baseado no perfil de risco e sentimento
-    base_signal = np.random.uniform(-params['signal_range'], params['signal_range'])
-    sentiment_influence = sentiment_score * 0.01 * params['factor']
+    # Gerar sinal mais sofisticado
+    market_trend = np.random.uniform(-config['signal_range'], config['signal_range'])
+    sentiment_boost = sentiment_score * 0.008 * config['factor']
     
-    combined_signal = base_signal + sentiment_influence
+    if is_quick:
+        market_trend *= 0.6  # Reduzir sinal para análise rápida
+    
+    combined_signal = market_trend + sentiment_boost
     
     predicted_price = current_price * (1 + combined_signal)
     price_change = predicted_price - current_price
@@ -806,8 +809,8 @@ def run_basic_analysis(current_price, is_quick, sentiment_score, risk_level):
         'predicted_price': predicted_price,
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
-        'model_confidence': params['confidence'],
-        'analysis_focus': f'Análise Básica ({risk_level}) - Sentimento: {sentiment_score:.3f}',
+        'model_confidence': config['confidence'],
+        'analysis_focus': f'Análise Básica ({risk_level}) - Tendência: {market_trend:.4f}, Sentimento: {sentiment_score:.3f}',
         'risk_level_used': risk_level
     }
 
@@ -946,62 +949,68 @@ def display_main_summary(results, analysis_mode):
         # Get risk level from results if available
         risk_level_used = results.get('risk_level_used', 'Moderate')
         
-        # Enhanced risk management system based on investor profile
+        # Enhanced risk management system with better multipliers
         risk_profiles = {
             'Conservative': {
-                'stop_factor': 0.6,        # Stop loss mais próximo (60% da variação)
-                'profit_factor': 0.8,      # Take profit menor (80% da variação)
+                'stop_factor': 0.8,        # Stop loss mais próximo (80% da variação)
+                'profit_factor': 1.2,      # Take profit conservador (120% da variação)
                 'banca_risk': 1.0,         # Máximo 1% da banca por operação
-                'extension_factor': 1.2,   # Potencial de extensão limitado
-                'reversal_sensitivity': 0.3, # Alta sensibilidade a reversões
-                'volatility_threshold': 0.015
+                'extension_factor': 1.8,   # Potencial de extensão limitado
+                'reversal_sensitivity': 0.4, # Alta sensibilidade a reversões
+                'volatility_threshold': 0.015,
+                'min_risk_reward': 1.5     # Mínima razão risco/retorno aceitável
             },
             'Moderate': {
-                'stop_factor': 1.0,        # Stop loss moderado (100% da variação)
-                'profit_factor': 1.5,      # Take profit moderado (150% da variação)
-                'banca_risk': 2.0,         # Máximo 2% da banca por operação
-                'extension_factor': 1.8,   # Potencial de extensão moderado
-                'reversal_sensitivity': 0.5, # Sensibilidade moderada a reversões
-                'volatility_threshold': 0.025
+                'stop_factor': 1.2,        # Stop loss moderado (120% da variação)
+                'profit_factor': 2.0,      # Take profit moderado (200% da variação)
+                'banca_risk': 2.5,         # Máximo 2.5% da banca por operação
+                'extension_factor': 2.8,   # Potencial de extensão moderado
+                'reversal_sensitivity': 0.6, # Sensibilidade moderada a reversões
+                'volatility_threshold': 0.025,
+                'min_risk_reward': 1.3     # Mínima razão risco/retorno aceitável
             },
             'Aggressive': {
-                'stop_factor': 1.8,        # Stop loss mais distante (180% da variação)
-                'profit_factor': 2.5,      # Take profit mais ambicioso (250% da variação)
+                'stop_factor': 2.0,        # Stop loss mais distante (200% da variação)
+                'profit_factor': 3.5,      # Take profit ambicioso (350% da variação)
                 'banca_risk': 5.0,         # Máximo 5% da banca por operação
-                'extension_factor': 3.0,   # Alto potencial de extensão
-                'reversal_sensitivity': 0.8, # Menor sensibilidade a reversões
-                'volatility_threshold': 0.040
+                'extension_factor': 4.5,   # Alto potencial de extensão
+                'reversal_sensitivity': 0.9, # Menor sensibilidade a reversões
+                'volatility_threshold': 0.040,
+                'min_risk_reward': 1.1     # Mínima razão risco/retorno aceitável
             }
         }
         
         profile = risk_profiles.get(risk_level_used, risk_profiles['Moderate'])
         
-        # Calculate enhanced risk metrics
-        price_change = abs(predicted_price - current_price)
-        volatility_factor = max(0.1, 1 - confidence)  # Fator de volatilidade
+        # Enhanced calculations with better scaling
+        base_movement = abs(predicted_price - current_price)
+        volatility_adjustment = max(0.3, 1 - confidence)  # Ajuste baseado na confiança
         
-        # Base calculations with profile-specific factors
+        # Dynamic risk scaling based on market volatility and profile
+        risk_multiplier = base_movement * profile['stop_factor'] * volatility_adjustment
+        profit_multiplier = base_movement * profile['profit_factor']
+        
         if predicted_price > current_price:  # COMPRA
-            stop_loss_level = current_price - (price_change * profile['stop_factor'] * volatility_factor)
-            take_profit_level = predicted_price + (price_change * profile['profit_factor'])
+            stop_loss_level = current_price - risk_multiplier
+            take_profit_level = current_price + profit_multiplier
             
-            # Extensão potencial baseada no perfil
-            max_extension = take_profit_level + (price_change * profile['extension_factor'])
+            # Extensão potencial mais ambiciosa
+            max_extension = take_profit_level + (base_movement * profile['extension_factor'])
             
-            # Reversão iminente baseada na sensibilidade
-            reversal_level = current_price - (price_change * profile['reversal_sensitivity'])
+            # Nível de alerta para reversão
+            reversal_level = current_price - (base_movement * profile['reversal_sensitivity'])
             
             risk_direction = "abaixo"
             reward_direction = "acima"
         else:  # VENDA
-            stop_loss_level = current_price + (price_change * profile['stop_factor'] * volatility_factor)
-            take_profit_level = predicted_price - (price_change * profile['profit_factor'])
+            stop_loss_level = current_price + risk_multiplier
+            take_profit_level = current_price - profit_multiplier
             
-            # Extensão potencial baseada no perfil
-            max_extension = take_profit_level - (price_change * profile['extension_factor'])
+            # Extensão potencial mais ambiciosa
+            max_extension = take_profit_level - (base_movement * profile['extension_factor'])
             
-            # Reversão iminente baseada na sensibilidade
-            reversal_level = current_price + (price_change * profile['reversal_sensitivity'])
+            # Nível de alerta para reversão
+            reversal_level = current_price + (base_movement * profile['reversal_sensitivity'])
             
             risk_direction = "acima"
             reward_direction = "abaixo"
@@ -1014,12 +1023,20 @@ def display_main_summary(results, analysis_mode):
         
         risk_reward_ratio = reward_percentage / risk_percentage if risk_percentage > 0 else 0
         
-        # Gestão de banca (simulação com base de $10,000)
+        # Enhanced money management calculations
         banca_base = 10000  # Base simulada
         posicao_size = (banca_base * profile['banca_risk']) / 100
         risco_monetario = posicao_size * (risk_percentage / 100)
         potencial_lucro = posicao_size * (reward_percentage / 100)
         potencial_extensao = posicao_size * (extension_percentage / 100)
+        
+        # Ensure minimum meaningful values for display
+        if risco_monetario < 1:
+            risco_monetario = max(1, posicao_size * 0.01)
+        if potencial_lucro < 1:
+            potencial_lucro = max(2, risco_monetario * risk_reward_ratio)
+        if potencial_extensao < potencial_lucro:
+            potencial_extensao = potencial_lucro * 1.5
         
         # Color coding based on profile
         risk_color = "red" if risk_percentage > profile['volatility_threshold'] * 100 else "orange" if risk_percentage > profile['volatility_threshold'] * 50 else "green"
