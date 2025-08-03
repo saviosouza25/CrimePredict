@@ -983,25 +983,71 @@ def main():
                 font-size: 16px !important;
             }
             
-            /* MODERN MOBILE-FIRST RESPONSIVE DESIGN */
+            /* MODERN MOBILE-FIRST RESPONSIVE DESIGN WITH TOGGLE */
             @media (max-width: 768px) {
-                /* Force sidebar to be visible and accessible on mobile */
+                /* Mobile sidebar toggle button */
+                .mobile-sidebar-toggle {
+                    position: fixed !important;
+                    top: 1rem !important;
+                    left: 1rem !important;
+                    z-index: 9999 !important;
+                    background: linear-gradient(135deg, #667eea, #764ba2) !important;
+                    color: white !important;
+                    border: none !important;
+                    border-radius: 12px !important;
+                    padding: 0.75rem !important;
+                    font-size: 1.2rem !important;
+                    cursor: pointer !important;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+                    min-width: 48px !important;
+                    min-height: 48px !important;
+                    touch-action: manipulation !important;
+                }
+                
+                /* Sidebar styling - initially hidden */
                 .css-1d391kg,
                 .st-emotion-cache-1d391kg,
                 section[data-testid="stSidebar"] {
-                    display: block !important;
-                    visibility: visible !important;
-                    position: relative !important;
-                    width: 100% !important;
-                    min-width: 100% !important;
-                    max-width: 100% !important;
-                    transform: none !important;
-                    margin: 0 !important;
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    width: 85% !important;
+                    max-width: 350px !important;
+                    height: 100vh !important;
+                    background: white !important;
+                    box-shadow: 2px 0 10px rgba(0,0,0,0.1) !important;
+                    transform: translateX(-100%) !important;
+                    transition: transform 0.3s ease !important;
+                    z-index: 9998 !important;
+                    overflow-y: auto !important;
                     padding: 1rem !important;
-                    background: rgba(28, 131, 225, 0.1) !important;
-                    border-radius: 12px !important;
-                    margin-bottom: 1.5rem !important;
-                    border: 1px solid rgba(28, 131, 225, 0.2) !important;
+                }
+                
+                /* Show sidebar when open */
+                .sidebar-open .css-1d391kg,
+                .sidebar-open .st-emotion-cache-1d391kg,
+                .sidebar-open section[data-testid="stSidebar"] {
+                    transform: translateX(0) !important;
+                }
+                
+                /* Overlay for sidebar */
+                .sidebar-overlay {
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    background: rgba(0,0,0,0.5) !important;
+                    z-index: 9997 !important;
+                    opacity: 0 !important;
+                    visibility: hidden !important;
+                    transition: all 0.3s ease !important;
+                }
+                
+                /* Show overlay when sidebar is open */
+                .sidebar-open .sidebar-overlay {
+                    opacity: 1 !important;
+                    visibility: visible !important;
                 }
                 
                 /* Modern sidebar styling for mobile */
@@ -1009,6 +1055,12 @@ def main():
                 .st-emotion-cache-1d391kg > div {
                     padding: 0 !important;
                     width: 100% !important;
+                }
+                
+                /* Adjust main content for mobile */
+                .main .block-container {
+                    padding-left: 1rem !important;
+                    padding-top: 4rem !important; /* Space for toggle button */
                 }
                 
                 /* Better button sizing for mobile */
@@ -1182,6 +1234,18 @@ def main():
                     padding: 1.5rem !important;
                     background: linear-gradient(145deg, #f8f9fa, #e9ecef) !important;
                     border-right: 1px solid rgba(0,0,0,0.1) !important;
+                    position: relative !important;
+                    transform: none !important;
+                }
+                
+                /* Hide mobile toggle on desktop */
+                .mobile-sidebar-toggle {
+                    display: none !important;
+                }
+                
+                /* Reset main content padding on desktop */
+                .main .block-container {
+                    padding-top: 1rem !important;
                 }
                 
                 /* Modern desktop buttons */
@@ -1215,6 +1279,37 @@ def main():
             }
         </style>
         """, unsafe_allow_html=True)
+    
+    # Mobile sidebar toggle and overlay
+    st.markdown("""
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <button class="mobile-sidebar-toggle" onclick="toggleSidebar()">
+        <span id="sidebar-icon">☰</span>
+    </button>
+    
+    <script>
+    function toggleSidebar() {
+        const body = document.body;
+        const icon = document.getElementById('sidebar-icon');
+        
+        if (body.classList.contains('sidebar-open')) {
+            body.classList.remove('sidebar-open');
+            icon.innerHTML = '☰';
+        } else {
+            body.classList.add('sidebar-open');
+            icon.innerHTML = '✕';
+        }
+    }
+    
+    // Close sidebar when clicking on overlay
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('sidebar-overlay')) {
+            document.body.classList.remove('sidebar-open');
+            document.getElementById('sidebar-icon').innerHTML = '☰';
+        }
+    });
+    </script>
+    """, unsafe_allow_html=True)
     
     # Header with company logo
     logo_base64 = get_logo_base64()
