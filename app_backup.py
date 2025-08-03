@@ -1535,38 +1535,60 @@ def main():
             use_container_width=True,
             help="Análise rápida com dados em cache (se disponível)"
         )
-    
-    # Main content area
-    if analyze_button or quick_analysis:
-        run_analysis(
-            pair, interval, horizon, risk_level, lookback_period, 
-            mc_samples, epochs, quick_analysis
+                    margin: 0.75rem 0 !important;
+                    touch-action: manipulation !important;
+                    -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+                }
+                
+                /* Enhanced touch feedback */
+                .stButton > button:active {
+                    transform: scale(0.98) !important;
+                    transition: transform 0.1s ease !important;
+                }
+                
+                /* Better spacing between buttons */
+                .element-container:has(.stButton) {
+                    margin: 0.5rem 0 !important;
+                }
+            }
+            
+            /* Tablet optimizations */
+            @media (min-width: 769px) and (max-width: 1024px) {
+                .stButton > button {
+                    min-height: 48px !important;
+                    font-size: 15px !important;
+                    padding: 0.875rem 1.25rem !important;
+                }
+            }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        analyze_button = st.button(
+            "🎯 Obter Sinal de Trading", 
+            type="primary", 
+            help=get_help_content("get_trading_signal")
         )
-    
-    # Display results if available
-    if st.session_state.get('analysis_results'):
-        display_analysis_results()
-    
-    # Footer
-    st.markdown("---")
-    st.markdown("""
-    <div style="text-align: center; color: #666; padding: 1rem;">
-        <p>⚠️ <strong>Aviso Legal:</strong> Esta plataforma é apenas para fins educacionais. 
-        Trading forex envolve riscos substanciais e pode não ser adequado para todos os investidores.</p>
-        <p>Desenvolvido pela Artecinvesting • Última atualização: {}</p>
-    </div>
-    """.format(datetime.now().strftime("%d-%m-%Y %H:%M")), unsafe_allow_html=True)
-
-def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_samples, epochs, is_quick=False):
-    """Run the complete forex analysis"""
-    pass  # Implementation will be added later
-
-def display_analysis_results():
-    """Display analysis results"""
-    pass  # Implementation will be added later
-
-if __name__ == "__main__":
-    main()
+        
+        quick_analysis = st.button(
+            "⚡ Verificação Rápida",
+            help=get_help_content("quick_check")
+        )
+        
+        st.markdown("---")
+        
+        # Risk settings
+        risk_level = st.selectbox(
+            get_text("sidebar_risk_level"),
+            list(RISK_LEVELS.keys()),
+            index=1,  # Default to Moderate
+            help=get_help_content("risk_level")
+        )
+        
+        # Configuration status
+        cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
+        if cache_count > 0:
+            st.info(f"💾 {cache_count} análises em cache disponíveis")
     
     # Tutorial section with forced styling for Dark theme
     if st.session_state.get('show_tutorial', False):
