@@ -1786,7 +1786,8 @@ def display_main_summary(results, analysis_mode):
                 'daily_range_factor': 0.25,    # 25% da média do range diário
                 'min_risk_reward': 1.6,        # Mínima razão risco/retorno
                 'max_risk_pips': 25,           # Máximo 25 pips de risco
-                'confidence_adjustment': 0.2   # Reduz risco quando confiança baixa
+                'confidence_adjustment': 0.2,  # Reduz risco quando confiança baixa
+                'volatility_threshold': 0.015  # Limite de volatilidade para cores
             },
             'Moderate': {
                 'atr_multiplier_stop': 2.0,    # 2.0x ATR para stop loss
@@ -1798,7 +1799,8 @@ def display_main_summary(results, analysis_mode):
                 'daily_range_factor': 0.35,    # 35% da média do range diário
                 'min_risk_reward': 1.4,        # Mínima razão risco/retorno
                 'max_risk_pips': 45,           # Máximo 45 pips de risco
-                'confidence_adjustment': 0.3   # Ajuste moderado por confiança
+                'confidence_adjustment': 0.3,  # Ajuste moderado por confiança
+                'volatility_threshold': 0.025  # Limite de volatilidade para cores
             },
             'Aggressive': {
                 'atr_multiplier_stop': 3.0,    # 3.0x ATR para stop loss (agressivo)
@@ -1810,7 +1812,8 @@ def display_main_summary(results, analysis_mode):
                 'daily_range_factor': 0.50,    # 50% da média do range diário
                 'min_risk_reward': 1.2,        # Mínima razão risco/retorno
                 'max_risk_pips': 80,           # Máximo 80 pips de risco
-                'confidence_adjustment': 0.4   # Maior ajuste por confiança
+                'confidence_adjustment': 0.4,  # Maior ajuste por confiança
+                'volatility_threshold': 0.040  # Limite de volatilidade para cores
             }
         }
         
