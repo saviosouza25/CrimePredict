@@ -476,13 +476,14 @@ def display_comprehensive_tutorial():
         st.rerun()
     
     # Menu do tutorial com tabs
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "🏁 Início Rápido", 
         "⚙️ Configurações", 
         "🧠 Análises", 
         "💰 Gestão de Risco", 
         "📊 Interpretação", 
-        "🎯 Estratégias"
+        "🎯 Estratégias",
+        "⏰ Tempo & Mercado"
     ])
     
     with tab1:
@@ -730,6 +731,262 @@ def display_comprehensive_tutorial():
         """)
         
         st.warning("⚠️ **Lembrete**: Sempre teste estratégias em conta demo antes de aplicar com dinheiro real!")
+    
+    with tab7:
+        st.markdown("## ⏰ Tempo & Mercado: Estratégia Temporal e Impacto")
+        st.markdown("""
+        ### 🌍 Como a Estratégia Temporal Influencia o Mercado
+        
+        A escolha correta da estratégia temporal é fundamental para o sucesso no trading. Cada timeframe tem características únicas que afetam diretamente seus resultados.
+        
+        ### 📈 Análise Detalhada por Estratégia Temporal
+        """)
+        
+        # Scalping
+        st.markdown("#### ⚡ Scalping (1-5 min)")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **Características do Mercado:**
+            - Movimentos de 5-15 pips são significativos
+            - Ruído do mercado muito presente
+            - Spreads têm impacto maior no lucro
+            - Liquidez extremamente importante
+            - Reações instantâneas a notícias
+            
+            **Melhores Pares para Scalping:**
+            - EUR/USD (spread baixo, alta liquidez)
+            - GBP/USD (volatilidade adequada)
+            - USD/JPY (movimentos previsíveis)
+            """)
+        with col2:
+            st.markdown("""
+            **Horários Ideais:**
+            - 08:00-12:00 UTC (Sobreposição Londres/Europa)
+            - 13:00-17:00 UTC (Sobreposição Londres/NY)
+            - Evitar: 22:00-06:00 UTC (baixa liquidez)
+            
+            **Relação Horizonte-Resultado:**
+            - Horizonte 1 hora = Máximo 3-5 operações
+            - Foco em momentum imediato
+            - Stop loss: 5-10 pips máximo
+            - Take profit: 8-15 pips típico
+            """)
+        
+        # Intraday
+        st.markdown("#### 📈 Intraday (15-30 min)")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **Características do Mercado:**
+            - Movimentos de 20-50 pips são o alvo
+            - Padrões técnicos mais confiáveis
+            - Menos ruído que scalping
+            - Influência de releases econômicos
+            - Tendências intraday claras
+            
+            **Eventos que Impactam:**
+            - Dados econômicos (PMI, emprego, inflação)
+            - Decisões de bancos centrais
+            - Discursos de autoridades
+            - Abertura de mercados importantes
+            """)
+        with col2:
+            st.markdown("""
+            **Estratégia de Horizonte:**
+            - Horizonte 4 horas permite 2-4 operações
+            - Análise de suporte/resistência crucial
+            - Padrões de candlestick mais válidos
+            - Confirmação de múltiplos timeframes
+            
+            **Timing Perfeito:**
+            - 08:30-10:00 UTC (dados europeus)
+            - 13:30-15:30 UTC (dados americanos)
+            - 15:30-17:00 UTC (fechamento europeu)
+            """)
+        
+        # Swing
+        st.markdown("#### 🌊 Swing (1-4 horas)")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **Características do Mercado:**
+            - Movimentos de 50-150 pips típicos
+            - Tendências de 1-5 dias de duração
+            - Menor impacto de ruído
+            - Análise fundamental ganha importância
+            - Padrões técnicos mais confiáveis
+            
+            **Fatores de Influência:**
+            - Sentimento de risco on/off
+            - Fluxos de capital internacional
+            - Expectativas de política monetária
+            - Correlações entre ativos
+            """)
+        with col2:
+            st.markdown("""
+            **Horizonte 1 Dia - Impacto:**
+            - Captura movimentos completos
+            - Menor estresse psicológico
+            - Tempo para análise aprofundada
+            - Oportunidade de piramidação
+            
+            **Vantagens Temporais:**
+            - Podem manter posições overnight
+            - Menos dependente de timing preciso
+            - Aproveitam gaps de abertura
+            - Seguem tendências estabelecidas
+            """)
+        
+        # Position
+        st.markdown("#### 📅 Position (Diário)")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **Características do Mercado:**
+            - Movimentos de 150-400 pips possíveis
+            - Tendências de semanas/meses
+            - Análise fundamental predominante
+            - Menor frequência de operações
+            - Maior importância dos fundamentos
+            
+            **Drivers Principais:**
+            - Diferencial de juros entre países
+            - Crescimento econômico relativo
+            - Políticas monetárias divergentes
+            - Fluxos de investimento estrangeiro
+            """)
+        with col2:
+            st.markdown("""
+            **Horizonte 1 Semana - Estratégia:**
+            - Foco em tendências macro
+            - Resistência a ruídos de curto prazo
+            - Análise de múltiplos indicadores
+            - Paciência para desenvolvimento
+            
+            **Timing Macro:**
+            - Reuniões de bancos centrais
+            - Releases trimestrais de GDP
+            - Mudanças em sentiment global
+            - Ciclos econômicos regionais
+            """)
+        
+        # Trend
+        st.markdown("#### 📊 Trend (Semanal)")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **Características do Mercado:**
+            - Movimentos de 300+ pips comuns
+            - Tendências de meses/anos
+            - Análise macroeconômica essencial
+            - Menor número de operações
+            - Foco em mega tendências
+            
+            **Mega Drivers:**
+            - Ciclos econômicos globais
+            - Mudanças estruturais monetárias
+            - Crises econômicas/geopolíticas
+            - Shifts demográficos
+            """)
+        with col2:
+            st.markdown("""
+            **Horizonte 1 Mês - Visão:**
+            - Captura de super ciclos
+            - Imunidade a volatilidade diária
+            - Foco em fundamentos sólidos
+            - Construção de posições graduais
+            
+            **Exemplos Históricos:**
+            - USD bull market 2014-2016
+            - EUR bear market 2008-2012
+            - JPY carry trade cycles
+            - Commodities super cycles
+            """)
+        
+        st.markdown("---")
+        st.markdown("### 🎯 Matriz de Decisão: Tempo vs Mercado")
+        
+        # Tabela interativa
+        st.markdown("""
+        | Estratégia | Melhor Volatilidade | Pior Volatilidade | Spread Máximo | News Impact | Pairs Ideais |
+        |------------|--------------------|--------------------|---------------|-------------|--------------|
+        | **Scalping** | Média (15-25 pips/hora) | Baixa (<10 pips/hora) | 1-2 pips | Alto (evitar) | EUR/USD, USD/JPY |
+        | **Intraday** | Média-Alta (25-40 pips/4h) | Muito baixa | 2-3 pips | Médio (aproveitar) | GBP/USD, EUR/GBP |
+        | **Swing** | Alta (40-80 pips/dia) | Média | 3-5 pips | Baixo | AUD/USD, NZD/USD |
+        | **Position** | Qualquer | Qualquer | 5+ pips | Muito baixo | USD/CAD, EUR/CHF |
+        | **Trend** | Qualquer | Qualquer | Irrelevante | Irrelevante | Todos os majors |
+        """)
+        
+        st.markdown("### 🔄 Interação Dinâmica: Estratégia + Horizonte")
+        
+        st.info("""
+        **🧠 Inteligência da Plataforma:**
+        
+        Nossa plataforma automaticamente ajusta os algoritmos baseado na combinação escolhida:
+        
+        - **Scalping + 1 hora**: Foco em momentum e breakouts imediatos
+        - **Intraday + 4 horas**: Análise de padrões e confirmações técnicas  
+        - **Swing + 1 dia**: Convergência técnica-fundamental balanceada
+        - **Position + 1 semana**: Predominância de análise fundamental
+        - **Trend + 1 mês**: Foco exclusivo em macro tendências
+        
+        Cada combinação otimiza:
+        - Pesos dos indicadores técnicos
+        - Sensibilidade ao sentimento de mercado
+        - Parâmetros da rede neural LSTM
+        - Níveis de stop loss e take profit
+        - Alertas de reversão de tendência
+        """)
+        
+        st.markdown("### 📊 Impacto Prático no Trading")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **⚠️ Erros Comuns por Estratégia:**
+            
+            **Scalping:**
+            - Operar em horários de baixa liquidez
+            - Ignorar spreads altos
+            - Usar alavancagem excessiva
+            - Não respeitar stop loss rápido
+            
+            **Intraday:**  
+            - Manter posições durante news importantes
+            - Não ajustar para diferentes sessões
+            - Ignorar correlações entre pares
+            
+            **Swing:**
+            - Fechar posições muito cedo por ansiedade
+            - Não considerar gaps de fim de semana
+            - Ignorar análise fundamental
+            """)
+        
+        with col2:
+            st.markdown("""
+            **✅ Melhores Práticas:**
+            
+            **Position/Trend:**
+            - Análise fundamental como base
+            - Paciência para desenvolvimento
+            - Gestão de posições graduais
+            - Foco em mega tendências
+            
+            **Geral:**
+            - Sempre alinhar estratégia com disponibilidade
+            - Respeitar os horários ótimos de cada abordagem
+            - Ajustar lote conforme timeframe
+            - Manter disciplina na gestão de risco
+            """)
+        
+        st.success("""
+        🎯 **Fórmula do Sucesso Temporal:**
+        
+        **Estratégia Temporal Correta** + **Horizonte Alinhado** + **Timing de Mercado** = **Resultados Consistentes**
+        
+        Use nossa plataforma para eliminar as incertezas - cada preset já otimiza automaticamente todos esses fatores!
+        """)
     
     # Seção final com dicas importantes
     st.markdown("---")
