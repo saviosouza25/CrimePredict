@@ -152,6 +152,16 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
+    # Botão Home na parte superior
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("🏠 Home", type="primary", use_container_width=True):
+            # Limpar todos os resultados e voltar ao estado inicial
+            for key in ['analysis_results', 'show_analysis', 'analysis_mode']:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
+    
     # Main content area - header controlled by display logic
     
     # Initialize services if not already done
