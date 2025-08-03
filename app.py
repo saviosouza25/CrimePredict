@@ -1044,6 +1044,17 @@ def display_main_summary(results, analysis_mode):
     
     if 'analysis_focus' in results:
         st.info(f"**Foco da Análise:** {results['analysis_focus']}")
+    
+    # Show risk level impact summary
+    if 'risk_level_used' in results:
+        risk_level = results['risk_level_used']
+        risk_impacts = {
+            'Conservative': "🛡️ Proteção máxima - Stop loss próximo, menor exposição, maior segurança",
+            'Moderate': "⚖️ Equilíbrio - Risco moderado com potencial de retorno balanceado",
+            'Aggressive': "🚀 Maior potencial - Stop loss distante, maior exposição, busca máximos retornos"
+        }
+        
+        st.success(f"**Impacto do Perfil {risk_level}:** {risk_impacts.get(risk_level, 'Perfil padrão aplicado')}")
 
 def display_summary_tab(results, analysis_mode):
     """Display summary tab content"""
