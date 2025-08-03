@@ -419,17 +419,11 @@ def main():
         st.markdown("---")
         
         # Botões auxiliares compactos
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
         with col1:
-            if st.button("🏠 Home"):
-                # Clear analysis results to return to initial state
-                if 'analysis_results' in st.session_state:
-                    del st.session_state['analysis_results']
-                st.rerun()
-        with col2:
             if st.button("📚 Tutorial"):
                 st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
-        with col3:
+        with col2:
             if st.button("🚪 Sair"):
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
