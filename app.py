@@ -1478,7 +1478,7 @@ def main():
             min_value=30,
             max_value=120,
             value=LOOKBACK_PERIOD,
-            key="sidebar_lookback_period",
+            key="main_sidebar_lookback_period",
             help="Períodos históricos para treinamento da IA"
         )
         
@@ -1487,7 +1487,7 @@ def main():
             min_value=5,
             max_value=20,
             value=EPOCHS,
-            key="sidebar_epochs",
+            key="main_sidebar_epochs",
             help="Mais épocas = melhor precisão mas mais lento"
         )
         
@@ -1496,7 +1496,7 @@ def main():
             min_value=10,
             max_value=50,
             value=MC_SAMPLES,
-            key="sidebar_mc_samples",
+            key="main_sidebar_mc_samples",
             help="Amostras para estimativa de incerteza"
         )
         
@@ -1511,7 +1511,7 @@ def main():
         if cache_count > 0:
             st.metric("Análises em Cache", cache_count, "dados salvos")
             
-            if st.button("🗑️ Limpar Cache", key="sidebar_clear_cache"):
+            if st.button("🗑️ Limpar Cache", key="main_sidebar_clear_cache"):
                 CacheManager.clear_cache()
                 st.success("Cache limpo!")
                 st.rerun()
@@ -1519,7 +1519,7 @@ def main():
             st.info("📂 Nenhuma análise em cache")
         
         # Auto-save settings
-        auto_save = st.checkbox("💾 Salvar Automaticamente", value=True, key="sidebar_auto_save", help="Salva análises automaticamente no cache")
+        auto_save = st.checkbox("💾 Salvar Automaticamente", value=True, key="main_sidebar_auto_save", help="Salva análises automaticamente no cache")
         
         st.markdown("---")
         
@@ -1672,7 +1672,7 @@ def main():
                 max_value=120,
                 value=LOOKBACK_PERIOD,
                 help="Períodos históricos para treinamento da IA",
-                key="sidebar_lookback_period"
+                key="expander_lookback_period"
             )
             
             epochs = st.slider(
@@ -1681,7 +1681,7 @@ def main():
                 max_value=20,
                 value=EPOCHS,
                 help="Mais épocas = melhor precisão mas mais lento",
-                key="sidebar_epochs"
+                key="expander_epochs"
             )
             
             mc_samples = st.slider(
@@ -1690,7 +1690,7 @@ def main():
                 max_value=50,
                 value=MC_SAMPLES,
                 help="Amostras para estimativa de incerteza",
-                key="sidebar_mc_samples"
+                key="expander_mc_samples"
             )
             
             # Mobile-optimized cache button
@@ -1706,7 +1706,7 @@ def main():
             </style>
             """, unsafe_allow_html=True)
             
-            if st.button("Limpar Cache", key="sidebar_clear_cache"):
+            if st.button("Limpar Cache", key="expander_clear_cache"):
                 CacheManager.clear_cache()
                 st.success("Cache limpo!")
                 st.rerun()
