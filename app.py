@@ -679,13 +679,7 @@ def display_main_summary(results, analysis_mode):
         'trend': '📉 Análise de Tendência'
     }
     
-    # Replace main header with analysis title in a rectangle
-    st.markdown(f"""
-    <div style="text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2.5rem 3rem; border-radius: 15px; margin-bottom: 2rem; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3); color: white; width: 100%; max-width: 1200px; margin-left: auto; margin-right: auto;">
-        <h1 style="margin: 0; color: white; font-size: 2.5rem; font-weight: bold;">{mode_names.get(analysis_mode, 'Análise Padrão')}</h1>
-        <p style="margin: 0.8rem 0 0 0; color: rgba(255,255,255,0.9); font-size: 1.2em;">Resultados da Análise • {results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Analysis header will be included in the recommendation panel
     
     # Main recommendation card
     if 'final_recommendation' in results:
@@ -708,6 +702,8 @@ def display_main_summary(results, analysis_mode):
             background: linear-gradient(135deg, rgba(0,0,0,0.1), rgba(255,255,255,0.1));
             margin: 1rem 0;
         ">
+            <h3 style="color: #666; margin: 0 0 0.5rem 0; font-size: 1.1rem;">{mode_names.get(analysis_mode, 'Análise Padrão')}</h3>
+            <p style="color: #888; margin: 0 0 1.5rem 0; font-size: 0.9rem;">Resultados da Análise • {results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
             <h1 style="color: {confidence_color}; margin: 0; font-size: 2.5em;">{recommendation}</h1>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; text-align: left;">
                 <div>
