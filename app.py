@@ -441,8 +441,12 @@ def main():
     # Always show main header
     display_main_header()
     
+    # Display tutorial if activated
+    if st.session_state.get('show_tutorial', False):
+        display_comprehensive_tutorial()
+    
     # Display results if available
-    if st.session_state.get('analysis_results'):
+    elif st.session_state.get('analysis_results'):
         display_analysis_results_with_tabs()
     else:
         # Show footer when no analysis is active
@@ -460,6 +464,302 @@ def display_main_header():
         </p>
     </div>
     """, unsafe_allow_html=True)
+
+def display_comprehensive_tutorial():
+    """Display comprehensive tutorial about all platform functions"""
+    st.markdown("# 📚 Tutorial Completo da Plataforma")
+    st.markdown("### *Guia Definitivo para Maximizar seus Resultados no Trading Forex*")
+    
+    # Botão para fechar tutorial
+    if st.button("❌ Fechar Tutorial", type="secondary"):
+        st.session_state['show_tutorial'] = False
+        st.rerun()
+    
+    # Menu do tutorial com tabs
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "🏁 Início Rápido", 
+        "⚙️ Configurações", 
+        "🧠 Análises", 
+        "💰 Gestão de Risco", 
+        "📊 Interpretação", 
+        "🎯 Estratégias"
+    ])
+    
+    with tab1:
+        st.markdown("## 🏁 Guia de Início Rápido")
+        st.markdown("""
+        ### Como começar em 3 passos simples:
+        
+        **1. Configure sua Estratégia Temporal** ⏰
+        - Na barra lateral, escolha uma das 5 estratégias pré-definidas:
+          - **Scalping (1-5 min)**: Para operações muito rápidas
+          - **Intraday (15-30 min)**: Para operações no mesmo dia
+          - **Swing (1-4 horas)**: Para operações de alguns dias
+          - **Position (Diário)**: Para operações de médio prazo
+          - **Trend (Semanal)**: Para análise de tendência longa
+        
+        **2. Configure seu Perfil de Risco** ⚖️
+        - **Conservativo**: Máxima proteção, menores ganhos
+        - **Moderado**: Equilíbrio ideal entre risco e retorno
+        - **Agressivo**: Maior potencial, maiores riscos
+        
+        **3. Execute a Análise** 🧠
+        - Clique em "Análise Unificada Inteligente" para a melhor recomendação
+        - Ou escolha análises específicas (Técnica, Sentimento, IA, etc.)
+        """)
+        
+        st.success("💡 **Dica de Ouro**: Comece sempre com a Análise Unificada - ela combina todas as ferramentas para dar a melhor recomendação!")
+    
+    with tab2:
+        st.markdown("## ⚙️ Configurações Avançadas")
+        st.markdown("""
+        ### 🏦 Configuração da Conta Real
+        
+        **Saldo da Conta**: Configure seu saldo real para cálculos precisos de risco/retorno
+        
+        **Sistema de Lotes MT4/MT5**:
+        - **0.01**: Micro lote (1.000 unidades da moeda base)
+        - **0.1**: Mini lote (10.000 unidades da moeda base)
+        - **1.0**: Lote padrão (100.000 unidades da moeda base)
+        
+        **Alavancagem**: De 1:1 até 1000:1 como nas corretoras reais
+        - **1:50**: Conservador, menor risco
+        - **1:100-200**: Moderado, equilíbrio ideal
+        - **1:500+**: Agressivo, maior potencial
+        
+        ### ⏰ Sistema Temporal Unificado
+        
+        **Por que é importante?**: Intervalos e horizontes desalinhados geram previsões inconsistentes.
+        
+        **Presets Otimizados**:
+        - Cada preset já tem intervalo e horizonte perfeitamente calibrados
+        - Garante máxima coerência nas análises
+        - Elimina variações drásticas nos resultados
+        
+        **Modo Manual**: Para traders experientes que querem configuração personalizada
+        """)
+        
+        st.warning("⚠️ **Importante**: Use sempre os presets para máxima precisão. O modo manual pode reduzir a confiabilidade se não configurado corretamente.")
+    
+    with tab3:
+        st.markdown("## 🧠 Tipos de Análise")
+        st.markdown("""
+        ### 🎯 Análise Unificada Inteligente (RECOMENDADA)
+        Combina todas as análises em uma única recomendação super precisa:
+        - Análise técnica com 8+ indicadores
+        - Sentimento de mercado em tempo real
+        - Inteligência artificial LSTM
+        - Gestão de risco personalizada
+        
+        ### 📊 Análises Individuais
+        
+        **Análise Técnica**:
+        - RSI, MACD, Bollinger Bands, Stochastico
+        - Médias móveis (SMA, EMA)
+        - Sinais de compra/venda automáticos
+        
+        **Análise de Sentimento**:
+        - Processamento de notícias em tempo real
+        - Score de sentimento do mercado
+        - Impacto nas decisões de trading
+        
+        **Análise de IA/LSTM**:
+        - Rede neural com memória de longo prazo
+        - Predições baseadas em padrões históricos
+        - Adaptação automática ao perfil de risco
+        
+        **Análise de Risco**:
+        - Stop loss e take profit otimizados
+        - Cálculo de margem necessária
+        - Razão risco/retorno automática
+        
+        **Análise de Volume**:
+        - Força dos movimentos de preço
+        - Confirmação de tendências
+        - Pontos de entrada e saída
+        
+        **Análise de Tendência**:
+        - Direção geral do mercado
+        - Força da tendência atual
+        - Pontos de reversão potenciais
+        """)
+        
+        st.info("🎯 **Estratégia Vencedora**: Use a Análise Unificada como base e complemente com análises específicas para confirmação.")
+    
+    with tab4:
+        st.markdown("## 💰 Gestão de Risco Profissional")
+        st.markdown("""
+        ### 🛡️ Sistema de Proteção Multicamadas
+        
+        **Cálculos em Tempo Real**:
+        - Valor exato em pips e dinheiro
+        - Margem necessária baseada na alavancagem
+        - Percentual da banca em risco
+        
+        **Níveis de Proteção**:
+        1. **Stop Loss**: Proteção contra perdas
+        2. **Take Profit**: Objetivo de lucro
+        3. **Extensão Máxima**: Potencial adicional
+        4. **Reversão Iminente**: Alerta de mudança
+        
+        ### 📈 Perfis de Risco Explicados
+        
+        **Conservativo** 🛡️:
+        - Stop loss mais próximo (menor risco)
+        - Take profit moderado
+        - Ideal para: Iniciantes, contas pequenas
+        - Expectativa: 1-3% por operação
+        
+        **Moderado** ⚖️:
+        - Equilíbrio perfeito risco/retorno
+        - Stop e take profit balanceados
+        - Ideal para: Maioria dos traders
+        - Expectativa: 2-5% por operação
+        
+        **Agressivo** 🚀:
+        - Stop loss mais distante (maior risco)
+        - Take profit ambicioso
+        - Ideal para: Traders experientes, contas maiores
+        - Expectativa: 3-8% por operação
+        
+        ### 💡 Dicas de Gestão Profissional
+        - Nunca arrisque mais que 2% da conta por operação
+        - Use sempre stop loss
+        - Razão risco/retorno mínima de 1:1.5
+        - Considere trailing stop para maximizar lucros
+        """)
+    
+    with tab5:
+        st.markdown("## 📊 Como Interpretar os Resultados")
+        st.markdown("""
+        ### 🎯 Sinais de Decisão
+        
+        **Recomendação Principal**:
+        - **COMPRAR** 🟢: Expectativa de alta no preço
+        - **VENDER** 🔴: Expectativa de queda no preço
+        - **MANTER** 🟡: Mercado neutro, aguardar melhor oportunidade
+        
+        ### 📈 Métricas Importantes
+        
+        **Confiança do Modelo**:
+        - **80-95%**: Alta confiança, execute a operação
+        - **60-79%**: Confiança moderada, considere outros fatores
+        - **<60%**: Baixa confiança, aguarde melhor setup
+        
+        **Variação Esperada**:
+        - **+2%**: Movimento significativo de alta
+        - **-1.5%**: Movimento moderado de baixa
+        - **±0.5%**: Movimento fraco, pouco potencial
+        
+        ### 🔍 Interpretação por Abas
+        
+        **Aba Visão Geral**:
+        - Resumo executivo da análise
+        - Recomendação principal clara
+        - Níveis de risco e retorno
+        
+        **Aba Técnica**:
+        - Estado dos indicadores técnicos
+        - Força da tendência atual
+        - Pontos de entrada/saída
+        
+        **Aba Sentimento**:
+        - Humor do mercado
+        - Pressão de compra/venda
+        - Impacto das notícias
+        
+        **Aba Métricas**:
+        - Dados detalhados da análise
+        - Histórico de performance
+        - Componentes individuais
+        """)
+        
+        st.success("📊 **Dica Pro**: Combine alta confiança (>80%) + razão R:R favorável (>1:2) + sentimento alinhado = Setup perfeito!")
+    
+    with tab6:
+        st.markdown("## 🎯 Estratégias de Trading Profissionais")
+        st.markdown("""
+        ### 🏆 Estratégias por Perfil Temporal
+        
+        **Scalping (1-5 min)** ⚡:
+        - **Objetivo**: Lucros pequenos e rápidos
+        - **Setup ideal**: Confiança >85% + movimento >15 pips
+        - **Gestão**: Stop 5-10 pips, Take 10-20 pips
+        - **Melhor horário**: Sobreposição de sessões (08h-12h, 14h-18h UTC)
+        
+        **Intraday (15-30 min)** 📈:
+        - **Objetivo**: Aproveitar movimentos do dia
+        - **Setup ideal**: Confiança >75% + sentimento alinhado
+        - **Gestão**: Stop 15-25 pips, Take 25-50 pips
+        - **Melhor horário**: Após releases econômicos
+        
+        **Swing (1-4 horas)** 🌊:
+        - **Objetivo**: Seguir tendências de médio prazo
+        - **Setup ideal**: Convergência técnica + fundamentalista
+        - **Gestão**: Stop 30-50 pips, Take 60-150 pips
+        - **Melhor momento**: Início de novas tendências
+        
+        **Position (Diário)** 📅:
+        - **Objetivo**: Capturar grandes movimentos
+        - **Setup ideal**: Análise fundamental + técnica alinhadas
+        - **Gestão**: Stop 50-100 pips, Take 150-300 pips
+        - **Melhor momento**: Mudanças de política monetária
+        
+        **Trend (Semanal)** 📊:
+        - **Objetivo**: Movimentos de longo prazo
+        - **Setup ideal**: Tendência forte + fundamentais sólidos
+        - **Gestão**: Stop 100-200 pips, Take 300+ pips
+        - **Melhor momento**: Início de ciclos econômicos
+        
+        ### 🎪 Estratégias Avançadas de Combinação
+        
+        **Estratégia de Confirmação Tripla**:
+        1. Execute Análise Unificada (confiança >80%)
+        2. Confirme com Análise Técnica (indicadores alinhados)
+        3. Valide com Sentimento (score favorável)
+        
+        **Estratégia de Gestão Dinâmica**:
+        1. Entre com lote conservador
+        2. Adicione posição se análise se mantém forte
+        3. Use trailing stop após 50% do take profit
+        
+        **Estratégia Anti-Reversão**:
+        1. Monitor nível de "Reversão Iminente"
+        2. Feche posição parcial ao atingir alerta
+        3. Mantenha stop móvel na entrada
+        """)
+        
+        st.warning("⚠️ **Lembrete**: Sempre teste estratégias em conta demo antes de aplicar com dinheiro real!")
+    
+    # Seção final com dicas importantes
+    st.markdown("---")
+    st.markdown("## 🏆 Checklist do Trader Profissional")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        ### ✅ Antes de Operar
+        - [ ] Configurei meu perfil de risco corretamente
+        - [ ] Escolhi a estratégia temporal adequada
+        - [ ] Análise unificada com confiança >75%
+        - [ ] Razão risco/retorno favorável (>1:1.5)
+        - [ ] Defini stop loss e take profit
+        - [ ] Calculei o risco monetário (máx 2% da conta)
+        """)
+    
+    with col2:
+        st.markdown("""
+        ### ✅ Durante a Operação
+        - [ ] Monitor níveis de reversão iminente
+        - [ ] Mantenho disciplina nos stops
+        - [ ] Evito mover stop contra mim
+        - [ ] Uso trailing stop quando em lucro
+        - [ ] Registro todas as operações
+        - [ ] Mantenho controle emocional
+        """)
+    
+    st.success("🎯 **Sucesso no Trading**: Consistência + Disciplina + Gestão de Risco = Lucros Sustentáveis!")
 
 def display_footer():
     """Display the footer section"""
