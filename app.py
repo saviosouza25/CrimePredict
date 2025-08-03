@@ -1881,40 +1881,61 @@ def display_main_summary(results, analysis_mode):
         atr_based_profit = atr_estimate * profile['atr_multiplier_tp']
         profit_distance = max(profit_distance, atr_based_profit)
         
-        if predicted_price > current_price:  # COMPRA
-            stop_loss_level = current_price - stop_distance
-            take_profit_level = current_price + profit_distance
+        # LÓGICA CRÍTICA CORRIGIDA - DIREÇÕES OPOSTAS PARA STOP E TARGET
+        trade_direction = "COMPRA" if predicted_price > current_price else "VENDA"
+        
+        if predicted_price > current_price:  # SINAL DE COMPRA
+            # COMPRA: Stop loss ABAIXO do preço atual, Take profit ACIMA
+            stop_loss_level = current_price - stop_distance    # STOP ABAIXO (proteção contra queda)
+            take_profit_level = current_price + profit_distance # TARGET ACIMA (lucro com alta)
             
-            # Extensão baseada em múltiplos do ATR e movimento previsto
+            # Extensão para cenário otimista de COMPRA (ainda mais ACIMA)
             extension_distance = max(
                 profit_distance * profile['extension_factor'],
                 atr_estimate * (profile['atr_multiplier_tp'] * 1.5)
             )
-            max_extension = current_price + extension_distance
+            max_extension = current_price + extension_distance  # EXTENSÃO ACIMA
             
-            # Nível de alerta para reversão baseado em suporte técnico
+            # Reversão: se cair muito, alerta (ABAIXO do preço)
             reversal_distance = stop_distance * profile['reversal_sensitivity']
-            reversal_level = current_price - reversal_distance
+            reversal_level = current_price - reversal_distance  # ALERTA ABAIXO
             
-            risk_direction = "abaixo"
-            reward_direction = "acima"
-        else:  # VENDA
-            stop_loss_level = current_price + stop_distance
-            take_profit_level = current_price - profit_distance
+            risk_direction = "abaixo"    # Risco se preço descer
+            reward_direction = "acima"   # Lucro se preço subir
             
-            # Extensão baseada em múltiplos do ATR e movimento previsto
+        else:  # SINAL DE VENDA
+            # VENDA: Stop loss ACIMA do preço atual, Take profit ABAIXO
+            stop_loss_level = current_price + stop_distance    # STOP ACIMA (proteção contra alta)
+            take_profit_level = current_price - profit_distance # TARGET ABAIXO (lucro com queda)
+            
+            # Extensão para cenário otimista de VENDA (ainda mais ABAIXO)
             extension_distance = max(
                 profit_distance * profile['extension_factor'],
                 atr_estimate * (profile['atr_multiplier_tp'] * 1.5)
             )
-            max_extension = current_price - extension_distance
+            max_extension = current_price - extension_distance  # EXTENSÃO ABAIXO
             
-            # Nível de alerta para reversão baseado em resistência técnica
+            # Reversão: se subir muito, alerta (ACIMA do preço)
             reversal_distance = stop_distance * profile['reversal_sensitivity']
-            reversal_level = current_price + reversal_distance
+            reversal_level = current_price + reversal_distance  # ALERTA ACIMA
             
-            risk_direction = "acima"
-            reward_direction = "abaixo"
+            risk_direction = "acima"     # Risco se preço subir
+            reward_direction = "abaixo"  # Lucro se preço descer
+        
+        # VALIDAÇÃO CRÍTICA: Verificar se as direções estão corretas
+        stop_is_correct = (trade_direction == "COMPRA" and stop_loss_level < current_price) or \
+                         (trade_direction == "VENDA" and stop_loss_level > current_price)
+        
+        target_is_correct = (trade_direction == "COMPRA" and take_profit_level > current_price) or \
+                           (trade_direction == "VENDA" and take_profit_level < current_price)
+        
+        # Se há erro na lógica, corrigir imediatamente
+        if not stop_is_correct or not target_is_correct:
+            st.error(f"🚨 ERRO CRÍTICO DETECTADO NA LÓGICA DE TRADING! Trade: {trade_direction}")
+            st.error(f"Preço atual: {current_price:.5f}")
+            st.error(f"Stop Loss: {stop_loss_level:.5f} (deve ser {'<' if trade_direction == 'COMPRA' else '>'} que preço atual)")
+            st.error(f"Take Profit: {take_profit_level:.5f} (deve ser {'>' if trade_direction == 'COMPRA' else '<'} que preço atual)")
+            return
         
         # Enhanced risk calculations
         risk_percentage = abs((stop_loss_level - current_price) / current_price) * 100
@@ -1985,6 +2006,44 @@ def display_main_summary(results, analysis_mode):
         
         # Color coding based on profile
         risk_color = "red" if risk_percentage > profile['volatility_threshold'] * 100 else "orange" if risk_percentage > profile['volatility_threshold'] * 50 else "green"
+        
+        # PAINEL DE VALIDAÇÃO CRÍTICA - Mostrar debug da lógica
+        st.markdown(f"""
+        <div style="
+            background: linear-gradient(135deg, rgba(76,175,80,0.1), rgba(33,150,243,0.1));
+            border-left: 4px solid #2196F3;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        ">
+            <h4 style="color: #2196F3; margin: 0 0 0.8rem 0; font-size: 1rem;">🔍 Validação Crítica da Lógica de Trading</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.8rem; text-align: center;">
+                <div style="background: rgba(33,150,243,0.1); padding: 0.8rem; border-radius: 6px;">
+                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Sinal Identificado</strong></p>
+                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #2196F3;">{trade_direction}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Baseado na previsão</p>
+                </div>
+                <div style="background: rgba(244,67,54,0.1); padding: 0.8rem; border-radius: 6px;">
+                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Stop Loss Válido</strong></p>
+                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {'green' if stop_is_correct else 'red'};">{'✓ CORRETO' if stop_is_correct else '✗ ERRO'}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.75rem;">{'Posicionado' if stop_is_correct else 'DIREÇÃO ERRADA!'} {risk_direction}</p>
+                </div>
+                <div style="background: rgba(76,175,80,0.1); padding: 0.8rem; border-radius: 6px;">
+                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Take Profit Válido</strong></p>
+                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {'green' if target_is_correct else 'red'};">{'✓ CORRETO' if target_is_correct else '✗ ERRO'}</p>
+                    <p style="margin: 0; color: #888; font-size: 0.75rem;">{'Posicionado' if target_is_correct else 'DIREÇÃO ERRADA!'} {reward_direction}</p>
+                </div>
+                <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px;">
+                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Diferenças</strong></p>
+                    <p style="margin: 0; font-size: 0.9rem; font-weight: bold; color: #FF9800;">
+                        Stop: {(stop_loss_level - current_price):+.5f}<br>
+                        Target: {(take_profit_level - current_price):+.5f}
+                    </p>
+                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Em relação ao preço atual</p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.markdown(f"""
         <div style="
