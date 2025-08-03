@@ -56,7 +56,7 @@ def check_password():
                 st.session_state["saved_password"] = password
                 st.session_state["credentials_saved"] = True
             
-            # Clear the input fields
+            # Clear the input fields but keep login state
             if "password" in st.session_state:
                 del st.session_state["password"]
             if "username" in st.session_state:
@@ -75,7 +75,12 @@ def check_password():
                 return True
         return False
 
-    # Check if user has saved credentials and wants direct login
+    # Auto-login with saved credentials on page load
+    if st.session_state.get("credentials_saved", False) and not st.session_state.get("password_correct", False):
+        if direct_login():
+            return True
+
+    # Check if user clicked direct login button
     if st.session_state.get("direct_login_clicked", False):
         if direct_login():
             st.session_state["direct_login_clicked"] = False
@@ -114,12 +119,21 @@ def check_password():
             col_direct, col_manual = st.columns(2)
             
             with col_direct:
-                if st.button("🚀 Entrar Automaticamente", type="primary", use_container_width=True):
-                    st.session_state["direct_login_clicked"] = True
-                    st.rerun()
+                if st.button("🚀 Entrar Automaticamente", type="primary", use_container_width=True, key="auto_login_btn"):
+                    # Direct login with saved credentials
+                    saved_username = st.session_state.get("saved_username", "")
+                    saved_password = st.session_state.get("saved_password", "")
+                    
+                    if saved_username in VALID_CREDENTIALS and VALID_CREDENTIALS[saved_username] == hashlib.md5(saved_password.encode()).hexdigest():
+                        st.session_state["password_correct"] = True
+                        st.rerun()  # Immediate redirect
+                    else:
+                        st.session_state["credentials_saved"] = False
+                        st.error("❌ Credenciais salvas inválidas!")
+                        st.rerun()
             
             with col_manual:
-                if st.button("✏️ Inserir Manualmente", use_container_width=True):
+                if st.button("✏️ Inserir Manualmente", use_container_width=True, key="manual_login_btn"):
                     st.session_state["credentials_saved"] = False
                     st.rerun()
             
@@ -132,16 +146,37 @@ def check_password():
         # Remember me checkbox
         st.checkbox("🔒 Lembrar credenciais", key="remember_me", help="Salva suas credenciais para login automático futuro")
         
-        # Login button
-        if st.button("🔓 Fazer Login", type="primary", use_container_width=True):
-            password_entered()
+        # Login button with immediate response
+        if st.button("🔓 Fazer Login", type="primary", use_container_width=True, key="login_submit"):
+            username = st.session_state.get("username", "")
+            password = st.session_state.get("password", "")
+            remember_me = st.session_state.get("remember_me", False)
+            
+            if username and password and username in VALID_CREDENTIALS and VALID_CREDENTIALS[username] == hashlib.md5(password.encode()).hexdigest():
+                st.session_state["password_correct"] = True
+                
+                # Save credentials if remember me is checked
+                if remember_me:
+                    st.session_state["saved_username"] = username
+                    st.session_state["saved_password"] = password
+                    st.session_state["credentials_saved"] = True
+                
+                # Clear the input fields
+                if "password" in st.session_state:
+                    del st.session_state["password"]
+                if "username" in st.session_state:
+                    del st.session_state["username"]
+                
+                st.rerun()  # Immediate redirect
+            else:
+                st.session_state["password_correct"] = False
+                st.error("❌ Usuário ou senha incorretos!")
         
-        if "password_correct" in st.session_state and not st.session_state["password_correct"]:
-            st.error(get_text("invalid_credentials"))
+        # Remove the general error message since we handle it inline now
             
         # Clear saved credentials option
         if has_saved_credentials:
-            if st.button("🗑️ Limpar Credenciais Salvas", help="Remove as credenciais salvas deste dispositivo"):
+            if st.button("🗑️ Limpar Credenciais Salvas", help="Remove as credenciais salvas deste dispositivo", key="clear_creds_btn"):
                 st.session_state["credentials_saved"] = False
                 if "saved_username" in st.session_state:
                     del st.session_state["saved_username"]
