@@ -176,6 +176,16 @@ def main():
     
     # Sidebar lateral simples como era antes
     with st.sidebar:
+        # Botão Home no topo da sidebar
+        if st.button("🏠 Home", type="primary", use_container_width=True):
+            # Limpar todos os resultados e voltar ao estado inicial
+            for key in ['analysis_results', 'show_analysis', 'analysis_mode']:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
+        
+        st.markdown("---")
+        
         # Header da sidebar compacto
         st.markdown("## ⚙️ Configurações")
         
