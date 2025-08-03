@@ -20,12 +20,14 @@ try:
     from models.lstm_model import ForexPredictor
     from services.data_service import DataService  
     from services.sentiment_service import SentimentService
+    from services.ai_unified_service import AIUnifiedService
     from utils.cache_manager import CacheManager
     
     # Initialize services
     services = {
         'data_service': DataService(),
-        'sentiment_service': SentimentService()
+        'sentiment_service': SentimentService(),
+        'ai_unified_service': AIUnifiedService()
     }
 except ImportError as e:
     print(f"Import warning: {e}")
@@ -40,7 +42,8 @@ except ImportError as e:
     
     services = {
         'data_service': MockService(),
-        'sentiment_service': MockService()
+        'sentiment_service': MockService(),
+        'ai_unified_service': MockService()
     }
 
 # Simple technical indicators class
@@ -1817,7 +1820,8 @@ def display_main_summary(results, analysis_mode):
             }
         }
         
-        profile = risk_profiles.get(risk_level_used, risk_profiles['Moderate'])
+        # Get AI-enhanced profile from settings
+        profile = RISK_PROFILES.get(risk_level_used, RISK_PROFILES['Moderate'])
         
         # Calcular volatilidade real baseada nos dados históricos
         pair_name = results.get('pair', 'EUR/USD')
@@ -1856,6 +1860,47 @@ def display_main_summary(results, analysis_mode):
         
         # Sistema aprimorado de cálculo baseado em probabilidades reais
         predicted_movement = abs(predicted_price - current_price)
+        
+        # INTEGRAÇÃO DA IA UNIFICADA COM PARÂMETROS SEPARADOS
+        try:
+            # Preparar dados para análise de IA
+            price_data_for_ai = pd.DataFrame({
+                'close': [current_price - 0.001, current_price - 0.0005, current_price],
+                'high': [current_price + 0.001, current_price + 0.0005, current_price + 0.0002],
+                'low': [current_price - 0.002, current_price - 0.001, current_price - 0.0001]
+            })
+            
+            sentiment_data_for_ai = {
+                'overall_sentiment': sentiment_score,
+                'news_count': 8,  # Simulated count
+                'sentiment_consistency': abs(sentiment_score) if sentiment_score != 0 else 0.5
+            }
+            
+            prediction_data_for_ai = {
+                'predicted_price': predicted_price,
+                'current_price': current_price,
+                'confidence': confidence
+            }
+            
+            # Executar análise unificada de IA
+            ai_analysis = services['ai_unified_service'].run_unified_analysis(
+                price_data_for_ai, sentiment_data_for_ai, prediction_data_for_ai, profile
+            )
+            
+            # Extrair resultados da IA para usar nos cálculos
+            ai_confidence_boost = ai_analysis.unified_interpretation.get('unified_confidence', confidence)
+            ai_direction_strength = ai_analysis.unified_interpretation.get('combined_strength', 0.5)
+            ai_consensus = ai_analysis.unified_interpretation.get('consensus_strength', 0.5)
+            
+            # Ajustar confiança baseada na IA
+            enhanced_confidence = (confidence * 0.7) + (ai_confidence_boost * 0.3)
+            
+        except Exception as e:
+            st.error(f"Erro na análise de IA: {e}")
+            ai_analysis = None
+            enhanced_confidence = confidence
+            ai_direction_strength = 0.5
+            ai_consensus = 0.5
         
         # ANÁLISE TÉCNICA REAL PARA NÍVEIS DE STOP E TARGET
         
@@ -2210,6 +2255,85 @@ def display_main_summary(results, analysis_mode):
     # Show unified analysis components if available
     if analysis_mode == 'unified' and 'components' in results:
         st.markdown("### 🔍 Componentes da Análise Unificada")
+        
+        # Show AI analysis if available
+        if 'ai_analysis' in results and results['ai_analysis'] is not None:
+            ai_analysis = results['ai_analysis']
+            
+            st.markdown("#### 🧠 Interpretação da IA")
+            st.markdown(f"""
+            <div style="
+                background: linear-gradient(135deg, rgba(63,81,181,0.1), rgba(156,39,176,0.1));
+                border-left: 4px solid #3F51B5;
+                border-radius: 8px;
+                padding: 1rem;
+                margin: 1rem 0;
+            ">
+                <h5 style="color: #3F51B5; margin: 0 0 0.8rem 0;">💭 {ai_analysis.unified_interpretation.get('ai_interpretation', 'Análise em processamento...')}</h5>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.8rem; margin-bottom: 1rem;">
+                    <div style="background: rgba(63,81,181,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Direção Unificada</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #3F51B5;">{ai_analysis.unified_interpretation.get('unified_direction', 'neutral').upper()}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Confiança: {ai_analysis.unified_interpretation.get('direction_confidence', 0)*100:.0f}%</p>
+                    </div>
+                    <div style="background: rgba(76,175,80,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Consenso IA</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4CAF50;">{ai_analysis.unified_interpretation.get('consensus_count', 0)}/3</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Componentes alinhados</p>
+                    </div>
+                    <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Recomendação</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #FF9800;">{ai_analysis.unified_interpretation.get('recommendation', 'hold').upper()}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Força: {ai_analysis.unified_interpretation.get('combined_strength', 0)*100:.0f}%</p>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 1rem;">
+                    <h6 style="margin: 0 0 0.5rem 0; color: #666;">Pesos dos Componentes:</h6>
+                    <div style="display: flex; justify-content: space-around; text-align: center; font-size: 0.85rem;">
+                        <div>
+                            <strong>Histórico:</strong> {ai_analysis.unified_interpretation.get('component_weights', {}).get('historical', 0)*100:.0f}%
+                        </div>
+                        <div>
+                            <strong>Sentimento:</strong> {ai_analysis.unified_interpretation.get('component_weights', {}).get('sentiment', 0)*100:.0f}%
+                        </div>
+                        <div>
+                            <strong>Probabilidade:</strong> {ai_analysis.unified_interpretation.get('component_weights', {}).get('probability', 0)*100:.0f}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Mostrar componentes individuais
+            st.markdown("#### 📊 Componentes Detalhados")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.markdown("**📈 Análise Histórica**")
+                hist = ai_analysis.historical_analysis
+                st.write(f"• Tendência: {hist.get('trend_direction', 'neutral')}")
+                st.write(f"• Força: {hist.get('trend_strength', 0):.2f}")
+                st.write(f"• Momentum: {hist.get('momentum', 0):.4f}")
+                st.write(f"• Confiança: {hist.get('confidence', 0)*100:.0f}%")
+            
+            with col2:
+                st.markdown("**📰 Análise de Sentimento**")
+                sent = ai_analysis.sentiment_analysis
+                st.write(f"• Direção: {sent.get('sentiment_direction', 'neutral')}")
+                st.write(f"• Score: {sent.get('sentiment_score', 0):.3f}")
+                st.write(f"• Humor: {sent.get('market_mood', 'uncertain')}")
+                st.write(f"• Confiança: {sent.get('confidence', 0)*100:.0f}%")
+            
+            with col3:
+                st.markdown("**🎯 Análise de Probabilidade**")
+                prob = ai_analysis.probability_analysis
+                st.write(f"• Direção: {prob.get('direction_probability', 0)*100:.0f}%")
+                st.write(f"• Magnitude: {prob.get('magnitude_probability', 0)*100:.0f}%")
+                st.write(f"• Sucesso: {prob.get('success_probability', 0)*100:.0f}%")
+                st.write(f"• Confiança: {prob.get('confidence', 0)*100:.0f}%")
         
         # Create columns for components
         cols = st.columns(2)

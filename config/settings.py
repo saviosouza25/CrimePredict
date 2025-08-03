@@ -93,9 +93,82 @@ CACHE_TTL = 300  # 5 minutes
 DATA_CACHE_TTL = 900  # 15 minutes
 NEWS_CACHE_TTL = 1800  # 30 minutes
 
-# Risk Management
+# Risk Management with AI Parameters
 RISK_LEVELS = {
     'Conservative': 0.02,
     'Moderate': 0.05,
     'Aggressive': 0.10
+}
+
+# Advanced Risk Profiles with AI Integration
+RISK_PROFILES = {
+    'Conservative': {
+        'atr_multiplier_stop': 1.2,      # Múltiplo ATR para stop loss
+        'atr_multiplier_tp': 1.8,        # Múltiplo ATR para take profit
+        'daily_range_factor': 0.6,       # Fator do range diário
+        'volatility_buffer': 0.0001,     # Buffer mínimo de volatilidade
+        'volatility_threshold': 0.015,   # Limiar de volatilidade (1.5%)
+        'max_risk_pips': 25,             # Máximo risco em pips
+        'min_risk_reward': 1.8,          # Mínima razão risco/retorno
+        'confidence_adjustment': 0.15,   # Ajuste de confiança (15%)
+        'banca_risk': 1.0,               # Máximo 1% da banca em risco
+        'extension_factor': 1.4,         # Fator de extensão para cenários otimistas
+        'reversal_sensitivity': 0.5,     # Sensibilidade para alertas de reversão
+        
+        # PARÂMETROS IA SEPARADOS
+        'ai_historical_weight': 0.4,     # Peso da análise histórica (40%)
+        'ai_sentiment_weight': 0.3,      # Peso da análise de sentimento (30%)
+        'ai_probability_weight': 0.3,    # Peso das probabilidades (30%)
+        'ai_confidence_threshold': 0.7,  # Limiar mínimo de confiança IA
+        'ai_historical_periods': 20,     # Períodos históricos para análise
+        'ai_sentiment_sensitivity': 0.6, # Sensibilidade ao sentimento (conservador)
+        'ai_volatility_adjustment': 0.8, # Ajuste por volatilidade
+        'ai_trend_strength_min': 0.6     # Força mínima de tendência
+    },
+    'Moderate': {
+        'atr_multiplier_stop': 1.8,
+        'atr_multiplier_tp': 2.5,
+        'daily_range_factor': 0.8,
+        'volatility_buffer': 0.00015,
+        'volatility_threshold': 0.025,
+        'max_risk_pips': 45,
+        'min_risk_reward': 1.5,
+        'confidence_adjustment': 0.25,
+        'banca_risk': 2.0,
+        'extension_factor': 1.8,
+        'reversal_sensitivity': 0.4,
+        
+        # PARÂMETROS IA SEPARADOS
+        'ai_historical_weight': 0.35,    # Peso da análise histórica (35%)
+        'ai_sentiment_weight': 0.35,     # Peso da análise de sentimento (35%)
+        'ai_probability_weight': 0.30,   # Peso das probabilidades (30%)
+        'ai_confidence_threshold': 0.6,  # Limiar mínimo de confiança IA
+        'ai_historical_periods': 30,     # Períodos históricos para análise
+        'ai_sentiment_sensitivity': 0.7, # Sensibilidade ao sentimento (moderado)
+        'ai_volatility_adjustment': 1.0, # Ajuste por volatilidade
+        'ai_trend_strength_min': 0.5     # Força mínima de tendência
+    },
+    'Aggressive': {
+        'atr_multiplier_stop': 2.5,
+        'atr_multiplier_tp': 3.5,
+        'daily_range_factor': 1.2,
+        'volatility_buffer': 0.0002,
+        'volatility_threshold': 0.04,
+        'max_risk_pips': 80,
+        'min_risk_reward': 1.2,
+        'confidence_adjustment': 0.4,
+        'banca_risk': 3.0,
+        'extension_factor': 2.5,
+        'reversal_sensitivity': 0.3,
+        
+        # PARÂMETROS IA SEPARADOS
+        'ai_historical_weight': 0.30,    # Peso da análise histórica (30%)
+        'ai_sentiment_weight': 0.40,     # Peso da análise de sentimento (40%)
+        'ai_probability_weight': 0.30,   # Peso das probabilidades (30%)
+        'ai_confidence_threshold': 0.5,  # Limiar mínimo de confiança IA
+        'ai_historical_periods': 50,     # Períodos históricos para análise
+        'ai_sentiment_sensitivity': 0.9, # Sensibilidade ao sentimento (agressivo)
+        'ai_volatility_adjustment': 1.3, # Ajuste por volatilidade
+        'ai_trend_strength_min': 0.4     # Força mínima de tendência
+    }
 }
