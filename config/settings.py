@@ -2,7 +2,7 @@ import os
 from typing import Dict, List
 
 # API Configuration
-API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', 'VZ6XL34A1G4VCKP3')
+API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
 
 # Trading Pairs
 PAIRS: List[str] = ['EUR/USD', 'USD/JPY', 'GBP/USD', 'AUD/USD', 'USD/CAD', 'NZD/USD', 'GBP/JPY', 'EUR/GBP']

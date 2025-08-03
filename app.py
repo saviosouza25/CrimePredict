@@ -309,25 +309,18 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
             st.error("❌ Dados insuficientes ou inválidos recebidos")
             return
         
-        # Usar dados reais ou simulação mais realista baseada no par
-        import numpy as np
+        # Step 2: Add technical indicators
+        from utils.technical_indicators import TechnicalIndicators
+        df_with_indicators = TechnicalIndicators.add_all_indicators(df)
         
-        # Preços base realistas por par
-        price_base = {
-            'EUR/USD': 1.0800,
-            'GBP/USD': 1.2650,
-            'USD/JPY': 149.50,
-            'USD/CHF': 0.8850,
-            'AUD/USD': 0.6580,
-            'USD/CAD': 1.3620,
-            'NZD/USD': 0.6120,
-            'EUR/GBP': 0.8530,
-            'EUR/JPY': 161.40,
-            'GBP/JPY': 189.20
-        }
+        # Buscar preço atual real da Alpha Vantage
+        current_price = services['data_service'].get_latest_price(pair)
         
-        base_price = price_base.get(pair, 1.0000)
-        current_price = base_price + np.random.uniform(-base_price*0.005, base_price*0.005)
+        if current_price is None:
+            st.error(f"❌ Não foi possível obter o preço atual para {pair}. Verifique a conexão com Alpha Vantage.")
+            return
+        
+        st.info(f"💰 Preço atual de {pair}: {current_price:.5f} (dados em tempo real)")
         
         results = {
             'pair': pair,
@@ -339,25 +332,28 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
             'components': {}
         }
         
+        # Buscar dados de sentimento real para todas as análises
+        sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
+        
         # Executar análises baseadas no modo selecionado
         if analysis_mode == 'unified':
             # Análise unificada - combina todas as análises
-            results.update(run_unified_analysis(current_price, pair, risk_level))
+            results.update(run_unified_analysis(current_price, pair, risk_level, sentiment_score, df_with_indicators))
         elif analysis_mode == 'technical':
-            results.update(run_technical_analysis(current_price))
+            results.update(run_technical_analysis(current_price, df_with_indicators))
         elif analysis_mode == 'sentiment':
-            results.update(run_sentiment_analysis(current_price, pair))
+            results.update(run_sentiment_analysis(current_price, pair, sentiment_score))
         elif analysis_mode == 'risk':
             results.update(run_risk_analysis(current_price, risk_level))
         elif analysis_mode == 'ai_lstm':
-            results.update(run_ai_analysis(current_price, lookback_period, epochs))
+            results.update(run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators))
         elif analysis_mode == 'volume':
-            results.update(run_volume_analysis(current_price))
+            results.update(run_volume_analysis(current_price, df_with_indicators))
         elif analysis_mode == 'trend':
-            results.update(run_trend_analysis(current_price))
+            results.update(run_trend_analysis(current_price, df_with_indicators))
         else:
             # Análise padrão
-            results.update(run_basic_analysis(current_price, is_quick))
+            results.update(run_basic_analysis(current_price, is_quick, sentiment_score))
         
         st.session_state.analysis_results = results
         st.success("✅ Análise concluída com sucesso!")
@@ -366,27 +362,37 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
         st.error(f"❌ Erro durante a análise: {str(e)}")
         print(f"Analysis error: {e}")
 
-def run_unified_analysis(current_price, pair, risk_level):
+def run_unified_analysis(current_price, pair, risk_level, sentiment_score, df_with_indicators):
     """Análise unificada que combina todas as fonções para melhor previsão"""
     import numpy as np
     
-    # Simular componentes da análise unificada
+    # Pesos dos componentes
     technical_weight = 0.3
     sentiment_weight = 0.25
     ai_weight = 0.3
     risk_weight = 0.15
     
-    # Componente técnico
-    technical_signal = np.random.uniform(-0.02, 0.02)
+    # Componente técnico - baseado em indicadores reais
+    rsi = df_with_indicators['rsi'].iloc[-1] if 'rsi' in df_with_indicators.columns else 50
+    macd = df_with_indicators['macd'].iloc[-1] if 'macd' in df_with_indicators.columns else 0
     
-    # Componente de sentimento
-    sentiment_signal = np.random.uniform(-0.015, 0.015)
+    # Sinal técnico baseado em RSI e MACD
+    rsi_signal = (50 - rsi) / 50  # RSI normalizado
+    macd_signal = np.tanh(macd * 1000)  # MACD normalizado
+    technical_signal = (rsi_signal + macd_signal) / 2 * 0.02
     
-    # Componente de IA
-    ai_signal = np.random.uniform(-0.025, 0.025)
+    # Componente de sentimento - usar dados reais
+    sentiment_signal = sentiment_score * 0.015
     
-    # Componente de risco
-    risk_signal = np.random.uniform(-0.01, 0.01)
+    # Componente de IA - baseado em tendência dos preços
+    recent_prices = df_with_indicators['close'].tail(5).values
+    price_trend = (recent_prices[-1] - recent_prices[0]) / recent_prices[0]
+    ai_signal = np.tanh(price_trend * 10) * 0.025
+    
+    # Componente de risco - baseado na volatilidade
+    volatility = df_with_indicators['close'].tail(20).std() / current_price
+    risk_multiplier = {'Conservative': 0.5, 'Moderate': 1.0, 'Aggressive': 1.5}.get(risk_level, 1.0)
+    risk_signal = (0.01 - volatility) * risk_multiplier * 0.01
     
     # Combinação ponderada
     combined_signal = (technical_signal * technical_weight + 
@@ -401,48 +407,63 @@ def run_unified_analysis(current_price, pair, risk_level):
     # Calcular confiança baseada na convergência dos sinais
     signals = [technical_signal, sentiment_signal, ai_signal, risk_signal]
     signal_variance = np.var(signals)
-    confidence = max(0.5, 1 - (signal_variance * 100))  # Maior confiança quando sinais convergem
+    confidence = max(0.5, min(0.95, 1 - (signal_variance * 100)))
     
     return {
         'predicted_price': predicted_price,
         'price_change': price_change,
         'price_change_pct': price_change_pct,
         'model_confidence': confidence,
+        'sentiment_score': sentiment_score,
         'components': {
-            'technical': {'signal': technical_signal, 'weight': technical_weight},
-            'sentiment': {'signal': sentiment_signal, 'weight': sentiment_weight},
-            'ai': {'signal': ai_signal, 'weight': ai_weight},
-            'risk': {'signal': risk_signal, 'weight': risk_weight}
+            'technical': {'signal': technical_signal, 'weight': technical_weight, 'details': f'RSI: {rsi:.1f}, MACD: {macd:.5f}'},
+            'sentiment': {'signal': sentiment_signal, 'weight': sentiment_weight, 'details': f'Score: {sentiment_score:.3f}'},
+            'ai': {'signal': ai_signal, 'weight': ai_weight, 'details': f'Tendência: {price_trend:.3f}'},
+            'risk': {'signal': risk_signal, 'weight': risk_weight, 'details': f'Volatilidade: {volatility:.3f}'}
         },
         'final_recommendation': 'COMPRAR' if combined_signal > 0.005 else 'VENDER' if combined_signal < -0.005 else 'MANTER'
     }
 
-def run_technical_analysis(current_price):
+def run_technical_analysis(current_price, df_with_indicators):
     """Análise técnica especializada"""
     import numpy as np
-    signal = np.random.uniform(-0.02, 0.02)
-    predicted_price = current_price * (1 + signal)
+    
+    # Usar indicadores técnicos reais
+    rsi = df_with_indicators['rsi'].iloc[-1] if 'rsi' in df_with_indicators.columns else 50
+    macd = df_with_indicators['macd'].iloc[-1] if 'macd' in df_with_indicators.columns else 0
+    
+    # Calcular sinais baseados em indicadores
+    rsi_signal = (50 - rsi) / 100  # RSI signal
+    macd_signal = np.tanh(macd * 1000)  # MACD signal normalized
+    
+    combined_signal = (rsi_signal + macd_signal) / 2 * 0.02
+    predicted_price = current_price * (1 + combined_signal)
     price_change = predicted_price - current_price
+    
     return {
         'predicted_price': predicted_price,
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': 0.75,
-        'analysis_focus': 'Indicadores técnicos (RSI, MACD, Bollinger)'
+        'analysis_focus': f'Indicadores técnicos - RSI: {rsi:.1f}, MACD: {macd:.5f}'
     }
 
-def run_sentiment_analysis(current_price, pair):
+def run_sentiment_analysis(current_price, pair, sentiment_score):
     """Análise de sentimento especializada"""
-    import numpy as np
-    signal = np.random.uniform(-0.015, 0.015)
+    # Usar dados reais de sentimento
+    signal = sentiment_score * 0.015  # Amplificar o sinal do sentimento
     predicted_price = current_price * (1 + signal)
     price_change = predicted_price - current_price
+    
+    sentiment_label = "Positivo" if sentiment_score > 0.1 else "Negativo" if sentiment_score < -0.1 else "Neutro"
+    
     return {
         'predicted_price': predicted_price,
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': 0.65,
-        'analysis_focus': 'Sentimento de mercado e notícias financeiras'
+        'sentiment_score': sentiment_score,
+        'analysis_focus': f'Sentimento: {sentiment_label} (Score: {sentiment_score:.3f})'
     }
 
 def run_risk_analysis(current_price, risk_level):
