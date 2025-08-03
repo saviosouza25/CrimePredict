@@ -1852,8 +1852,10 @@ def display_main_summary(results, analysis_mode):
         predicted_price = results['predicted_price']
         confidence = results['model_confidence']
         
-        # Get risk level from results if available
+        # Get risk level and sentiment score from results if available
         risk_level_used = results.get('risk_level_used', 'Moderate')
+        sentiment_score = results.get('sentiment_score', 0.0)
+        horizon = results.get('horizon', '1 Hora')
         
         # Sistema de gerenciamento de risco baseado em volatilidade real do mercado
         # Valores calculados com base na análise histórica de pares forex da Alpha Vantage
