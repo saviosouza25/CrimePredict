@@ -1216,7 +1216,8 @@ def main():
             "Tema da Interface",
             ["Light (Claro)", "Dark (Escuro)"],
             index=0 if st.session_state.get('theme', 'light') == 'light' else 1,
-            help="Escolha entre tema claro ou escuro"
+            help="Escolha entre tema claro ou escuro",
+            key="theme_selector"
         )
         
         # Update theme in session state
@@ -1227,11 +1228,11 @@ def main():
             st.rerun()
         
         # Tutorial button
-        if st.button("📚 Tutorial Completo", help="Abrir guia detalhado de todas as funções"):
+        if st.button("📚 Tutorial Completo", help="Abrir guia detalhado de todas as funções", key="tutorial_button"):
             st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
         
         # Add logout button
-        if st.button("🚪 Sair", help="Sair da plataforma"):
+        if st.button("🚪 Sair", help="Sair da plataforma", key="logout_button"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
@@ -1285,7 +1286,8 @@ def main():
                 min_value=30,
                 max_value=120,
                 value=LOOKBACK_PERIOD,
-                help="Períodos históricos para treinamento da IA"
+                help="Períodos históricos para treinamento da IA",
+                key="sidebar_lookback_period"
             )
             
             epochs = st.slider(
@@ -1293,7 +1295,8 @@ def main():
                 min_value=5,
                 max_value=20,
                 value=EPOCHS,
-                help="Mais épocas = melhor precisão mas mais lento"
+                help="Mais épocas = melhor precisão mas mais lento",
+                key="sidebar_epochs"
             )
             
             mc_samples = st.slider(
@@ -1301,7 +1304,8 @@ def main():
                 min_value=10,
                 max_value=50,
                 value=MC_SAMPLES,
-                help="Amostras para estimativa de incerteza"
+                help="Amostras para estimativa de incerteza",
+                key="sidebar_mc_samples"
             )
             
             # Mobile-optimized cache button
@@ -1317,7 +1321,7 @@ def main():
             </style>
             """, unsafe_allow_html=True)
             
-            if st.button("Limpar Cache"):
+            if st.button("Limpar Cache", key="sidebar_clear_cache"):
                 CacheManager.clear_cache()
                 st.success("Cache limpo!")
                 st.rerun()
@@ -1394,51 +1398,7 @@ def main():
             help=get_help_content("risk_level")
         )
         
-        # Advanced settings - collapsed by default
-        with st.expander("Opções Avançadas"):
-            lookback_period = st.slider(
-                "Histórico de Dados",
-                min_value=30,
-                max_value=120,
-                value=LOOKBACK_PERIOD,
-                help="Períodos históricos para treinamento da IA"
-            )
-            
-            epochs = st.slider(
-                "Intensidade do Treinamento IA",
-                min_value=5,
-                max_value=20,
-                value=EPOCHS,
-                help="Mais épocas = melhor precisão mas mais lento"
-            )
-            
-            mc_samples = st.slider(
-                "Amostras de Previsão",
-                min_value=10,
-                max_value=50,
-                value=MC_SAMPLES,
-                help="Amostras para estimativa de incerteza"
-            )
-            
-            # Mobile-optimized cache button
-            st.markdown("""
-            <style>
-                @media (max-width: 768px) {
-                    .stButton > button:contains("Limpar") {
-                        min-height: 44px !important;
-                        font-size: 14px !important;
-                        padding: 0.75rem !important;
-                    }
-                }
-            </style>
-            """, unsafe_allow_html=True)
-            
-            if st.button("Limpar Cache"):
-                CacheManager.clear_cache()
-                st.success("Cache limpo!")
-                st.rerun()
-        
-        # Simple status
+        # Configuration status
         cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
         if cache_count > 0:
             st.info(f"💾 {cache_count} análises em cache disponíveis")
