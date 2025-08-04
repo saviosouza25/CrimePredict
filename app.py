@@ -1970,18 +1970,81 @@ def display_main_summary(results, analysis_mode):
                 horizon, pair_name
             )
             
-            # Extrair resultados da IA para usar nos cálculos
+            # Extrair resultados REAIS da IA para usar nos cálculos
             ai_confidence_boost = ai_analysis.unified_interpretation.get('unified_confidence', confidence)
             ai_direction_strength = ai_analysis.unified_interpretation.get('combined_strength', 0.5)
             ai_consensus = ai_analysis.unified_interpretation.get('consensus_strength', 0.5)
             
-            # Ajustar confiança baseada na IA
-            enhanced_confidence = (confidence * 0.7) + (ai_confidence_boost * 0.3)
+            # CALCULAR CONFIANÇA CONFLUENTE REAL baseada em múltiplos fatores
+            def calculate_real_confidence_score(lstm_confidence, ai_confidence, sentiment_score, direction_strength):
+                """Calcular confiança real baseada na confluência de todas as análises"""
+                
+                # 1. Confiança base do modelo LSTM (40% do peso)
+                lstm_component = lstm_confidence * 0.4
+                
+                # 2. Confiança da IA unificada (30% do peso)
+                ai_component = ai_confidence * 0.3
+                
+                # 3. Força da direção do sentiment (20% do peso)
+                sentiment_strength = min(1.0, abs(sentiment_score) * 2)  # Normalizar para 0-1
+                sentiment_component = sentiment_strength * 0.2
+                
+                # 4. Consistência da direção entre análises (10% do peso)
+                # Verificar se LSTM e sentiment apontam na mesma direção
+                lstm_direction = 1 if lstm_confidence > 0.5 else -1
+                sentiment_direction = 1 if sentiment_score > 0 else -1
+                direction_consistency = 1.0 if lstm_direction == sentiment_direction else 0.3
+                consistency_component = direction_consistency * 0.1
+                
+                # Confiança total confluente
+                total_confidence = lstm_component + ai_component + sentiment_component + consistency_component
+                
+                # Limitar entre 15% e 95% (valores realistas)
+                final_confidence = max(0.15, min(0.95, total_confidence))
+                
+                return final_confidence, {
+                    'lstm_weight': lstm_component,
+                    'ai_weight': ai_component, 
+                    'sentiment_weight': sentiment_component,
+                    'consistency_weight': consistency_component,
+                    'direction_alignment': direction_consistency == 1.0
+                }
+            
+            # Aplicar cálculo de confiança confluente
+            enhanced_confidence, confidence_breakdown = calculate_real_confidence_score(
+                confidence, ai_confidence_boost, sentiment_score, ai_direction_strength
+            )
             
         except Exception as e:
-            st.error(f"Erro na análise de IA: {e}")
+            st.warning(f"IA indisponível, usando análise técnica: {e}")
             ai_analysis = None
-            enhanced_confidence = confidence
+            
+            # Confiança conservadora sem IA (baseada apenas em LSTM + sentiment)
+            def calculate_conservative_confidence(lstm_confidence, sentiment_score):
+                """Calcular confiança sem IA disponível"""
+                
+                # Base do LSTM (70% do peso)
+                lstm_component = lstm_confidence * 0.7
+                
+                # Força do sentiment (30% do peso)
+                sentiment_strength = min(1.0, abs(sentiment_score) * 2)
+                sentiment_component = sentiment_strength * 0.3
+                
+                # Penalidade por falta de IA (-10%)
+                ai_penalty = 0.1
+                
+                total_confidence = lstm_component + sentiment_component - ai_penalty
+                
+                # Limitar entre 10% e 80% (mais conservador sem IA)
+                return max(0.10, min(0.80, total_confidence))
+            
+            enhanced_confidence = calculate_conservative_confidence(confidence, sentiment_score)
+            confidence_breakdown = {
+                'lstm_weight': confidence * 0.7,
+                'sentiment_weight': min(1.0, abs(sentiment_score) * 2) * 0.3,
+                'ai_penalty': -0.1,
+                'direction_alignment': False
+            }
             ai_direction_strength = 0.5
             ai_consensus = 0.5
         
@@ -2261,10 +2324,10 @@ def display_main_summary(results, analysis_mode):
             
             return time_days, total_probability
         
-        # Aplicar cálculo de tempo com IA
+        # Aplicar cálculo de tempo com IA usando a confiança confluente
         ai_consensus_value = ai_consensus if 'ai_consensus' in locals() else 0.5
         estimated_time_days, scenario_probability = calculate_ai_time_probability(
-            extension_percentage, confidence, ai_consensus_value, 
+            extension_percentage, enhanced_confidence, ai_consensus_value, 
             pair_params['volatility'], analysis_mode
         )
         
@@ -2323,10 +2386,10 @@ def display_main_summary(results, analysis_mode):
                     <p style="margin: 0; color: #888; font-size: 0.70rem;">Ref: {target_reference_level:.5f}</p>
                 </div>
                 <div style="background: rgba(33,150,243,0.1); padding: 0.8rem; border-radius: 6px;">
-                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Probabilidade Real</strong></p>
-                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #2196f3;">{(confidence * 85):.0f}%</p>
-                    <p style="margin: 0; color: #888; font-size: 0.75rem;">De atingir o alvo técnico</p>
-                    <p style="margin: 0; color: #888; font-size: 0.70rem;">Confiança ajustada</p>
+                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Confiança Confluente</strong></p>
+                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #2196f3;">{(enhanced_confidence * 100):.0f}%</p>
+                    <p style="margin: 0; color: #888; font-size: 0.75rem;">LSTM + IA + Sentiment</p>
+                    <p style="margin: 0; color: #888; font-size: 0.70rem;">Análise real integrada</p>
                 </div>
                 <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px;">
                     <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Risco vs Retorno</strong></p>
@@ -2452,7 +2515,8 @@ def display_main_summary(results, analysis_mode):
                     <p style="margin: 0; color: #555; font-size: 0.9rem;">
                         <strong>Alerta de Reversão:</strong> Se o preço se mover {risk_direction} além de <strong>{reversal_level:.5f}</strong>, 
                         considere revisar a posição. Stop definitivo em <strong>{stop_loss_level:.5f}</strong>. 
-                        Confiança: <strong>{confidence:.0%}</strong>
+                        <span style="color: #2e7d32;"><strong>Confiança Confluente:</strong> {enhanced_confidence:.0%}</span> 
+                        (LSTM + IA + Sentiment integrados)
                     </p>
                 </div>
             </div>
