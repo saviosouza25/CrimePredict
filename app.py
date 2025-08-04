@@ -131,6 +131,9 @@ def calculate_realistic_drawdown_and_extensions(current_price, pair_name, horizo
     # Determinar direção baseada na análise
     direction = "ALTA" if sentiment_score > 0 or lstm_confidence > 0.6 else "BAIXA"
     
+    # Garantir que current_price é float para operações matemáticas
+    current_price = float(current_price)
+    
     if direction == "ALTA":
         max_adverse_level = current_price - realistic_max_drawdown
         extension_level = current_price + realistic_extension
@@ -284,6 +287,10 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
     current_atr = atr_values.get(pair_name, 0.0015)
     
     # ANÁLISE CONFLUENTE: Previsão + Probabilidade + Momentum
+    # Garantir que são floats para operações matemáticas
+    current_price = float(current_price)
+    predicted_price = float(predicted_price)
+    
     direction = 1 if predicted_price > current_price else -1
     price_momentum = abs(predicted_price - current_price) / current_price
     prob_strength = market_probability['confluent_probability']
@@ -1806,8 +1813,10 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
         probability = 50
     
     # === 8. PREVISÃO DE PREÇO BASEADA EM VOLATILIDADE ===
+    # Garantir que current_price é float antes de operações matemáticas
+    current_price = float(current_price)
     expected_move = float(unified_signal) * float(volatility) * 2.5  # Fator de movimento
-    predicted_price = float(current_price) * (1 + expected_move)
+    predicted_price = current_price * (1 + expected_move)
     price_change = predicted_price - current_price
     price_change_pct = (price_change / current_price) * 100
     
@@ -1820,7 +1829,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     
     # Calcular drawdown e extensão baseados na nova análise
     drawdown_extension_data = calculate_realistic_drawdown_and_extensions(
-        current_price, predicted_price, pair, confidence, sentiment_score, "1 Hora"
+        current_price, str(pair), "1 Hora", "Moderate", sentiment_score, confidence
     )
     
     return {
