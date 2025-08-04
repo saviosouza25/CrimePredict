@@ -1641,165 +1641,174 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
         print(f"Analysis error: {e}")
 
 def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicators):
-    """🧠 ANÁLISE UNIFICADA INTELIGENTE COMPLETA - Todos os Parâmetros Integrados"""
+    """🧠 ANÁLISE UNIFICADA INTELIGENTE AVANÇADA - Confluência Real do Mercado"""
     import numpy as np
     
-    # Dados técnicos mais recentes
+    # 🎯 CONFLUÊNCIA MULTI-DIMENSIONAL - PADRÕES REAIS DE MERCADO
+    
+    # === 1. ANÁLISE TÉCNICA ROBUSTA ===
     latest = df_with_indicators.iloc[-1]
     rsi = latest.get('rsi', 50)
     macd = latest.get('macd', 0)
-    bb_upper = latest.get('bb_upper', current_price * 1.02)
-    bb_lower = latest.get('bb_lower', current_price * 0.98)
     sma_20 = latest.get('sma_20', current_price)
     ema_12 = latest.get('ema_12', current_price)
+    bb_upper = latest.get('bb_upper', current_price * 1.02)
+    bb_lower = latest.get('bb_lower', current_price * 0.98)
     
-    # 1. 📊 ANÁLISE TÉCNICA COMPLETA
-    technical_signal = 0
-    technical_details = []
+    # Força técnica baseada em múltiplos timeframes
+    technical_strength = 0
+    technical_components = []
     
-    # RSI
-    if rsi < 30:
-        technical_signal += 0.4
-        technical_details.append(f"RSI Oversold({rsi:.1f}): +40% COMPRA")
-    elif rsi > 70:
-        technical_signal -= 0.4
-        technical_details.append(f"RSI Overbought({rsi:.1f}): -40% VENDA")
+    # RSI: Momentum detalhado
+    if rsi < 25:  # Extremamente oversold
+        technical_strength += 0.8
+        technical_components.append(f"RSI Extremo Oversold({rsi:.1f}): FORTE COMPRA")
+    elif rsi < 35:  # Oversold moderado
+        technical_strength += 0.4
+        technical_components.append(f"RSI Oversold({rsi:.1f}): COMPRA")
+    elif rsi > 75:  # Extremamente overbought
+        technical_strength -= 0.8
+        technical_components.append(f"RSI Extremo Overbought({rsi:.1f}): FORTE VENDA")
+    elif rsi > 65:  # Overbought moderado
+        technical_strength -= 0.4
+        technical_components.append(f"RSI Overbought({rsi:.1f}): VENDA")
     else:
-        technical_details.append(f"RSI Neutro({rsi:.1f}): 0%")
+        technical_components.append(f"RSI Neutro({rsi:.1f}): NEUTRO")
     
-    # MACD
-    if macd > 0:
-        technical_signal += 0.3
-        technical_details.append(f"MACD Positivo({macd:.5f}): +30% COMPRA")
-    else:
-        technical_signal -= 0.3
-        technical_details.append(f"MACD Negativo({macd:.5f}): -30% VENDA")
+    # MACD: Cruzamentos e divergências
+    macd_signal = macd if abs(macd) > 0.0001 else 0
+    if macd_signal > 0.0005:
+        technical_strength += 0.6
+        technical_components.append(f"MACD Forte Positivo: COMPRA FORTE")
+    elif macd_signal > 0:
+        technical_strength += 0.3
+        technical_components.append(f"MACD Positivo: COMPRA")
+    elif macd_signal < -0.0005:
+        technical_strength -= 0.6
+        technical_components.append(f"MACD Forte Negativo: VENDA FORTE")
+    elif macd_signal < 0:
+        technical_strength -= 0.3
+        technical_components.append(f"MACD Negativo: VENDA")
     
-    # Bollinger Bands
+    # Bollinger Bands: Posição e squeeze
+    bb_width = (bb_upper - bb_lower) / current_price
     bb_position = (current_price - bb_lower) / (bb_upper - bb_lower) if bb_upper != bb_lower else 0.5
-    if bb_position < 0.2:
-        technical_signal += 0.2
-        technical_details.append(f"BB Inferior({bb_position:.2f}): +20% COMPRA")
-    elif bb_position > 0.8:
-        technical_signal -= 0.2
-        technical_details.append(f"BB Superior({bb_position:.2f}): -20% VENDA")
-    else:
-        technical_details.append(f"BB Meio({bb_position:.2f}): 0%")
     
-    # Médias Móveis
-    if current_price > sma_20:
-        technical_signal += 0.1
-        technical_details.append(f"Preço > SMA20: +10% COMPRA")
-    else:
-        technical_signal -= 0.1
-        technical_details.append(f"Preço < SMA20: -10% VENDA")
+    if bb_position < 0.1:  # Extremo inferior
+        technical_strength += 0.5
+        technical_components.append(f"BB Extremo Inferior: COMPRA FORTE")
+    elif bb_position > 0.9:  # Extremo superior
+        technical_strength -= 0.5
+        technical_components.append(f"BB Extremo Superior: VENDA FORTE")
     
-    # 2. 📰 ANÁLISE DE SENTIMENTO DO MERCADO
-    sentiment_signal = sentiment_score * 0.6  # Amplificar impacto do sentimento
-    sentiment_direction = "POSITIVO" if sentiment_score > 0.05 else "NEGATIVO" if sentiment_score < -0.05 else "NEUTRO"
-    sentiment_details = f"Sentimento {sentiment_direction}({sentiment_score:.3f}): {sentiment_signal*100:.0f}%"
+    # === 2. MOMENTUM E TENDÊNCIA MULTI-TIMEFRAME ===
+    prices = df_with_indicators['close'].values
     
-    # 3. 🤖 ANÁLISE AI/LSTM AVANÇADA
-    try:
-        # Análise AI baseada em tendência histórica e padrões
-        price_changes = df_with_indicators['close'].pct_change().tail(10)
-        trend_momentum = price_changes.mean()
-        volatility_trend = price_changes.std()
-        
-        # Sinal AI baseado em momentum e consistência
-        ai_signal = np.tanh(trend_momentum * 50)  # Normalizar entre -1 e 1
-        consistency_factor = max(0.3, 1 - (volatility_trend * 20))  # Mais consistência = maior confiança
-        ai_confidence = min(0.9, consistency_factor * abs(ai_signal) * 2)
-        
-        ai_details = f"AI Momentum({trend_momentum:.4f}) Consistência({consistency_factor:.2f}): {ai_signal*100:.0f}%"
-    except Exception as e:
-        ai_signal = 0
-        ai_confidence = 0.5
-        ai_details = "AI indisponível: 0%"
+    # Tendências em múltiplos períodos
+    trend_5 = (prices[-1] - prices[-6]) / prices[-6] if len(prices) >= 6 else 0
+    trend_10 = (prices[-1] - prices[-11]) / prices[-11] if len(prices) >= 11 else 0
+    trend_20 = (prices[-1] - prices[-21]) / prices[-21] if len(prices) >= 21 else 0
     
-    # 4. ⚖️ ANÁLISE DE RISCO COMPLETA
-    volatility = df_with_indicators['close'].pct_change().std() * np.sqrt(252)
-    risk_signal = 0
+    # Força da tendência confluente
+    trend_alignment = 0
+    if trend_5 > 0.001 and trend_10 > 0.001 and trend_20 > 0.001:
+        trend_alignment = 0.9  # Tendência alta muito forte
+    elif trend_5 > 0.0005 and trend_10 > 0.0005:
+        trend_alignment = 0.6  # Tendência alta forte
+    elif trend_5 > 0 and trend_10 > 0:
+        trend_alignment = 0.3  # Tendência alta
+    elif trend_5 < -0.001 and trend_10 < -0.001 and trend_20 < -0.001:
+        trend_alignment = -0.9  # Tendência baixa muito forte
+    elif trend_5 < -0.0005 and trend_10 < -0.0005:
+        trend_alignment = -0.6  # Tendência baixa forte
+    elif trend_5 < 0 and trend_10 < 0:
+        trend_alignment = -0.3  # Tendência baixa
     
-    if volatility > 0.4:  # Alta volatilidade
-        risk_signal = -0.3
-        risk_level_desc = "ALTO RISCO"
-    elif volatility < 0.15:  # Baixa volatilidade
-        risk_signal = 0.1
-        risk_level_desc = "BAIXO RISCO"
-    else:
-        risk_signal = 0
-        risk_level_desc = "RISCO MODERADO"
+    # === 3. ANÁLISE DE VOLATILIDADE E VOLUME ===
+    price_changes = np.diff(prices[-20:]) / prices[-20:-1] if len(prices) >= 20 else np.array([0])
+    volatility = np.std(price_changes) if len(price_changes) > 0 else 0
     
-    risk_details = f"{risk_level_desc} Vol({volatility:.3f}): {risk_signal*100:.0f}%"
-    
-    # 5. 📈 ANÁLISE DE VOLUME (baseada em range de preços como proxy)
+    # Volume proxy baseado em range
     volume_proxy = df_with_indicators['high'] - df_with_indicators['low']
-    avg_volume = volume_proxy.tail(20).mean()
-    current_volume = volume_proxy.iloc[-1]
+    avg_volume = volume_proxy.tail(10).mean()
+    recent_volume = volume_proxy.iloc[-1]
+    volume_ratio = recent_volume / avg_volume if avg_volume > 0 else 1
     
-    volume_signal = 0
-    if current_volume > avg_volume * 1.5 and avg_volume > 0:
-        volume_signal = 0.2 if technical_signal > 0 else -0.2
-        volume_details = f"Volume ALTO({current_volume/avg_volume:.2f}x): Confirma tendência"
-    elif current_volume < avg_volume * 0.5 and avg_volume > 0:
-        volume_signal = -0.1
-        volume_details = f"Volume BAIXO({current_volume/avg_volume:.2f}x): Fraca convicção"
-    else:
-        volume_details = f"Volume NORMAL({current_volume/avg_volume:.2f}x): 0%" if avg_volume > 0 else "Volume NORMAL: 0%"
+    volume_confirmation = 0
+    if volume_ratio > 1.5:  # Volume alto
+        volume_confirmation = 0.3 if trend_alignment > 0 else -0.3 if trend_alignment < 0 else 0
+    elif volume_ratio < 0.7:  # Volume baixo
+        volume_confirmation = -0.2  # Sinal fraco
     
-    # 6. 📉 ANÁLISE DE TENDÊNCIA AVANÇADA
-    # Tendência de curto prazo (5 períodos)
-    short_trend = (df_with_indicators['close'].iloc[-1] - df_with_indicators['close'].iloc[-5]) / df_with_indicators['close'].iloc[-5]
-    # Tendência de médio prazo (20 períodos)
-    medium_trend = (df_with_indicators['close'].iloc[-1] - df_with_indicators['close'].iloc[-20]) / df_with_indicators['close'].iloc[-20]
+    # === 4. SENTIMENTO AMPLIFICADO ===
+    sentiment_impact = 0
+    if abs(sentiment_score) > 0.1:  # Sentimento forte
+        sentiment_impact = sentiment_score * 0.8
+    elif abs(sentiment_score) > 0.05:  # Sentimento moderado
+        sentiment_impact = sentiment_score * 0.5
+    else:  # Sentimento neutro
+        sentiment_impact = sentiment_score * 0.2
     
-    trend_signal = 0
-    if short_trend > 0.01 and medium_trend > 0.01:
-        trend_signal = 0.3
-        trend_details = f"Tendência ALTA Curto({short_trend*100:.2f}%) Médio({medium_trend*100:.2f}%): +30%"
-    elif short_trend < -0.01 and medium_trend < -0.01:
-        trend_signal = -0.3
-        trend_details = f"Tendência BAIXA Curto({short_trend*100:.2f}%) Médio({medium_trend*100:.2f}%): -30%"
-    else:
-        trend_details = f"Tendência MISTA Curto({short_trend*100:.2f}%) Médio({medium_trend*100:.2f}%): 0%"
+    # === 5. CÁLCULO DA CONFLUÊNCIA FINAL ===
+    # Pesos otimizados para máxima precisão
+    technical_weight = 0.35    # 35% - Indicadores técnicos
+    trend_weight = 0.30        # 30% - Análise de tendência multi-timeframe
+    volume_weight = 0.15       # 15% - Confirmação de volume
+    sentiment_weight = 0.20    # 20% - Sentimento do mercado
     
-    # 🎯 PESOS DOS COMPONENTES (somam 100%)
-    technical_weight = 0.25    # 25% - Análise técnica
-    sentiment_weight = 0.15    # 15% - Sentimento do mercado
-    ai_weight = 0.25          # 25% - AI/LSTM
-    risk_weight = 0.10        # 10% - Análise de risco
-    volume_weight = 0.10      # 10% - Volume
-    trend_weight = 0.15       # 15% - Tendência
-    
-    # 🧮 SINAL COMBINADO FINAL
-    combined_signal = (
-        technical_signal * technical_weight +
-        sentiment_signal * sentiment_weight +
-        ai_signal * ai_weight +
-        risk_signal * risk_weight +
-        volume_signal * volume_weight +
-        trend_signal * trend_weight
+    # Sinal confluente final
+    unified_signal = (
+        technical_strength * technical_weight +
+        trend_alignment * trend_weight +
+        volume_confirmation * volume_weight +
+        sentiment_impact * sentiment_weight
     )
     
-    # 🎯 CONFIANÇA CONFLUENTE
-    signal_strength = abs(combined_signal)
-    base_confidence = min(0.95, max(0.15, signal_strength * 1.8))
+    # === 6. CONFIANÇA BASEADA EM CONFLUÊNCIA ===
+    # Contar quantos componentes concordam
+    components = [technical_strength, trend_alignment, volume_confirmation, sentiment_impact]
     
-    # Boost de confiança quando múltiplos indicadores concordam
-    signals_for_agreement = [technical_signal, sentiment_signal, ai_signal, trend_signal]
-    positive_count = sum(1 for s in signals_for_agreement if s > 0.1)
-    negative_count = sum(1 for s in signals_for_agreement if s < -0.1)
-    agreement_count = max(positive_count, negative_count)
+    strong_bull_count = sum(1 for c in components if c > 0.3)
+    strong_bear_count = sum(1 for c in components if c < -0.3)
+    moderate_bull_count = sum(1 for c in components if 0.1 < c <= 0.3)
+    moderate_bear_count = sum(1 for c in components if -0.3 <= c < -0.1)
     
-    agreement_boost = agreement_count * 0.08  # 8% boost por indicador concordante
-    confidence = min(0.95, base_confidence + agreement_boost)
+    # Confluência determina confiança
+    max_agreement = max(strong_bull_count + moderate_bull_count, strong_bear_count + moderate_bear_count)
+    confluence_strength = strong_bull_count + strong_bear_count  # Sinais fortes
     
-    # 💰 PREVISÃO DE PREÇO
-    price_trend = combined_signal * volatility * 0.08
-    predicted_price = current_price * (1 + price_trend)
+    # Confiança baseada em confluência real
+    base_confidence = 0.45 + (max_agreement * 0.15) + (confluence_strength * 0.1)
+    volatility_penalty = min(0.15, volatility * 10)  # Penalizar alta volatilidade
+    confidence = max(0.55, min(0.95, base_confidence - volatility_penalty))
+    
+    # === 7. DIREÇÃO CLARA E PROBABILIDADES ===
+    if unified_signal > 0.4:
+        direction = "COMPRA FORTE"
+        probability = min(85, 65 + (unified_signal * 25))
+    elif unified_signal > 0.15:
+        direction = "COMPRA"
+        probability = min(75, 55 + (unified_signal * 35))
+    elif unified_signal < -0.4:
+        direction = "VENDA FORTE"
+        probability = min(85, 65 + (abs(unified_signal) * 25))
+    elif unified_signal < -0.15:
+        direction = "VENDA"
+        probability = min(75, 55 + (abs(unified_signal) * 35))
+    else:
+        direction = "LATERAL/NEUTRO"
+        probability = 50
+    
+    # === 8. PREVISÃO DE PREÇO BASEADA EM VOLATILIDADE ===
+    expected_move = unified_signal * volatility * 2.5  # Fator de movimento
+    predicted_price = current_price * (1 + expected_move)
     price_change = predicted_price - current_price
     price_change_pct = (price_change / current_price) * 100
+    
+    # Calcular drawdown e extensão baseados na nova análise
+    drawdown_extension_data = calculate_realistic_drawdown_and_extensions(
+        current_price, predicted_price, pair, confidence, sentiment_score, "1 Hora"
+    )
     
     return {
         'pair': pair,
@@ -1809,63 +1818,45 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
         'price_change_pct': price_change_pct,
         'model_confidence': confidence,
         'sentiment_score': sentiment_score,
-        'unified_signal': combined_signal,
-        'agreement_score': agreement_count,
+        'unified_signal': unified_signal,
+        'agreement_score': max_agreement,
+        'confluence_strength': confluence_strength,
+        'market_direction': direction,
+        'success_probability': probability,
+        'drawdown_pips': drawdown_extension_data['drawdown_pips'],
+        'extension_pips': drawdown_extension_data['extension_pips'],
+        'drawdown_probability': drawdown_extension_data['drawdown_probability'],
+        'extension_probability': drawdown_extension_data['extension_probability'],
         'components': {
             'technical': {
-                'signal': technical_signal, 
+                'signal': technical_strength, 
                 'weight': technical_weight, 
-                'details': technical_details,
-                'contribution': technical_signal * technical_weight
+                'details': technical_components,
+                'contribution': technical_strength * technical_weight
             },
             'sentiment': {
-                'signal': sentiment_signal, 
+                'signal': sentiment_impact, 
                 'weight': sentiment_weight, 
-                'details': sentiment_details,
-                'contribution': sentiment_signal * sentiment_weight
-            },
-            'ai': {
-                'signal': ai_signal, 
-                'weight': ai_weight, 
-                'details': ai_details,
-                'contribution': ai_signal * ai_weight,
-                'confidence': ai_confidence
-            },
-            'risk': {
-                'signal': risk_signal, 
-                'weight': risk_weight, 
-                'details': risk_details,
-                'contribution': risk_signal * risk_weight
-            },
-            'volume': {
-                'signal': volume_signal, 
-                'weight': volume_weight, 
-                'details': volume_details,
-                'contribution': volume_signal * volume_weight
+                'details': f"Sentimento {sentiment_score:.3f}: {direction}",
+                'contribution': sentiment_impact * sentiment_weight
             },
             'trend': {
-                'signal': trend_signal, 
+                'signal': trend_alignment, 
                 'weight': trend_weight, 
-                'details': trend_details,
-                'contribution': trend_signal * trend_weight
+                'details': f"Tendência Multi-TF: {trend_5*100:.2f}%/5p {trend_10*100:.2f}%/10p {trend_20*100:.2f}%/20p",
+                'contribution': trend_alignment * trend_weight
+            },
+            'volume': {
+                'signal': volume_confirmation, 
+                'weight': volume_weight, 
+                'details': f"Volume Ratio: {volume_ratio:.2f}x",
+                'contribution': volume_confirmation * volume_weight
             }
         },
-        'final_recommendation': get_enhanced_recommendation(combined_signal, confidence, {
-            'technical': {'signal': technical_signal, 'weight': technical_weight},
-            'sentiment': {'signal': sentiment_signal, 'weight': sentiment_weight},
-            'ai': {'signal': ai_signal, 'weight': ai_weight},
-            'risk': {'signal': risk_signal, 'weight': risk_weight},
-            'volume': {'signal': volume_signal, 'weight': volume_weight},
-            'trend': {'signal': trend_signal, 'weight': trend_weight}
-        }),
-        'recommendation_details': get_recommendation_explanation(combined_signal, confidence, {
-            'technical': {'signal': technical_signal, 'weight': technical_weight},
-            'sentiment': {'signal': sentiment_signal, 'weight': sentiment_weight},
-            'ai': {'signal': ai_signal, 'weight': ai_weight},
-            'risk': {'signal': risk_signal, 'weight': risk_weight},
-            'volume': {'signal': volume_signal, 'weight': volume_weight},
-            'trend': {'signal': trend_signal, 'weight': trend_weight}
-        })
+        'analysis_focus': f'ANÁLISE UNIFICADA AVANÇADA - Confluência: {max_agreement}/4 componentes | Força: {confluence_strength} sinais fortes',
+        'final_recommendation': f"{direction} - {probability:.0f}% de probabilidade",
+        'recommendation_details': f"Confluência de {max_agreement} componentes com {confluence_strength} sinais fortes. " +
+                                f"Volatilidade: {volatility*100:.2f}%. Confiança: {confidence*100:.0f}%."
     }
 
 def get_enhanced_recommendation(combined_signal, confidence, components):
@@ -2343,23 +2334,64 @@ def display_main_summary(results, analysis_mode):
     col1, col2, col3 = st.columns([0.1, 10, 0.1])
     
     with col2:
-        st.markdown(f"""
-        <div style="
-            text-align: center; 
-            padding: 2rem 3rem; 
-            border: 3px solid {confidence_color}; 
-            border-radius: 15px; 
-            background: linear-gradient(135deg, rgba(0,0,0,0.1), rgba(255,255,255,0.1));
-            margin: 1rem 0;
-            width: 100%;
-            margin-left: auto;
-            margin-right: auto;
-        ">
-            <h3 style="color: #666; margin: 0 0 0.3rem 0; font-size: 1rem;">{mode_names.get(analysis_mode, 'Análise Padrão')}</h3>
-            <p style="color: #888; margin: 0 0 1rem 0; font-size: 0.85rem;">{results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
-            <h1 style="color: {confidence_color}; margin: 0 0 1rem 0; font-size: 2.2em;">{recommendation}</h1>
-        </div>
-        """, unsafe_allow_html=True)
+        # Enhanced display for unified analysis
+        if analysis_mode == 'unified' and 'market_direction' in results:
+            direction = results['market_direction']
+            probability = results.get('success_probability', results['model_confidence'] * 100)
+            
+            # Color and icon based on direction
+            if 'COMPRA FORTE' in direction:
+                direction_color = "#00C851"
+                direction_icon = "🚀"
+            elif 'COMPRA' in direction:
+                direction_color = "#4CAF50"
+                direction_icon = "📈"
+            elif 'VENDA FORTE' in direction:
+                direction_color = "#FF3547"
+                direction_icon = "🔴"
+            elif 'VENDA' in direction:
+                direction_color = "#F44336"
+                direction_icon = "📉"
+            else:
+                direction_color = "#FF9800"
+                direction_icon = "⚪"
+            
+            st.markdown(f"""
+            <div style="
+                text-align: center; 
+                padding: 2rem 3rem; 
+                border: 3px solid {direction_color}; 
+                border-radius: 15px; 
+                background: linear-gradient(135deg, rgba(0,0,0,0.1), rgba(255,255,255,0.1));
+                margin: 1rem 0;
+                width: 100%;
+                margin-left: auto;
+                margin-right: auto;
+            ">
+                <h3 style="color: #666; margin: 0 0 0.3rem 0; font-size: 1rem;">🧠 Análise Unificada Inteligente</h3>
+                <p style="color: #888; margin: 0 0 0.5rem 0; font-size: 0.85rem;">{results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
+                <h1 style="color: {direction_color}; margin: 0 0 0.5rem 0; font-size: 2.2em;">{direction_icon} {direction}</h1>
+                <h2 style="color: {direction_color}; margin: 0; font-size: 1.4em;">Probabilidade: {probability:.0f}%</h2>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div style="
+                text-align: center; 
+                padding: 2rem 3rem; 
+                border: 3px solid {confidence_color}; 
+                border-radius: 15px; 
+                background: linear-gradient(135deg, rgba(0,0,0,0.1), rgba(255,255,255,0.1));
+                margin: 1rem 0;
+                width: 100%;
+                margin-left: auto;
+                margin-right: auto;
+            ">
+                <h3 style="color: #666; margin: 0 0 0.3rem 0; font-size: 1rem;">{mode_names.get(analysis_mode, 'Análise Padrão')}</h3>
+                <p style="color: #888; margin: 0 0 1rem 0; font-size: 0.85rem;">{results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
+                <h1 style="color: {confidence_color}; margin: 0 0 1rem 0; font-size: 2.2em;">{recommendation}</h1>
+            </div>
+            """, unsafe_allow_html=True)
         
         # Adicionar detalhes da recomendação se disponível
         if 'recommendation_details' in results:
@@ -3660,23 +3692,89 @@ def display_analysis_results():
     if 'analysis_focus' in results:
         st.caption(f"Foco: {results['analysis_focus']}")
     
-    # Main recommendation
+    # Main recommendation with new enhanced display
     if 'final_recommendation' in results:
         recommendation = results['final_recommendation']
+    elif 'market_direction' in results:
+        recommendation = f"🎯 {results['market_direction']}"
     else:
         recommendation = "📈 COMPRA" if results['price_change'] > 0 else "📉 VENDA" if results['price_change'] < 0 else "⚪ INDECISÃO"
     
-    confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
-    
-    st.markdown(f"""
-    <div class="metric-card">
-        <h3 style="color: {confidence_color}; margin: 0;">{recommendation}</h3>
-        <p style="margin: 0.5rem 0;"><strong>Preço Atual:</strong> {results['current_price']:.5f}</p>
-        <p style="margin: 0.5rem 0;"><strong>Preço Previsto:</strong> {results['predicted_price']:.5f}</p>
-        <p style="margin: 0.5rem 0;"><strong>Variação:</strong> {results['price_change_pct']:+.2f}%</p>
-        <p style="margin: 0.5rem 0;"><strong>Confiança:</strong> {results['model_confidence']:.0%}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Enhanced display for unified analysis with market direction and probability
+    if analysis_mode == 'unified' and 'market_direction' in results:
+        direction = results['market_direction']
+        probability = results.get('success_probability', results['model_confidence'] * 100)
+        confluence = results.get('confluence_strength', 0)
+        agreement = results.get('agreement_score', 0)
+        
+        # Color coding based on direction and probability
+        if 'COMPRA FORTE' in direction:
+            direction_color = "#00C851"  # Strong green
+            direction_icon = "🚀"
+        elif 'COMPRA' in direction:
+            direction_color = "#4CAF50"  # Green
+            direction_icon = "📈"
+        elif 'VENDA FORTE' in direction:
+            direction_color = "#FF3547"  # Strong red
+            direction_icon = "🔴"
+        elif 'VENDA' in direction:
+            direction_color = "#F44336"  # Red
+            direction_icon = "📉"
+        else:
+            direction_color = "#FF9800"  # Orange for neutral
+            direction_icon = "⚪"
+        
+        st.markdown(f"""
+        <div style="
+            text-align: center; 
+            padding: 2rem; 
+            border: 3px solid {direction_color}; 
+            border-radius: 15px; 
+            background: linear-gradient(135deg, rgba(0,0,0,0.05), rgba(255,255,255,0.1));
+            margin: 1rem 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        ">
+            <h2 style="color: {direction_color}; margin: 0 0 1rem 0; font-size: 2.5em;">{direction_icon} {direction}</h2>
+            <h3 style="color: {direction_color}; margin: 0 0 1.5rem 0; font-size: 1.8em;">Probabilidade: {probability:.0f}%</h3>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                <div style="background: rgba(255,255,255,0.8); padding: 1rem; border-radius: 8px; border-left: 4px solid {direction_color};">
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Confluência</strong></p>
+                    <p style="margin: 0; font-size: 1.3rem; font-weight: bold; color: {direction_color};">{confluence} Sinais Fortes</p>
+                </div>
+                <div style="background: rgba(255,255,255,0.8); padding: 1rem; border-radius: 8px; border-left: 4px solid {direction_color};">
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Concordância</strong></p>
+                    <p style="margin: 0; font-size: 1.3rem; font-weight: bold; color: {direction_color};">{agreement}/4 Componentes</p>
+                </div>
+                <div style="background: rgba(255,255,255,0.8); padding: 1rem; border-radius: 8px; border-left: 4px solid {direction_color};">
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Preço Atual</strong></p>
+                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #333;">{results['current_price']:.5f}</p>
+                </div>
+                <div style="background: rgba(255,255,255,0.8); padding: 1rem; border-radius: 8px; border-left: 4px solid {direction_color};">
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Previsão</strong></p>
+                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #333;">{results['predicted_price']:.5f}</p>
+                </div>
+            </div>
+            
+            <p style="color: #666; margin: 0; font-size: 0.95rem;">
+                <strong>Análise Confluente:</strong> {agreement} componentes concordam com {confluence} sinais de alta força. 
+                Variação esperada: {results['price_change_pct']:+.2f}% | Confiança: {results['model_confidence']:.0%}
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        # Fallback to original display for other analysis modes
+        confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
+        
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3 style="color: {confidence_color}; margin: 0;">{recommendation}</h3>
+            <p style="margin: 0.5rem 0;"><strong>Preço Atual:</strong> {results['current_price']:.5f}</p>
+            <p style="margin: 0.5rem 0;"><strong>Preço Previsto:</strong> {results['predicted_price']:.5f}</p>
+            <p style="margin: 0.5rem 0;"><strong>Variação:</strong> {results['price_change_pct']:+.2f}%</p>
+            <p style="margin: 0.5rem 0;"><strong>Confiança:</strong> {results['model_confidence']:.0%}</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     # Mostrar componentes da análise unificada
     if analysis_mode == 'unified' and 'components' in results:
