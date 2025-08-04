@@ -2139,15 +2139,8 @@ def display_main_summary(results, analysis_mode):
             st.error(f"Take Profit: {take_profit_level:.5f} (deve ser {'>' if trade_direction == 'COMPRA' else '<'} que preço atual)")
             return
         
-        # Calcular nível de reversão e sua porcentagem
-        if predicted_price > current_price:  # COMPRA
-            reversal_level = current_price - (stop_distance * 0.6)  # 60% do caminho até o stop
-        else:  # VENDA
-            reversal_level = current_price + (stop_distance * 0.6)  # 60% do caminho até o stop
-        
+        # Não duplicar - já calculado acima
         reversal_percentage = abs((reversal_level - current_price) / current_price) * 100
-        
-        risk_reward_ratio = reward_percentage / risk_percentage if risk_percentage > 0 else 0
         
         # Sistema de gerenciamento monetário baseado em dados reais
         banca_base = getattr(st.session_state, 'account_balance', 10000)
@@ -2221,6 +2214,9 @@ def display_main_summary(results, analysis_mode):
         estimated_time_hours = 8 + (extension_percentage * 2)  # Base 8h + complexidade
         time_days = max(1, min(7, estimated_time_hours / 24))  # Entre 1 e 7 dias
         time_description = f"{time_days:.1f} dias" if time_days >= 1 else f"{estimated_time_hours:.0f} horas"
+        
+        # Calcular risk_reward_ratio após definir os percentuais
+        risk_reward_ratio = reward_percentage / risk_percentage if risk_percentage > 0 else 0
         
         # Valores monetários realistas baseados no valor do pip calculado
         risco_monetario = stop_loss_pip_diff * pip_value_calculated
