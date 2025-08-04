@@ -1975,6 +1975,11 @@ def display_main_summary(results, analysis_mode):
             ai_direction_strength = ai_analysis.unified_interpretation.get('combined_strength', 0.5)
             ai_consensus = ai_analysis.unified_interpretation.get('consensus_strength', 0.5)
             
+            # Calcular confiança confluente final
+            enhanced_confidence = calculate_real_confidence_score(
+                confidence, ai_confidence_boost, sentiment_score, ai_direction_strength
+            )
+            
             # CALCULAR CONFIANÇA CONFLUENTE REAL baseada em múltiplos fatores
             def calculate_real_confidence_score(lstm_confidence, ai_confidence, sentiment_score, direction_strength):
                 """Calcular confiança real baseada na confluência de todas as análises"""
@@ -1983,6 +1988,23 @@ def display_main_summary(results, analysis_mode):
                 lstm_component = lstm_confidence * 0.4
                 
                 # 2. Confiança da IA unificada (30% do peso)
+                ai_component = ai_confidence * 0.3
+                
+                # 3. Força do sentiment (20% do peso)
+                sentiment_strength = min(abs(sentiment_score), 1.0)  # Normalizar entre 0-1
+                sentiment_component = sentiment_strength * 0.2
+                
+                # 4. Consistência direcional (10% do peso)
+                # Quando LSTM e sentiment concordam na direção, adicionar bônus
+                lstm_direction = 1 if predicted_price > current_price else -1
+                sentiment_direction = 1 if sentiment_score > 0 else -1
+                consistency_bonus = 0.1 if lstm_direction == sentiment_direction else 0.05
+                
+                # Calcular confiança final
+                final_confidence = lstm_component + ai_component + sentiment_component + consistency_bonus
+                
+                # Garantir que esteja entre 15% e 85% (valores realísticos)
+                return max(0.15, min(0.85, final_confidence))
                 ai_component = ai_confidence * 0.3
                 
                 # 3. Força da direção do sentiment (20% do peso)
@@ -2416,8 +2438,10 @@ def display_main_summary(results, analysis_mode):
                 <div style="background: rgba(33,150,243,0.1); padding: 0.8rem; border-radius: 6px;">
                     <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Confiança Confluente</strong></p>
                     <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #2196f3;">{(enhanced_confidence * 100):.0f}%</p>
-                    <p style="margin: 0; color: #888; font-size: 0.75rem;">LSTM + IA + Sentiment</p>
-                    <p style="margin: 0; color: #888; font-size: 0.70rem;">Análise real integrada</p>
+                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Integração de análises</p>
+                    <p style="margin: 0; color: #888; font-size: 0.70rem;">
+                        LSTM({confidence*100:.0f}%) + Sentiment({abs(sentiment_score)*100:.0f}%)
+                    </p>
                 </div>
                 <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px;">
                     <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Risco vs Retorno</strong></p>
@@ -2533,8 +2557,8 @@ def display_main_summary(results, analysis_mode):
                     <p style="margin: 0; color: #555; font-size: 0.9rem;">
                         <strong>Alerta de Reversão:</strong> Se o preço se mover {risk_direction} além de <strong>{reversal_level:.5f}</strong>, 
                         considere revisar a posição. Stop definitivo em <strong>{stop_loss_level:.5f}</strong>. 
-                        <span style="color: #2e7d32;"><strong>Confiança Confluente:</strong> {enhanced_confidence:.0%}</span> 
-                        (LSTM + IA + Sentiment integrados)
+                        <span style="color: #2e7d32;"><strong>Confiança Final:</strong> {enhanced_confidence:.0%}</span> 
+                        (Confluência: LSTM {confidence*100:.0f}% + IA {ai_confidence_boost*100:.0f}% + Sentiment {abs(sentiment_score)*100:.0f}%)
                     </p>
                 </div>
             </div>
