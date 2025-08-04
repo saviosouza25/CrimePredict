@@ -3185,12 +3185,12 @@ def display_main_summary(results, analysis_mode):
                     <div>
                         <h4 style="margin: 0; color: #666;">🎯 ROI Esperado</h4>
                         <p style="margin: 0; font-size: 1.2rem; font-weight: bold; color: {result_color};">
-                            {(net_result_usd/(risk_amount_usd * 10))*100:+.1f}%
+                            {(net_result_usd/(max_drawdown_usd * 10) if max_drawdown_usd > 0 else 0)*100:+.1f}%
                         </p>
                     </div>
                 </div>
                 <p style="margin: 1rem 0 0 0; color: #666; font-size: 0.9rem;">
-                    Simulação baseada em 10 trades com gestão de {risk_per_trade_profile:.1%} da banca por operação
+                    Simulação baseada em 10 trades com lote de {lot_size:.2f} e banca de ${bank_value:,.2f}
                 </p>
             </div>
             """, unsafe_allow_html=True)
