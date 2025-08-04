@@ -2225,35 +2225,39 @@ def display_main_summary(results, analysis_mode):
         reward_percentage = abs((take_profit_level - current_price) / current_price) * 100
         extension_percentage = abs((max_extension - current_price) / current_price) * 100
         
-        # Calcular PROBABILIDADE DE TEMPO baseada em análise de IA combinada
+        # Calcular PROBABILIDADE DE TEMPO baseada em análise de IA REALÍSTICA
         def calculate_ai_time_probability(extension_percentage, confidence, ai_consensus, pair_volatility, analysis_mode):
-            """Calcular tempo e probabilidade usando múltiplos fatores de IA"""
+            """Calcular tempo e probabilidade usando múltiplos fatores de IA com valores realistas"""
             
-            # Fator base de volatilidade do par
+            # Fator base de volatilidade do par (mais conservador)
             volatility_factor = {
-                'EUR/USD': 1.0, 'USD/JPY': 1.1, 'GBP/USD': 1.3, 'AUD/USD': 1.4,
-                'USD/CAD': 1.2, 'USD/CHF': 1.1, 'NZD/USD': 1.5
-            }.get(pair_name, 1.2)
+                'EUR/USD': 2.0, 'USD/JPY': 2.2, 'GBP/USD': 1.8, 'AUD/USD': 1.6,
+                'USD/CAD': 2.1, 'USD/CHF': 2.3, 'NZD/USD': 1.5, 'GBP/JPY': 1.4
+            }.get(pair_name, 2.0)
             
-            # Fator de confiança da análise (quanto maior, mais rápido)
-            confidence_multiplier = confidence * 1.5  # 0.5 a 1.5x
+            # Calcular tempo base REALÍSTICO (cenários otimistas levam tempo)
+            # Base: movimentos grandes precisam de mais tempo
+            base_days = max(1, extension_percentage * volatility_factor)  # Base em dias
             
-            # Fator de consenso de IA (múltiplas análises concordam)
-            ai_multiplier = ai_consensus * 1.3 if analysis_mode == 'unified' else 1.0
+            # Ajustar pela confiança (mais confiança = menos tempo, mas limitado)
+            confidence_adjustment = max(0.7, confidence)  # Mínimo 70% do tempo base
+            adjusted_days = base_days / confidence_adjustment
             
-            # Cálculo do tempo base (em horas)
-            base_time_hours = (extension_percentage / 2) * volatility_factor  # Base proporcional
-            adjusted_time = base_time_hours / (confidence_multiplier * ai_multiplier)
+            # Limitar entre 1 e 15 dias (valores realistas para forex)
+            time_days = max(1, min(15, adjusted_days))
             
-            # Converter para dias e limitar entre 0.5 e 10 dias
-            time_days = max(0.5, min(10, adjusted_time / 24))
+            # Calcular probabilidade REALÍSTICA baseada na dificuldade do movimento
+            # Movimentos maiores = menor probabilidade
+            base_probability = max(15, 85 - (extension_percentage * 3))  # Reduz com tamanho
             
-            # Calcular probabilidade baseada em múltiplos fatores
-            probability_base = confidence * 100  # Base da confiança
-            probability_consensus = ai_consensus * 20 if analysis_mode == 'unified' else 0  # Bônus IA
-            probability_volatility = max(0, 30 - (volatility_factor * 10))  # Menos volátil = mais provável
+            # Ajustar pela confiança da análise
+            confidence_bonus = confidence * 25  # Máximo 25% de bônus
             
-            total_probability = min(95, probability_base + probability_consensus + probability_volatility)
+            # Ajustar pela volatilidade (pares mais voláteis = mais incertos)
+            volatility_penalty = (2.5 - volatility_factor) * 10  # Penalidade por volatilidade
+            
+            # Probabilidade final entre 15% e 75% (realista para cenários otimistas)
+            total_probability = max(15, min(75, base_probability + confidence_bonus + volatility_penalty))
             
             return time_days, total_probability
         
