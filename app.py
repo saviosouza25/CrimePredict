@@ -2139,10 +2139,12 @@ def display_main_summary(results, analysis_mode):
             st.error(f"Take Profit: {take_profit_level:.5f} (deve ser {'>' if trade_direction == 'COMPRA' else '<'} que preço atual)")
             return
         
-        # Enhanced risk calculations
-        risk_percentage = abs((stop_loss_level - current_price) / current_price) * 100
-        reward_percentage = abs((take_profit_level - current_price) / current_price) * 100
-        extension_percentage = abs((max_extension - current_price) / current_price) * 100
+        # Calcular nível de reversão e sua porcentagem
+        if predicted_price > current_price:  # COMPRA
+            reversal_level = current_price - (stop_distance * 0.6)  # 60% do caminho até o stop
+        else:  # VENDA
+            reversal_level = current_price + (stop_distance * 0.6)  # 60% do caminho até o stop
+        
         reversal_percentage = abs((reversal_level - current_price) / current_price) * 100
         
         risk_reward_ratio = reward_percentage / risk_percentage if risk_percentage > 0 else 0
@@ -2190,13 +2192,35 @@ def display_main_summary(results, analysis_mode):
         stop_loss_pip_diff = calculate_pip_difference(current_price, stop_loss_level, pair_name)
         take_profit_pip_diff = calculate_pip_difference(current_price, take_profit_level, pair_name)
         
-        # Calcular extensão máxima para cálculo de pips
+        # Calcular extensão máxima DETERMINÍSTICA e tempo de previsão
         if predicted_price > current_price:  # COMPRA
             max_extension = take_profit_level * 1.3  # 30% além do target
+            extension_direction = "ALTA"
+            extension_description = f"Movimento ascendente até {max_extension:.5f}"
+            max_risk_scenario = "Reversão abrupta por notícias negativas ou falha de suporte técnico"
+            estimated_time_hours = 8 + (extension_percentage * 2)  # Base 8h + complexidade
         else:  # VENDA
             max_extension = take_profit_level * 0.7  # 30% além do target
+            extension_direction = "BAIXA"
+            extension_description = f"Movimento descendente até {max_extension:.5f}"
+            max_risk_scenario = "Reversão por suporte forte ou notícias positivas inesperadas"
+            estimated_time_hours = 8 + (extension_percentage * 2)  # Base 8h + complexidade
+        
+        # Calcular tempo médio baseado na volatilidade do par e percentual de movimento
+        time_days = max(1, min(7, estimated_time_hours / 24))  # Entre 1 e 7 dias
+        time_description = f"{time_days:.1f} dias" if time_days >= 1 else f"{estimated_time_hours:.0f} horas"
         
         extension_pip_diff = calculate_pip_difference(current_price, max_extension, pair_name)
+        
+        # Calcular percentuais ANTES de usar no tempo
+        risk_percentage = abs((stop_loss_level - current_price) / current_price) * 100
+        reward_percentage = abs((take_profit_level - current_price) / current_price) * 100
+        extension_percentage = abs((max_extension - current_price) / current_price) * 100
+        
+        # Recalcular tempo usando extension_percentage já definido
+        estimated_time_hours = 8 + (extension_percentage * 2)  # Base 8h + complexidade
+        time_days = max(1, min(7, estimated_time_hours / 24))  # Entre 1 e 7 dias
+        time_description = f"{time_days:.1f} dias" if time_days >= 1 else f"{estimated_time_hours:.0f} horas"
         
         # Valores monetários realistas baseados no valor do pip calculado
         risco_monetario = stop_loss_pip_diff * pip_value_calculated
@@ -2313,7 +2337,8 @@ def display_main_summary(results, analysis_mode):
                     <div>
                         <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Potencial Máximo</strong></p>
                         <p style="margin: 0; font-size: 1rem; font-weight: bold; color: blue;">+${potencial_extensao:,.2f}</p>
-                        <p style="margin: 0; color: #888; font-size: 0.75rem;">{extension_pip_diff:.1f} pips</p>
+                        <p style="margin: 0; color: #888; font-size: 0.72rem;">{extension_pip_diff:.1f} pips • {extension_direction}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.70rem;">⏱️ {time_description}</p>
                     </div>
                 </div>
             </div>
@@ -2354,6 +2379,10 @@ def display_main_summary(results, analysis_mode):
                     <p style="margin: 0 0 0.5rem 0; color: #555; font-size: 0.9rem;">
                         <strong>Expectativa de Movimento:</strong> O mercado pode se mover {reward_direction} até <strong>{take_profit_level:.5f}</strong>, 
                         com potencial de extensão até <strong>{max_extension:.5f}</strong> em cenário otimista.
+                    </p>
+                    <p style="margin: 0 0 0.5rem 0; color: #555; font-size: 0.9rem;">
+                        <strong>🎯 Potencial Máximo:</strong> {extension_description} em aproximadamente <strong>{time_description}</strong>. 
+                        <span style="color: #d32f2f;"><strong>Risco Máximo:</strong> {max_risk_scenario}</span>
                     </p>
                     <p style="margin: 0; color: #555; font-size: 0.9rem;">
                         <strong>Alerta de Reversão:</strong> Se o preço se mover {risk_direction} além de <strong>{reversal_level:.5f}</strong>, 
