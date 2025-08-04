@@ -735,6 +735,35 @@ def main():
 
 
         
+        # Gestão de Banca Simplificada
+        st.markdown("**💰 Configuração de Trading**")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            bank_value = st.number_input(
+                "💳 Valor da Banca (USD)", 
+                min_value=100.0, 
+                max_value=1000000.0, 
+                value=5000.0, 
+                step=500.0,
+                help="Valor total da sua banca em dólares"
+            )
+        
+        with col2:
+            lot_size = st.number_input(
+                "📊 Tamanho do Lote",
+                min_value=0.01,
+                max_value=100.0,
+                value=0.1,
+                step=0.01,
+                format="%.2f",
+                help="Tamanho do lote para a operação"
+            )
+        
+        # Armazenar no session state para uso nas análises
+        st.session_state['bank_value'] = bank_value
+        st.session_state['lot_size'] = lot_size
+        
         # Configurações de IA colapsáveis
         with st.expander("🤖 Configurações Avançadas de IA"):
             lookback_period = st.slider("Histórico de Dados", 30, 120, LOOKBACK_PERIOD)
@@ -3004,153 +3033,57 @@ def display_main_summary(results, analysis_mode):
             # Gestão de Banca Detalhada em Valores
             st.markdown("### 💰 Gestão de Banca - Valores em Dólar")
             
-            # Inputs para gestão
-            col1, col2 = st.columns(2)
+            # Usar valores do sidebar
+            bank_value = st.session_state.get('bank_value', 5000.0)
+            lot_size = st.session_state.get('lot_size', 0.1)
             
-            with col1:
-                banca_usd = st.number_input(
-                    "💳 Valor da Banca (USD)", 
-                    min_value=100.0, 
-                    max_value=1000000.0, 
-                    value=5000.0, 
-                    step=500.0,
-                    help="Digite o valor total da sua banca em dólares"
-                )
-                
-            with col2:
-                manual_lot = st.number_input(
-                    "📊 Lote Manual (Opcional)",
-                    min_value=0.0,
-                    max_value=100.0,
-                    value=0.0,
-                    step=0.01,
-                    format="%.2f",
-                    help="Digite o lote desejado para comparação (0 = usar cálculo automático)"
-                )
-            
-            # Cálculos de gestão por perfil de risco
-            risk_profiles = {
-                'Conservative': {'max_risk_per_trade': 0.01, 'max_monthly_risk': 0.05},  # 1% por trade, 5% mensal
-                'Conservador': {'max_risk_per_trade': 0.01, 'max_monthly_risk': 0.05},   # 1% por trade, 5% mensal
-                'Moderate': {'max_risk_per_trade': 0.02, 'max_monthly_risk': 0.08},      # 2% por trade, 8% mensal  
-                'Moderado': {'max_risk_per_trade': 0.02, 'max_monthly_risk': 0.08},      # 2% por trade, 8% mensal
-                'Aggressive': {'max_risk_per_trade': 0.03, 'max_monthly_risk': 0.12},   # 3% por trade, 12% mensal
-                'Agressivo': {'max_risk_per_trade': 0.03, 'max_monthly_risk': 0.12}     # 3% por trade, 12% mensal
-            }
-            
-            # Garantir que sempre tenha um perfil válido
-            current_profile = risk_profiles.get(risk_level_used, risk_profiles.get('Moderate', risk_profiles['Moderado']))
-            risk_per_trade_profile = current_profile['max_risk_per_trade']
-            
-            # Cálculo do valor de risco por trade
-            risk_amount_usd = banca_usd * risk_per_trade_profile
-            
-            # Calcular tamanho do lote baseado no drawdown
-            # Para maior precisão, usar valor do pip específico do par
+            # Cálculo simples do valor do pip baseado no par
             if 'JPY' in pair_name:
                 pip_value_per_lot = 10.0  # JPY pairs: 0.01 = $10 per standard lot
-                pip_size = 0.01
             elif pair_name in ['XAUUSD', 'GOLD']:
                 pip_value_per_lot = 1.0   # Gold: 0.1 = $1 per 0.1 lot
-                pip_size = 0.1
             else:
                 pip_value_per_lot = 10.0  # Major pairs: 0.0001 = $10 per standard lot
-                pip_size = 0.0001
             
-            # Tamanho do lote baseado no risco e drawdown (automático)
-            calculated_lot = risk_amount_usd / (drawdown_pips * pip_value_per_lot)
-            calculated_lot = max(0.01, min(10.0, calculated_lot))  # Limitar entre 0.01 e 10 lotes
-            
-            # Usar lote manual se fornecido, senão usar o calculado
-            lot_size = manual_lot if manual_lot > 0 else calculated_lot
-            use_manual_lot = manual_lot > 0
-            
-            # Valores reais de drawdown e extensão
+            # Cálculos simples em dólares baseados no lote escolhido
             max_drawdown_usd = drawdown_pips * pip_value_per_lot * lot_size
             max_extension_usd = extension_pips * pip_value_per_lot * lot_size
             
-            # Cálculo do risco real com o lote escolhido
-            actual_risk_usd = max_drawdown_usd
-            actual_risk_pct = (actual_risk_usd / banca_usd) * 100
+            # Percentual em relação à banca
+            drawdown_pct = (max_drawdown_usd / bank_value) * 100
+            extension_pct = (max_extension_usd / bank_value) * 100
             
-            # Métricas de gestão em colunas - Comparação de lotes
-            if use_manual_lot:
-                st.markdown("#### 🔀 Comparação: Lote Manual vs Calculado")
-                col1, col2, col3, col4 = st.columns(4)
+            # Métricas simples em valores de dólar
+            st.markdown("#### 💰 Valores de Trading Calculados")
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric(
+                    "💳 Valor da Banca",
+                    f"${bank_value:,.2f}",
+                    "Configurado no sidebar"
+                )
                 
-                with col1:
-                    delta_lot = manual_lot - calculated_lot
-                    st.metric(
-                        "📊 Lote Manual",
-                        f"{manual_lot:.2f}",
-                        f"{delta_lot:+.2f} vs calculado"
-                    )
-                    
-                with col2:
-                    calculated_risk = calculated_lot * drawdown_pips * pip_value_per_lot
-                    delta_risk = actual_risk_usd - calculated_risk
-                    st.metric(
-                        "⚠️ Risco Manual",
-                        f"${actual_risk_usd:.2f}",
-                        f"${delta_risk:+.2f} vs recomendado"
-                    )
-                    
-                with col3:
-                    st.metric(
-                        "📊 Lote Calculado",
-                        f"{calculated_lot:.2f}",
-                        f"Perfil {risk_level_used}"
-                    )
-                    
-                with col4:
-                    recommended_risk = calculated_risk
-                    st.metric(
-                        "⚠️ Risco Recomendado",
-                        f"${recommended_risk:.2f}",
-                        f"{risk_per_trade_profile:.1%} da banca"
-                    )
+            with col2:
+                st.metric(
+                    "📊 Lote Selecionado",
+                    f"{lot_size:.2f}",
+                    "Configurado no sidebar"
+                )
                 
-                # Alertas sobre risco
-                risk_ratio = actual_risk_usd / recommended_risk if recommended_risk > 0 else 1
-                if risk_ratio > 1.5:
-                    st.error(f"⚠️ RISCO ALTO: Lote manual representa {risk_ratio:.1f}x o risco recomendado!")
-                elif risk_ratio > 1.2:
-                    st.warning(f"⚠️ Risco Moderado: Lote manual representa {risk_ratio:.1f}x o risco recomendado")
-                elif risk_ratio < 0.5:
-                    st.info(f"ℹ️ Risco Baixo: Lote manual representa {risk_ratio:.1f}x o risco recomendado")
-                else:
-                    st.success(f"✅ Risco Adequado: Lote manual está dentro do perfil ({risk_ratio:.1f}x)")
-            else:
-                st.markdown("#### 📊 Gestão Automática")
-                col1, col2, col3, col4 = st.columns(4)
+            with col3:
+                st.metric(
+                    "📉 Drawdown Máximo",
+                    f"${max_drawdown_usd:.2f}",
+                    f"{drawdown_pct:.2f}% da banca"
+                )
                 
-                with col1:
-                    st.metric(
-                        "📊 Lote Calculado",
-                        f"{calculated_lot:.2f}",
-                        f"Perfil {risk_level_used}"
-                    )
-                    
-                with col2:
-                    st.metric(
-                        "⚠️ Risco por Trade",
-                        f"${actual_risk_usd:.2f}",
-                        f"{actual_risk_pct:.2f}% da banca"
-                    )
-                    
-                with col3:
-                    st.metric(
-                        "📉 DD Máximo",
-                        f"${max_drawdown_usd:.2f}",
-                        f"{drawdown_pips} pips"
-                    )
-                    
-                with col4:
-                    st.metric(
-                        "🎯 Ganho Máximo",
-                        f"${max_extension_usd:.2f}",
-                        f"{extension_pips} pips"
-                    )
+            with col4:
+                st.metric(
+                    "📈 Extensão Máxima",
+                    f"${max_extension_usd:.2f}",
+                    f"{extension_pct:.2f}% da banca"
+                )
             
             # Análise de probabilidade em valores
             st.markdown("### 🎲 Análise de Probabilidade em Valores")
@@ -3182,7 +3115,7 @@ def display_main_summary(results, analysis_mode):
                 - **💰 Ganho Esperado:** ${expected_gain:.2f}
                 - **📉 Perda Esperada:** ${expected_loss:.2f}
                 - **🔄 Resultado Líquido:** ${expected_net:+.2f}
-                - **📈 Expectativa:** {(expected_net/risk_amount_usd)*100:+.1f}%
+                - **📈 Expectativa:** {(expected_net/(max_drawdown_usd if max_drawdown_usd > 0 else 1))*100:+.1f}%
                 """)
             
             # Simulação de trades em valores
@@ -3194,7 +3127,7 @@ def display_main_summary(results, analysis_mode):
             total_gain_usd = winning_trades * max_extension_usd
             total_loss_usd = losing_trades * max_drawdown_usd
             net_result_usd = total_gain_usd - total_loss_usd
-            net_result_pct = (net_result_usd / banca_usd) * 100
+            net_result_pct = (net_result_usd / bank_value) * 100
             
             col1, col2, col3, col4 = st.columns(4)
             
@@ -3216,19 +3149,19 @@ def display_main_summary(results, analysis_mode):
                 st.metric(
                     "💰 Ganho Total",
                     f"${total_gain_usd:.2f}",
-                    f"+{(total_gain_usd/banca_usd)*100:.1f}%"
+                    f"+{(total_gain_usd/bank_value)*100:.1f}%"
                 )
                 
             with col4:
                 st.metric(
                     "📉 Perda Total",
                     f"${total_loss_usd:.2f}", 
-                    f"-{(total_loss_usd/banca_usd)*100:.1f}%"
+                    f"-{(total_loss_usd/bank_value)*100:.1f}%"
                 )
             
             # Resultado final detalhado
             result_color = "green" if net_result_usd > 0 else "red"
-            risk_multiple = abs(net_result_usd) / (risk_amount_usd * 10) if risk_amount_usd > 0 else 0
+            risk_multiple = abs(net_result_usd) / (max_drawdown_usd * 10) if max_drawdown_usd > 0 else 0
             
             st.markdown(f"""
             <div style="text-align: center; padding: 1.5rem; background: rgba({'0,255,0' if net_result_usd > 0 else '255,0,0'},0.1); 

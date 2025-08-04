@@ -37,13 +37,13 @@ Preferred communication style: Simple, everyday language.
 - **Training**: Configurable batch size, learning rate, and epoch parameters
 - **Prediction**: Realistic short-term forecasting (maximum 7 days) with confluent confidence system
 - **Confidence System**: Combined LSTM (40%), AI (30%), sentiment (20%), and consistency (10%) weights
-- **Unified Analysis**: Position, Swing, and Intraday trading use same realistic probability calculations and risk management approach
-- **Advanced Money Management**: Complete lot size calculation, drawdown prediction in USD, extension probability values, and ROI analysis
+- **Unified Analysis**: Position, Swing, and Intraday trading use same realistic probability calculations
+- **Simplified Money Management**: Manual bank value and lot selection with dollar-based drawdown and extension calculations
 
 ### Technical Analysis Engine
 - **Indicators**: Comprehensive set including SMA, EMA, RSI, MACD, Bollinger Bands, and Stochastic
 - **Signal Generation**: Automated buy/sell signal generation based on indicator crossovers
-- **Risk Management**: Configurable risk levels (Conservative, Moderate, Aggressive)
+- **Manual Trading Setup**: Simple bank value and lot size selection in sidebar
 - **Position Trading**: Unified realistic conditions aligned with Swing and Intraday analyses
 
 ### Sentiment Analysis System
@@ -59,7 +59,8 @@ Preferred communication style: Simple, everyday language.
 ## Configuration Management
 - **Settings**: Centralized configuration in `config/settings.py`
 - **Parameters**: Configurable trading pairs, intervals, model parameters, and cache settings
-- **Trader Profiles**: Real market-based parameters for Conservative, Moderate, and Aggressive profiles
+- **Trading Configuration**: Manual bank value (USD) and lot size selection in sidebar
+- **Risk Calculation**: Simple dollar-based drawdown and maximum extension calculations
 - **Temporal Strategy**: Market-realistic parameters for each timeframe (5min to 1 month) based on actual trading statistics
 - **Environment**: Environment variable support for sensitive data
 
