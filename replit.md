@@ -38,6 +38,7 @@ Preferred communication style: Simple, everyday language.
 - **Prediction**: Realistic short-term forecasting (maximum 7 days) with confluent confidence system
 - **Confidence System**: Combined LSTM (40%), AI (30%), sentiment (20%), and consistency (10%) weights
 - **Unified Analysis**: Position, Swing, and Intraday trading use same realistic probability calculations and risk management approach
+- **Advanced Money Management**: Complete lot size calculation, drawdown prediction in USD, extension probability values, and ROI analysis
 
 ### Technical Analysis Engine
 - **Indicators**: Comprehensive set including SMA, EMA, RSI, MACD, Bollinger Bands, and Stochastic

@@ -3106,16 +3106,126 @@ def display_main_summary(results, analysis_mode):
                     - **Take Profit:** {extension_pips} pips
                     """)
             
-            # Análise de risco detalhada
-            st.markdown("### ⚠️ Análise de Risco da Banca")
+            # Gestão de Banca Detalhada em Valores
+            st.markdown("### 💰 Gestão de Banca - Valores em Dólar")
             
-            # Simular séries de trades
+            # Input para valor da banca
+            banca_usd = st.number_input(
+                "💳 Valor da Banca (USD)", 
+                min_value=100.0, 
+                max_value=1000000.0, 
+                value=5000.0, 
+                step=500.0,
+                help="Digite o valor total da sua banca em dólares"
+            )
+            
+            # Cálculos de gestão por perfil de risco
+            risk_profiles = {
+                'Conservative': {'max_risk_per_trade': 0.01, 'max_monthly_risk': 0.05},  # 1% por trade, 5% mensal
+                'Moderate': {'max_risk_per_trade': 0.02, 'max_monthly_risk': 0.08},      # 2% por trade, 8% mensal  
+                'Aggressive': {'max_risk_per_trade': 0.03, 'max_monthly_risk': 0.12}    # 3% por trade, 12% mensal
+            }
+            
+            current_profile = risk_profiles[risk_level_used]
+            risk_per_trade_profile = current_profile['max_risk_per_trade']
+            
+            # Cálculo do valor de risco por trade
+            risk_amount_usd = banca_usd * risk_per_trade_profile
+            
+            # Calcular tamanho do lote baseado no drawdown
+            # Para maior precisão, usar valor do pip específico do par
+            if 'JPY' in pair_name:
+                pip_value_per_lot = 10.0  # JPY pairs: 0.01 = $10 per standard lot
+                pip_size = 0.01
+            elif pair_name in ['XAUUSD', 'GOLD']:
+                pip_value_per_lot = 1.0   # Gold: 0.1 = $1 per 0.1 lot
+                pip_size = 0.1
+            else:
+                pip_value_per_lot = 10.0  # Major pairs: 0.0001 = $10 per standard lot
+                pip_size = 0.0001
+            
+            # Tamanho do lote baseado no risco e drawdown
+            lot_size = risk_amount_usd / (drawdown_pips * pip_value_per_lot)
+            lot_size = max(0.01, min(10.0, lot_size))  # Limitar entre 0.01 e 10 lotes
+            
+            # Valores reais de drawdown e extensão
+            max_drawdown_usd = drawdown_pips * pip_value_per_lot * lot_size
+            max_extension_usd = extension_pips * pip_value_per_lot * lot_size
+            
+            # Métricas de gestão em colunas
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric(
+                    "📊 Tamanho do Lote",
+                    f"{lot_size:.2f}",
+                    f"Perfil {risk_level_used}"
+                )
+                
+            with col2:
+                st.metric(
+                    "⚠️ Risco por Trade",
+                    f"${risk_amount_usd:.2f}",
+                    f"{risk_per_trade_profile:.1%} da banca"
+                )
+                
+            with col3:
+                st.metric(
+                    "📉 DD Máximo Previsto",
+                    f"${max_drawdown_usd:.2f}",
+                    f"{(max_drawdown_usd/banca_usd)*100:.2f}% da banca"
+                )
+                
+            with col4:
+                st.metric(
+                    "🎯 Ganho Máximo Previsto",
+                    f"${max_extension_usd:.2f}",
+                    f"{(max_extension_usd/banca_usd)*100:.2f}% da banca"
+                )
+            
+            # Análise de probabilidade em valores
+            st.markdown("### 🎲 Análise de Probabilidade em Valores")
+            
+            # Cenários probabilísticos
+            prob_only_drawdown = drawdown_prob * (1 - extension_prob)  # Só drawdown
+            prob_drawdown_then_extension = drawdown_prob * extension_prob  # DD depois extensão
+            prob_direct_extension = (1 - drawdown_prob) * extension_prob  # Direto para extensão
+            prob_sideways = (1 - drawdown_prob) * (1 - extension_prob)  # Lateral
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("#### 📊 Cenários Possíveis:")
+                st.markdown(f"""
+                - **🎯 Extensão Direta:** {prob_direct_extension:.1%}
+                - **⚠️ DD → Extensão:** {prob_drawdown_then_extension:.1%}  
+                - **📉 Só Drawdown:** {prob_only_drawdown:.1%}
+                - **↔️ Movimento Lateral:** {prob_sideways:.1%}
+                """)
+                
+            with col2:
+                st.markdown("#### 💵 Valores Esperados:")
+                expected_gain = (prob_direct_extension + prob_drawdown_then_extension) * max_extension_usd
+                expected_loss = prob_only_drawdown * max_drawdown_usd
+                expected_net = expected_gain - expected_loss
+                
+                st.markdown(f"""
+                - **💰 Ganho Esperado:** ${expected_gain:.2f}
+                - **📉 Perda Esperada:** ${expected_loss:.2f}
+                - **🔄 Resultado Líquido:** ${expected_net:+.2f}
+                - **📈 Expectativa:** {(expected_net/risk_amount_usd)*100:+.1f}%
+                """)
+            
+            # Simulação de trades em valores
+            st.markdown("### 🔄 Simulação de Trading - Valores Reais")
+            
             winning_trades = int(10 * final_success_prob)
             losing_trades = 10 - winning_trades
             
-            total_gain = winning_trades * potential_gain_pct * 100
-            total_loss = losing_trades * potential_loss_pct * 100
-            net_result = total_gain - total_loss
+            total_gain_usd = winning_trades * max_extension_usd
+            total_loss_usd = losing_trades * max_drawdown_usd
+            net_result_usd = total_gain_usd - total_loss_usd
+            net_result_pct = (net_result_usd / banca_usd) * 100
             
             col1, col2, col3, col4 = st.columns(4)
             
@@ -3123,40 +3233,62 @@ def display_main_summary(results, analysis_mode):
                 st.metric(
                     "✅ Trades Vencedores",
                     f"{winning_trades}/10",
-                    f"({final_success_prob:.0%})"
+                    f"${total_gain_usd:.2f}"
                 )
                 
             with col2:
                 st.metric(
                     "❌ Trades Perdedores", 
                     f"{losing_trades}/10",
-                    f"({(1-final_success_prob):.0%})"
+                    f"${total_loss_usd:.2f}"
                 )
                 
             with col3:
                 st.metric(
                     "💰 Ganho Total",
-                    f"+{total_gain:.1f}%",
-                    f"{winning_trades} trades × {potential_gain_pct:.1%}"
+                    f"${total_gain_usd:.2f}",
+                    f"+{(total_gain_usd/banca_usd)*100:.1f}%"
                 )
                 
             with col4:
                 st.metric(
                     "📉 Perda Total",
-                    f"-{total_loss:.1f}%", 
-                    f"{losing_trades} trades × {potential_loss_pct:.1%}"
+                    f"${total_loss_usd:.2f}", 
+                    f"-{(total_loss_usd/banca_usd)*100:.1f}%"
                 )
             
-            # Resultado líquido
-            result_color = "green" if net_result > 0 else "red"
+            # Resultado final detalhado
+            result_color = "green" if net_result_usd > 0 else "red"
+            risk_multiple = abs(net_result_usd) / (risk_amount_usd * 10) if risk_amount_usd > 0 else 0
+            
             st.markdown(f"""
-            <div style="text-align: center; padding: 1rem; background: rgba({'0,255,0' if net_result > 0 else '255,0,0'},0.1); 
-                        border-radius: 8px; margin: 1rem 0;">
-                <h4 style="color: {result_color}; margin: 0;">
-                    📊 Resultado Líquido em 10 Trades: {net_result:+.1f}% da Banca
-                </h4>
-                <p style="margin: 0.5rem 0 0 0; color: #666;">
-                    Baseado em probabilidades realísticas e gestão de 2% por trade
+            <div style="text-align: center; padding: 1.5rem; background: rgba({'0,255,0' if net_result_usd > 0 else '255,0,0'},0.1); 
+                        border-radius: 10px; margin: 1rem 0; border: 2px solid {'#4CAF50' if net_result_usd > 0 else '#f44336'};">
+                <h3 style="color: {result_color}; margin: 0 0 1rem 0;">
+                    💰 Resultado Líquido: ${net_result_usd:+,.2f}
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; text-align: center;">
+                    <div>
+                        <h4 style="margin: 0; color: #666;">📊 % da Banca</h4>
+                        <p style="margin: 0; font-size: 1.2rem; font-weight: bold; color: {result_color};">
+                            {net_result_pct:+.2f}%
+                        </p>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0; color: #666;">📈 Múltiplo do Risco</h4>
+                        <p style="margin: 0; font-size: 1.2rem; font-weight: bold; color: {result_color};">
+                            {risk_multiple:+.1f}x
+                        </p>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0; color: #666;">🎯 ROI Esperado</h4>
+                        <p style="margin: 0; font-size: 1.2rem; font-weight: bold; color: {result_color};">
+                            {(net_result_usd/(risk_amount_usd * 10))*100:+.1f}%
+                        </p>
+                    </div>
+                </div>
+                <p style="margin: 1rem 0 0 0; color: #666; font-size: 0.9rem;">
+                    Simulação baseada em 10 trades com gestão de {risk_per_trade_profile:.1%} da banca por operação
                 </p>
             </div>
             """, unsafe_allow_html=True)
