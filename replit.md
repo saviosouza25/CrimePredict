@@ -35,7 +35,8 @@ Preferred communication style: Simple, everyday language.
 - **Model**: Enhanced LSTM with bidirectional layers and attention mechanism
 - **Features**: Multi-feature input including OHLC prices and technical indicators
 - **Training**: Configurable batch size, learning rate, and epoch parameters
-- **Prediction**: Multi-horizon forecasting with uncertainty quantification
+- **Prediction**: Realistic short-term forecasting (maximum 7 days) with confluent confidence system
+- **Confidence System**: Combined LSTM (40%), AI (30%), sentiment (20%), and consistency (10%) weights
 
 ### Technical Analysis Engine
 - **Indicators**: Comprehensive set including SMA, EMA, RSI, MACD, Bollinger Bands, and Stochastic
@@ -55,6 +56,8 @@ Preferred communication style: Simple, everyday language.
 ## Configuration Management
 - **Settings**: Centralized configuration in `config/settings.py`
 - **Parameters**: Configurable trading pairs, intervals, model parameters, and cache settings
+- **Trader Profiles**: Real market-based parameters for Conservative, Moderate, and Aggressive profiles
+- **Temporal Strategy**: Market-realistic parameters for each timeframe (5min to 1 month) based on actual trading statistics
 - **Environment**: Environment variable support for sensitive data
 
 # External Dependencies
