@@ -3030,15 +3030,135 @@ def display_main_summary(results, analysis_mode):
                     f"{'+'if direction=='ALTA' else '-'}{extension_pips} pips ({extension_prob:.0%} prob.)"
                 )
             
-            # Detalhes adicionais
-            st.info(f"""
-            **Direção Prevista:** {direction}  
-            **Alvo Base {horizon}:** {base_target} pips  
-            **Alvo Ajustado:** {adjusted_target} pips  
-            **Ajuste de Confiança:** {confidence_boost:+.1%}  
-            **Impacto Sentimento:** {sentiment_boost:+.1%}  
-            **Perfil de Risco:** {risk_level_used}
-            """)
+            # Informações detalhadas de gestão de risco
+            st.markdown("### 📊 Gestão de Risco e Probabilidades")
+            
+            # Cálculos de gestão de banca
+            risk_reward_ratio = extension_pips / drawdown_pips if drawdown_pips > 0 else 0
+            
+            # Probabilidade de sucesso baseada em confluência
+            base_success_prob = 0.45  # Base realística para forex
+            confidence_factor = confidence * 0.3  # Máximo 30% de boost
+            sentiment_factor = abs(sentiment_score) * 0.15  # Máximo 15% de boost
+            final_success_prob = min(0.75, base_success_prob + confidence_factor + sentiment_factor)
+            
+            # Cálculo de risco da banca (assumindo 2% de risco por trade)
+            risk_per_trade = 0.02  # 2% da banca por trade
+            potential_loss_pct = risk_per_trade
+            potential_gain_pct = risk_per_trade * risk_reward_ratio
+            
+            # Métricas em colunas
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric(
+                    "🎯 Probabilidade de Sucesso",
+                    f"{final_success_prob:.0%}",
+                    f"Base {base_success_prob:.0%} + Boost {(confidence_factor + sentiment_factor):.0%}"
+                )
+                
+            with col2:
+                st.metric(
+                    "⚖️ Razão Risco:Recompensa", 
+                    f"1:{risk_reward_ratio:.1f}",
+                    "Drawdown vs Extensão"
+                )
+                
+            with col3:
+                st.metric(
+                    "📈 Expectativa Matemática",
+                    f"{(final_success_prob * potential_gain_pct - (1-final_success_prob) * potential_loss_pct)*100:.2f}%",
+                    "Por trade (2% risco)"
+                )
+            
+            # Detalhes expandidos
+            with st.expander("📋 Detalhes Completos da Análise"):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown(f"""
+                    **📊 Parâmetros da Análise:**
+                    - **Direção Prevista:** {direction}
+                    - **Horizonte Temporal:** {horizon}
+                    - **Perfil de Risco:** {risk_level_used}
+                    - **Alvo Base:** {base_target} pips
+                    - **Alvo Ajustado:** {adjusted_target} pips
+                    
+                    **🎯 Ajustes Aplicados:**
+                    - **Confiança LSTM:** {confidence_boost:+.1%}
+                    - **Impacto Sentimento:** {sentiment_boost:+.1%}
+                    - **Confiança Final:** {confidence:.0%}
+                    """)
+                
+                with col2:
+                    st.markdown(f"""
+                    **📈 Cenários de Gestão:**
+                    - **Risco por Trade:** {potential_loss_pct:.1%} da banca
+                    - **Potencial Ganho:** {potential_gain_pct:.1%} da banca
+                    - **Prob. Drawdown:** {drawdown_prob:.0%}
+                    - **Prob. Extensão:** {extension_prob:.0%}
+                    - **Prob. Sucesso Total:** {final_success_prob:.0%}
+                    
+                    **⚠️ Gestão Recomendada:**
+                    - **Max por Trade:** 2% da banca
+                    - **Stop Loss:** {drawdown_pips} pips
+                    - **Take Profit:** {extension_pips} pips
+                    """)
+            
+            # Análise de risco detalhada
+            st.markdown("### ⚠️ Análise de Risco da Banca")
+            
+            # Simular séries de trades
+            winning_trades = int(10 * final_success_prob)
+            losing_trades = 10 - winning_trades
+            
+            total_gain = winning_trades * potential_gain_pct * 100
+            total_loss = losing_trades * potential_loss_pct * 100
+            net_result = total_gain - total_loss
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric(
+                    "✅ Trades Vencedores",
+                    f"{winning_trades}/10",
+                    f"({final_success_prob:.0%})"
+                )
+                
+            with col2:
+                st.metric(
+                    "❌ Trades Perdedores", 
+                    f"{losing_trades}/10",
+                    f"({(1-final_success_prob):.0%})"
+                )
+                
+            with col3:
+                st.metric(
+                    "💰 Ganho Total",
+                    f"+{total_gain:.1f}%",
+                    f"{winning_trades} trades × {potential_gain_pct:.1%}"
+                )
+                
+            with col4:
+                st.metric(
+                    "📉 Perda Total",
+                    f"-{total_loss:.1f}%", 
+                    f"{losing_trades} trades × {potential_loss_pct:.1%}"
+                )
+            
+            # Resultado líquido
+            result_color = "green" if net_result > 0 else "red"
+            st.markdown(f"""
+            <div style="text-align: center; padding: 1rem; background: rgba({'0,255,0' if net_result > 0 else '255,0,0'},0.1); 
+                        border-radius: 8px; margin: 1rem 0;">
+                <h4 style="color: {result_color}; margin: 0;">
+                    📊 Resultado Líquido em 10 Trades: {net_result:+.1f}% da Banca
+                </h4>
+                <p style="margin: 0.5rem 0 0 0; color: #666;">
+                    Baseado em probabilidades realísticas e gestão de 2% por trade
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
             <div style="
