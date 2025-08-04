@@ -2248,40 +2248,42 @@ def display_main_summary(results, analysis_mode):
         stop_loss_pip_diff = calculate_pip_difference(current_price, stop_loss_level, pair_name)
         take_profit_pip_diff = calculate_pip_difference(current_price, take_profit_level, pair_name)
         
-        # Calcular CENÁRIO TÉCNICO REAL de extensão máxima (SEMPRE MAIOR QUE TAKE PROFIT)
+        # Calcular POTENCIAL MÁXIMO baseado em análise confluente realística
         if predicted_price > current_price:  # COMPRA
-            # Cenário otimista: extensão 161.8% Fibonacci ou resistência major
-            fibonacci_extension = take_profit_level + (take_profit_level - current_price) * 1.618  # Extensão completa
-            next_resistance = resistance_levels[-1] if resistance_levels else take_profit_level * 1.02  # Última resistência
-            max_extension = max(fibonacci_extension, next_resistance, take_profit_level * 1.15)  # Garantir que seja maior
-            extension_direction = "ALTA"
-            extension_description = f"Ruptura técnica para {max_extension:.5f}"
+            # Potencial máximo: próxima resistência técnica + momentum de confluência
+            movement_to_tp = take_profit_level - current_price
             
-            # Risco máximo: se romper suporte crítico abaixo do stop
-            critical_support = support_levels[1] if len(support_levels) > 1 else support_levels[0]  # Nível 38.2%
-            max_risk_level = critical_support - (current_price - critical_support) * 0.382  # Extensão da queda
-            max_risk_scenario = f"Reversão crítica: rompimento de {critical_support:.5f} pode levar até {max_risk_level:.5f}"
+            # Extensão realística baseada em confluência das análises
+            confluence_multiplier = 1.2  # Base conservadora
+            if enhanced_confidence > 0.7 and sentiment_score > 0.3:  # Alta confluência
+                confluence_multiplier = 1.4
+            elif enhanced_confidence > 0.5 and sentiment_score > 0.1:  # Confluência moderada
+                confluence_multiplier = 1.3
+                
+            max_extension = take_profit_level + (movement_to_tp * (confluence_multiplier - 1))
+            extension_direction = "ALTA"
+            extension_description = f"Potencial máximo por confluência: {max_extension:.5f}"
             
         else:  # VENDA
-            # Cenário otimista: extensão 161.8% Fibonacci ou suporte major
-            fibonacci_extension = take_profit_level - (current_price - take_profit_level) * 1.618  # Extensão completa
-            next_support = support_levels[0] if support_levels else take_profit_level * 0.98  # Primeiro suporte
-            max_extension = min(fibonacci_extension, next_support, take_profit_level * 0.85)  # Garantir que seja menor para venda
-            extension_direction = "BAIXA"
-            extension_description = f"Queda técnica para {max_extension:.5f}"
+            # Potencial máximo: próximo suporte técnico + momentum de confluência
+            movement_to_tp = current_price - take_profit_level
             
-            # Risco máximo: se romper resistência crítica acima do stop
-            critical_resistance = resistance_levels[1] if len(resistance_levels) > 1 else resistance_levels[0]  # Nível 38.2%
-            max_risk_level = critical_resistance + (critical_resistance - current_price) * 0.382  # Extensão da subida
-            max_risk_scenario = f"Reversão crítica: rompimento de {critical_resistance:.5f} pode levar até {max_risk_level:.5f}"
+            # Extensão realística baseada em confluência das análises
+            confluence_multiplier = 1.2  # Base conservadora
+            if enhanced_confidence > 0.7 and sentiment_score < -0.3:  # Alta confluência bearish
+                confluence_multiplier = 1.4
+            elif enhanced_confidence > 0.5 and sentiment_score < -0.1:  # Confluência moderada bearish
+                confluence_multiplier = 1.3
+                
+            max_extension = take_profit_level - (movement_to_tp * (confluence_multiplier - 1))
+            extension_direction = "BAIXA"
+            extension_description = f"Potencial máximo por confluência: {max_extension:.5f}"
         
-        # Calcular pip differences e distâncias técnicas
+        # Calcular pip differences para potencial máximo
         extension_pip_diff = calculate_pip_difference(current_price, max_extension, pair_name)
-        max_risk_pip_diff = calculate_pip_difference(current_price, max_risk_level, pair_name)
         
-        # Calcular distâncias técnicas em vez de percentuais
+        # Calcular distâncias técnicas
         extension_distance = abs(max_extension - current_price)
-        max_risk_distance = abs(max_risk_level - current_price)
         
         # Manter percentuais para cálculos internos
         risk_percentage = abs((stop_loss_level - current_price) / current_price) * 100
@@ -2367,8 +2369,7 @@ def display_main_summary(results, analysis_mode):
         # Valores monetários realistas baseados no valor do pip calculado
         risco_monetario = stop_loss_pip_diff * pip_value_calculated
         potencial_lucro = take_profit_pip_diff * pip_value_calculated
-        potencial_extensao = extension_pip_diff * pip_value_calculated
-        potencial_risco_maximo = max_risk_pip_diff * pip_value_calculated
+        potencial_maximo = extension_pip_diff * pip_value_calculated
         
         # Calcular margem necessária baseada no tamanho da posição
         position_value = 100000 * lot_size_real  # Valor padrão do lote
@@ -2384,7 +2385,7 @@ def display_main_summary(results, analysis_mode):
             adjusted_lot_size = max_risk_money / (stop_loss_pip_diff * pip_value_calculated)
             risco_monetario = max_risk_money
             potencial_lucro = take_profit_pip_diff * calculate_pip_value(pair_name, adjusted_lot_size)
-            potencial_extensao = extension_pip_diff * calculate_pip_value(pair_name, adjusted_lot_size)
+            potencial_maximo = extension_pip_diff * calculate_pip_value(pair_name, adjusted_lot_size)
         
         # Color coding based on profile
         risk_color = "red" if risk_percentage > profile['volatility_threshold'] * 100 else "orange" if risk_percentage > profile['volatility_threshold'] * 50 else "green"
@@ -2478,17 +2479,11 @@ def display_main_summary(results, analysis_mode):
                         <p style="margin: 0; color: #888; font-size: 0.75rem;">{take_profit_pip_diff:.1f} pips</p>
                     </div>
                     <div>
-                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Cenário Otimista</strong></p>
-                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: blue;">+${potencial_extensao:,.2f}</p>
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Potencial Máximo</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #9c27b0;">+${potencial_maximo:,.2f}</p>
                         <p style="margin: 0; color: #888; font-size: 0.72rem;">{extension_pip_diff:.1f} pips • {extension_direction}</p>
                         <p style="margin: 0; color: #888; font-size: 0.70rem;">🎯 {max_extension:.5f}</p>
                         <p style="margin: 0; color: #2e7d32; font-size: 0.69rem; font-weight: bold;">📊 {probability_description} • ⏱️ {time_description}</p>
-                    </div>
-                    <div>
-                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Risco Máximo</strong></p>
-                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #d32f2f;">-${potencial_risco_maximo:,.2f}</p>
-                        <p style="margin: 0; color: #888; font-size: 0.72rem;">{max_risk_pip_diff:.1f} pips • REVERSÃO</p>
-                        <p style="margin: 0; color: #888; font-size: 0.70rem;">⚠️ {max_risk_level:.5f}</p>
                     </div>
                 </div>
             </div>
@@ -2531,13 +2526,9 @@ def display_main_summary(results, analysis_mode):
                         com potencial de extensão até <strong>{max_extension:.5f}</strong> em cenário otimista.
                     </p>
                     <p style="margin: 0 0 0.5rem 0; color: #555; font-size: 0.9rem;">
-                        <strong>🎯 Cenário Realístico de Curto Prazo:</strong> {extension_description} baseado em confluência LSTM + Sentiment + IA. 
+                        <strong>🎯 Potencial Máximo Realístico:</strong> {extension_description} baseado em confluência LSTM + Sentiment + IA. 
                         <span style="color: #2e7d32;"><strong>Probabilidade Real:</strong> {probability_description}</span> em <strong>{time_description}</strong> 
                         considerando movimentos típicos do par e concordância entre análises.
-                    </p>
-                    <p style="margin: 0 0 0.5rem 0; color: #d32f2f; font-size: 0.9rem;">
-                        <strong>⚠️ Alerta de Reversão Máxima:</strong> {max_risk_scenario}. 
-                        Este seria o cenário de invalidação total da análise com reversão completa.
                     </p>
                     <p style="margin: 0; color: #555; font-size: 0.9rem;">
                         <strong>Alerta de Reversão:</strong> Se o preço se mover {risk_direction} além de <strong>{reversal_level:.5f}</strong>, 
