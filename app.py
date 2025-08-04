@@ -729,11 +729,8 @@ def main():
                 horizon = manual_horizon
                 st.error("🔧 Modo manual ativo - Verifique se intervalo e horizonte estão compatíveis!")
         
-        risk_level = st.selectbox("⚖️ Nível de Risco", ["Conservativo", "Moderado", "Agressivo"], index=1)
-        
-        # Converter para inglês para compatibilidade
-        risk_mapping = {"Conservativo": "Conservative", "Moderado": "Moderate", "Agressivo": "Aggressive"}
-        risk_level_en = risk_mapping[risk_level]
+        # Usar configuração de risco padrão (moderado)
+        risk_level_en = "Moderate"
         
 
 
@@ -1440,7 +1437,7 @@ def display_footer():
     </div>
     """.format(datetime.now().strftime("%d-%m-%Y %H:%M")), unsafe_allow_html=True)
 
-def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_samples, epochs, is_quick=False):
+def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, is_quick=False):
     """Run the complete forex analysis with different modes"""
     
     try:
@@ -1526,21 +1523,21 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
             
             # Executar análises baseadas no modo selecionado - argumentos corretos
             if analysis_mode == 'unified':
-                results.update(run_unified_analysis(current_price, pair, risk_level, sentiment_score, df_with_indicators))
+                results.update(run_unified_analysis(current_price, pair, sentiment_score, df_with_indicators))
             elif analysis_mode == 'technical':
-                results.update(run_technical_analysis(current_price, df_with_indicators, risk_level))
+                results.update(run_technical_analysis(current_price, df_with_indicators))
             elif analysis_mode == 'sentiment':
-                results.update(run_sentiment_analysis(current_price, pair, sentiment_score, risk_level))
+                results.update(run_sentiment_analysis(current_price, pair, sentiment_score))
             elif analysis_mode == 'risk':
-                results.update(run_risk_analysis(current_price, risk_level))
+                results.update(run_risk_analysis(current_price))
             elif analysis_mode == 'ai_lstm':
-                results.update(run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators, risk_level))
+                results.update(run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators))
             elif analysis_mode == 'volume':
-                results.update(run_volume_analysis(current_price, df_with_indicators, risk_level))
+                results.update(run_volume_analysis(current_price, df_with_indicators))
             elif analysis_mode == 'trend':
-                results.update(run_trend_analysis(current_price, df_with_indicators, risk_level))
+                results.update(run_trend_analysis(current_price, df_with_indicators))
             else:
-                results.update(run_basic_analysis(current_price, is_quick, sentiment_score, risk_level, interval, horizon))
+                results.update(run_basic_analysis(current_price, is_quick, sentiment_score, interval, horizon))
             
             # Step 7: Finalizing
             status_text.text("✅ Finalizando análise...")
@@ -1569,7 +1566,7 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
         st.error(f"❌ Erro durante a análise: {str(e)}")
         print(f"Analysis error: {e}")
 
-def run_unified_analysis(current_price, pair, risk_level, sentiment_score, df_with_indicators):
+def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicators):
     """🧠 ANÁLISE UNIFICADA INTELIGENTE COMPLETA - Todos os Parâmetros Integrados"""
     import numpy as np
     
@@ -1853,7 +1850,7 @@ def get_recommendation_explanation(combined_signal, confidence, components):
     else:
         return f"⚪ **MERCADO INDECISO** - Sinais contraditórios: {positive_signals} positivos, {negative_signals} negativos, {neutral_signals} neutros. Aguardar definição clara do mercado."
 
-def run_technical_analysis(current_price, df_with_indicators, risk_level):
+def run_technical_analysis(current_price, df_with_indicators):
     """Análise técnica especializada com indicadores múltiplos e perfil de risco"""
     import numpy as np
     
@@ -1864,7 +1861,8 @@ def run_technical_analysis(current_price, df_with_indicators, risk_level):
         'Aggressive': {'signal_factor': 1.4, 'confidence_boost': -0.05}
     }
     
-    risk_params = risk_multipliers.get(risk_level, risk_multipliers['Moderate'])
+    # Usar configuração padrão (moderada)
+    risk_params = risk_multipliers['Moderate']
     
     # Análise baseada em múltiplos indicadores
     rsi = df_with_indicators['rsi'].iloc[-1] if 'rsi' in df_with_indicators.columns else 50
@@ -1898,8 +1896,7 @@ def run_technical_analysis(current_price, df_with_indicators, risk_level):
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': confidence,
-        'analysis_focus': f'Análise Técnica ({risk_level}) - RSI: {rsi:.1f}, MACD: {macd:.5f}, SMA20: {sma_20:.5f}',
-        'risk_level_used': risk_level,
+        'analysis_focus': f'Análise Técnica - RSI: {rsi:.1f}, MACD: {macd:.5f}, SMA20: {sma_20:.5f}',
         'technical_indicators': {
             'rsi': rsi,
             'macd': macd,
@@ -1907,7 +1904,7 @@ def run_technical_analysis(current_price, df_with_indicators, risk_level):
         }
     }
 
-def run_sentiment_analysis(current_price, pair, sentiment_score, risk_level):
+def run_sentiment_analysis(current_price, pair, sentiment_score):
     """Análise de sentimento especializada com fatores de mercado e perfil de risco"""
     
     # Ajustes baseados no perfil de risco do investidor
@@ -1917,7 +1914,8 @@ def run_sentiment_analysis(current_price, pair, sentiment_score, risk_level):
         'Aggressive': {'signal_factor': 1.5, 'confidence_penalty': -0.03, 'volatility_threshold': 0.40}
     }
     
-    risk_params = risk_adjustments.get(risk_level, risk_adjustments['Moderate'])
+    # Usar configuração padrão (moderada)
+    risk_params = risk_adjustments['Moderate']
     
     # Usar dados reais de sentimento com ajustes de volatilidade e perfil de risco
     base_signal = sentiment_score * 0.015 * risk_params['signal_factor']
@@ -1925,8 +1923,8 @@ def run_sentiment_analysis(current_price, pair, sentiment_score, risk_level):
     # Fator de ajuste baseado na intensidade do sentimento
     intensity_factor = abs(sentiment_score)
     
-    # Para perfil conservador, reduzir impacto de sentimentos extremos
-    if risk_level == 'Conservative' and intensity_factor > risk_params['volatility_threshold']:
+    # Limitar impacto de sentimentos extremos
+    if intensity_factor > risk_params['volatility_threshold']:
         intensity_factor = risk_params['volatility_threshold']
     
     adjusted_signal = base_signal * (1 + intensity_factor)
@@ -1960,12 +1958,11 @@ def run_sentiment_analysis(current_price, pair, sentiment_score, risk_level):
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': confidence,
         'sentiment_score': sentiment_score,
-        'analysis_focus': f'Sentimento de Mercado ({risk_level}): {sentiment_label} (Score: {sentiment_score:.3f}, Intensidade: {intensity_factor:.3f})',
-        'risk_level_used': risk_level,
+        'analysis_focus': f'Sentimento de Mercado: {sentiment_label} (Score: {sentiment_score:.3f}, Intensidade: {intensity_factor:.3f})',
         'sentiment_intensity': intensity_factor
     }
 
-def run_risk_analysis(current_price, risk_level):
+def run_risk_analysis(current_price):
     """Análise de risco especializada com cálculos avançados"""
     import numpy as np
     
@@ -1976,16 +1973,13 @@ def run_risk_analysis(current_price, risk_level):
         'Aggressive': {'volatility': 0.025, 'confidence': 0.65, 'signal_range': 0.025}
     }
     
-    factor = risk_factors.get(risk_level, risk_factors['Moderate'])
+    # Usar configuração padrão (moderada)
+    factor = risk_factors['Moderate']
     
     # Sinal baseado no perfil de risco
     signal = np.random.uniform(-factor['signal_range'], factor['signal_range'])
     
-    # Ajustar sinal baseado no nível de risco
-    if risk_level == 'Conservative':
-        signal *= 0.7  # Sinais mais conservadores
-    elif risk_level == 'Aggressive':
-        signal *= 1.3  # Sinais mais agressivos
+    # Aplicar ajuste padrão do sinal
     
     predicted_price = current_price * (1 + signal)
     price_change = predicted_price - current_price
@@ -1995,12 +1989,11 @@ def run_risk_analysis(current_price, risk_level):
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': factor['confidence'],
-        'analysis_focus': f'Análise de Risco Especializada ({risk_level}) - Volatilidade: {factor["volatility"]:.3f}',
-        'risk_level_used': risk_level,
+        'analysis_focus': f'Análise de Risco Especializada - Volatilidade: {factor["volatility"]:.3f}',
         'estimated_volatility': factor['volatility']
     }
 
-def run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators, risk_level):
+def run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators):
     """Análise de IA/LSTM especializada com deep learning simulado e perfil de risco"""
     import numpy as np
     
@@ -2011,7 +2004,8 @@ def run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators, 
         'Aggressive': {'volatility_tolerance': 1.3, 'signal_damping': 1.4, 'min_confidence': 0.60}
     }
     
-    risk_config = risk_configs.get(risk_level, risk_configs['Moderate'])
+    # Usar configuração padrão (moderada)
+    risk_config = risk_configs['Moderate']
     
     # Análise sofisticada baseada em múltiplos fatores
     recent_prices = df_with_indicators['close'].tail(lookback_period).values
@@ -2030,9 +2024,9 @@ def run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators, 
     momentum_signal = np.tanh(short_trend * 15) * 0.015 * risk_config['signal_damping']
     volatility_signal = (0.02 - volatility) * 0.010
     
-    # Para conservadores, penalizar alta volatilidade mais severamente
-    if risk_level == 'Conservative' and volatility > 0.015:
-        volatility_signal *= 0.5
+    # Ajuste padrão para alta volatilidade
+    if volatility > 0.015:
+        volatility_signal *= 0.8
     
     # Sinal final ponderado pelo fator de aprendizado e perfil de risco
     combined_signal = (trend_signal * 0.5 + momentum_signal * 0.3 + volatility_signal * 0.2) * learning_factor
@@ -2050,8 +2044,7 @@ def run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators, 
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': confidence,
-        'analysis_focus': f'IA/LSTM ({risk_level}) - Tendência: {long_trend:.3f}, Volatilidade: {volatility:.3f} (lookback: {lookback_period}, épocas: {epochs})',
-        'risk_level_used': risk_level,
+        'analysis_focus': f'IA/LSTM - Tendência: {long_trend:.3f}, Volatilidade: {volatility:.3f} (lookback: {lookback_period}, épocas: {epochs})',
         'ai_metrics': {
             'long_trend': long_trend,
             'short_trend': short_trend,
@@ -2060,7 +2053,7 @@ def run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators, 
         }
     }
 
-def run_volume_analysis(current_price, df_with_indicators, risk_level):
+def run_volume_analysis(current_price, df_with_indicators):
     """Análise de volume especializada com perfil de risco"""
     import numpy as np
     
@@ -2071,7 +2064,8 @@ def run_volume_analysis(current_price, df_with_indicators, risk_level):
         'Aggressive': {'signal_factor': 1.3, 'volatility_threshold': 0.030, 'confidence': 0.65}
     }
     
-    config = risk_configs.get(risk_level, risk_configs['Moderate'])
+    # Usar configuração padrão (moderada)
+    config = risk_configs['Moderate']
     
     # Usar volatilidade como proxy para volume
     volatility = df_with_indicators['close'].tail(20).std() / current_price
@@ -2080,9 +2074,9 @@ def run_volume_analysis(current_price, df_with_indicators, risk_level):
     base_signal = (config['volatility_threshold'] - volatility) * 0.015
     signal = base_signal * config['signal_factor']
     
-    # Para conservadores, penalizar alta volatilidade mais
-    if risk_level == 'Conservative' and volatility > config['volatility_threshold']:
-        signal *= 0.5
+    # Ajuste padrão para alta volatilidade
+    if volatility > config['volatility_threshold']:
+        signal *= 0.8
     
     predicted_price = current_price * (1 + signal)
     price_change = predicted_price - current_price
@@ -2092,11 +2086,10 @@ def run_volume_analysis(current_price, df_with_indicators, risk_level):
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': config['confidence'],
-        'analysis_focus': f'Volume/Liquidez ({risk_level}) - Volatilidade: {volatility:.4f}, Limite: {config["volatility_threshold"]:.3f}',
-        'risk_level_used': risk_level
+        'analysis_focus': f'Volume/Liquidez - Volatilidade: {volatility:.4f}, Limite: {config["volatility_threshold"]:.3f}',
     }
 
-def run_trend_analysis(current_price, df_with_indicators, risk_level):
+def run_trend_analysis(current_price, df_with_indicators):
     """Análise de tendência especializada com perfil de risco"""
     import numpy as np
     
@@ -2107,7 +2100,8 @@ def run_trend_analysis(current_price, df_with_indicators, risk_level):
         'Aggressive': {'signal_multiplier': 1.4, 'trend_threshold': 0.020, 'confidence': 0.68}
     }
     
-    settings = risk_settings.get(risk_level, risk_settings['Moderate'])
+    # Usar configuração padrão (moderada)
+    settings = risk_settings['Moderate']
     
     # Análise de tendência baseada em médias móveis
     sma_20 = df_with_indicators['sma_20'].iloc[-1] if 'sma_20' in df_with_indicators.columns else current_price
@@ -2121,8 +2115,8 @@ def run_trend_analysis(current_price, df_with_indicators, risk_level):
     base_signal = (price_vs_sma20 + sma_cross) / 2 * 0.018
     signal = base_signal * settings['signal_multiplier']
     
-    # Para conservadores, limitar sinais fortes
-    if risk_level == 'Conservative' and abs(signal) > settings['trend_threshold']:
+    # Limitar sinais fortes para estabilidade
+    if abs(signal) > settings['trend_threshold']:
         signal = np.sign(signal) * settings['trend_threshold']
     
     predicted_price = current_price * (1 + signal)
@@ -2133,11 +2127,10 @@ def run_trend_analysis(current_price, df_with_indicators, risk_level):
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': settings['confidence'],
-        'analysis_focus': f'Tendência ({risk_level}) - SMA20: {sma_20:.5f}, SMA50: {sma_50:.5f}, Força: {abs(signal):.4f}',
-        'risk_level_used': risk_level
+        'analysis_focus': f'Tendência - SMA20: {sma_20:.5f}, SMA50: {sma_50:.5f}, Força: {abs(signal):.4f}',
     }
 
-def run_basic_analysis(current_price, is_quick, sentiment_score, risk_level, interval="1hour", horizon="1 dia"):
+def run_basic_analysis(current_price, is_quick, sentiment_score, interval="1hour", horizon="1 dia"):
     """Análise básica com perfil de risco e configuração temporal integrada"""
     import numpy as np
     
@@ -2157,7 +2150,8 @@ def run_basic_analysis(current_price, is_quick, sentiment_score, risk_level, int
         "Weekly": {"volatility_factor": 1.6, "confidence_boost": 1.05}
     }
     
-    config = risk_configs.get(risk_level, risk_configs['Moderate'])
+    # Usar configuração padrão (moderada)
+    config = risk_configs['Moderate']
     temporal_adj = temporal_adjustments.get(interval, temporal_adjustments["60min"])
     
     # Gerar sinal otimizado por configuração temporal
@@ -2181,8 +2175,7 @@ def run_basic_analysis(current_price, is_quick, sentiment_score, risk_level, int
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': adjusted_confidence,
-        'analysis_focus': f'Análise Básica Integrada ({risk_level}) - {interval}/{horizon} - Tendência: {market_trend:.4f}, Sentimento: {sentiment_score:.3f}',
-        'risk_level_used': risk_level
+        'analysis_focus': f'Análise Básica Integrada - {interval}/{horizon} - Tendência: {market_trend:.4f}, Sentimento: {sentiment_score:.3f}',
     }
 
 def add_technical_indicators(df):
