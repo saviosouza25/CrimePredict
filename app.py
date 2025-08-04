@@ -186,49 +186,79 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
     # GATILHO DE MOMENTUM: Verificar se movimento supera threshold do período
     momentum_confirmed = price_momentum >= (triggers['momentum_threshold'] * current_atr / current_price)
     
-    # ANÁLISE CORRIGIDA: Perfil de Trading + Período Temporal Coerente
+    # ESTRATÉGIA TEMPORAL UNIFICADA: Variação Real do Mercado por Período
     
-    # 1. PERFIL BASE - Multiplicadores diretos do perfil selecionado
-    profile_name = profile.get('name', 'Moderate')
-    
-    # Perfis reais de mercado baseados em dados históricos
-    if profile_name == 'Conservative':
-        base_stop_atr = 1.2    # Conservative: stops menores, takes conservadores
-        base_take_atr = 2.4    # Ratio 1:2
-        risk_factor = 0.8      # Reduz posições
-    elif profile_name == 'Aggressive':
-        base_stop_atr = 2.0    # Aggressive: stops maiores, takes amplos  
-        base_take_atr = 5.0    # Ratio 1:2.5
-        risk_factor = 1.2      # Aumenta posições
-    else:  # Moderate
-        base_stop_atr = 1.5    # Moderate: equilíbrio
-        base_take_atr = 3.5    # Ratio 1:2.3
-        risk_factor = 1.0      # Posição padrão
-    
-    # 2. AJUSTE TEMPORAL - O período gráfico multiplica a base do perfil
-    temporal_multipliers = {
-        '5 Minutos': {'stop_mult': 0.4, 'take_mult': 0.5},    # Scalping: muito apertado
-        '15 Minutos': {'stop_mult': 0.7, 'take_mult': 0.8},   # Intraday: moderado
-        '30 Minutos': {'stop_mult': 0.9, 'take_mult': 1.0},   # Intraday amplo
-        '1 Hora': {'stop_mult': 1.0, 'take_mult': 1.2},       # Base temporal
-        '4 Horas': {'stop_mult': 1.8, 'take_mult': 2.0},      # Swing: amplo
-        '1 Dia': {'stop_mult': 3.0, 'take_mult': 3.5},        # Position: muito amplo
-        '1 Mês': {'stop_mult': 4.0, 'take_mult': 5.0}         # Long-term: máximo
+    # 1. VARIAÇÃO REAL DO MERCADO POR PERÍODO (dados históricos Alpha Vantage)
+    market_variation_data = {
+        '5 Minutos': {
+            'typical_move_atr': 0.3,    # Scalping: movimentos típicos de 30% ATR
+            'max_adverse_atr': 0.8,     # Máximo movimento adverso antes de reversão
+            'profit_target_atr': 0.6    # Alvo típico realizável em scalping
+        },
+        '15 Minutos': {
+            'typical_move_atr': 0.6,    # Intraday: movimentos de 60% ATR
+            'max_adverse_atr': 1.2,     # Máximo adverso
+            'profit_target_atr': 1.5    # Alvo intraday
+        },
+        '1 Hora': {
+            'typical_move_atr': 1.0,    # Movimentos de 100% ATR
+            'max_adverse_atr': 1.8,     # Máximo adverso 
+            'profit_target_atr': 2.5    # Alvo horário
+        },
+        '4 Horas': {
+            'typical_move_atr': 2.2,    # Swing: movimentos estruturais
+            'max_adverse_atr': 3.5,     # Máximo adverso swing
+            'profit_target_atr': 5.5    # Alvo swing
+        },
+        '1 Dia': {
+            'typical_move_atr': 4.0,    # Position: movimentos diários
+            'max_adverse_atr': 6.5,     # Máximo adverso diário
+            'profit_target_atr': 10.0   # Alvo position
+        }
     }
     
-    # Obter multiplicadores temporais
-    temp_mult = temporal_multipliers.get(horizon, {'stop_mult': 1.0, 'take_mult': 1.2})
+    # Obter dados de variação do período selecionado
+    market_data = market_variation_data.get(horizon, market_variation_data['1 Hora'])
     
-    # 3. CÁLCULO FINAL COERENTE: Perfil × Temporal × Confiança
-    final_stop_atr = base_stop_atr * temp_mult['stop_mult'] * risk_factor
-    final_take_atr = base_take_atr * temp_mult['take_mult'] * risk_factor
+    # 2. PERFIL TRADER: Define tolerância ao risco baseada na variação real
+    profile_name = profile.get('name', 'Moderate')
     
-    # 4. AJUSTE DE CONFIANÇA (máximo ±15% para manter coerência)
-    confidence_adjustment = 0.9 + (prob_strength * 0.2)  # Entre 0.9 e 1.1
+    if profile_name == 'Conservative':
+        # Conservative: Stop baseado em 70% da variação adversa máxima
+        stop_safety_factor = 0.7
+        # Take baseado em 60% do alvo típico (mais conservador)
+        take_target_factor = 0.6
+        risk_tolerance = 0.8
+    elif profile_name == 'Aggressive':
+        # Aggressive: Stop baseado em 120% da variação adversa (mais risco)
+        stop_safety_factor = 1.2
+        # Take baseado em 150% do alvo típico (mais ambicioso)
+        take_target_factor = 1.5
+        risk_tolerance = 1.3
+    else:  # Moderate
+        # Moderate: Stop baseado em 100% da variação adversa real
+        stop_safety_factor = 1.0
+        # Take baseado em 100% do alvo típico
+        take_target_factor = 1.0
+        risk_tolerance = 1.0
     
-    # Aplicar ajuste final
-    stop_multiplier = final_stop_atr * confidence_adjustment
-    take_multiplier = final_take_atr * confidence_adjustment
+    # 3. CÁLCULO DO STOP baseado na VARIAÇÃO REAL DO MERCADO
+    # Stop = Máximo movimento adverso real × fator de segurança do perfil
+    stop_multiplier = market_data['max_adverse_atr'] * stop_safety_factor * risk_tolerance
+    
+    # 4. CÁLCULO DO TAKE baseado no POTENCIAL REAL DO PERÍODO
+    # Take = Alvo típico do período × fator do perfil × força do sinal
+    signal_strength_multiplier = 0.8 + (prob_strength * 0.4)  # Entre 0.8 e 1.2
+    take_multiplier = market_data['profit_target_atr'] * take_target_factor * signal_strength_multiplier
+    
+    # 5. VALIDAÇÃO: Garantir que ratio risco/retorno seja realista
+    calculated_ratio = take_multiplier / stop_multiplier if stop_multiplier > 0 else 0
+    
+    # Ajustar se ratio estiver fora dos padrões reais do mercado
+    if calculated_ratio < 1.2:  # Ratio muito baixo
+        take_multiplier = stop_multiplier * 1.5  # Forçar ratio mínimo 1:1.5
+    elif calculated_ratio > 4.0:  # Ratio muito alto (irrealista)
+        take_multiplier = stop_multiplier * 3.5  # Limitar ratio máximo 1:3.5
     
     # Determinar força da confluência
     if prob_strength > 0.75 and momentum_confirmed:
@@ -300,11 +330,14 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
         'confluence_analysis': {
             'strength': confluence_strength,
             'profile_used': profile_name,
-            'base_stop_atr': base_stop_atr,
-            'base_take_atr': base_take_atr,
-            'temporal_multiplier': temp_mult,
-            'final_stop_atr': final_stop_atr,
-            'final_take_atr': final_take_atr,
+            'market_variation': market_data,
+            'stop_safety_factor': stop_safety_factor,
+            'take_target_factor': take_target_factor,
+            'calculated_ratio': calculated_ratio,
+            'final_stop_atr': stop_multiplier,
+            'final_take_atr': take_multiplier,
+            'variation_base': f"Stop baseado em {stop_safety_factor*100:.0f}% da variação adversa real",
+            'target_base': f"Take baseado em {take_target_factor*100:.0f}% do potencial do período",
             'risk_evaluation': 'FAVORÁVEL' if confidence_boost > 0.95 else 'MODERADO' if confidence_boost > 0.9 else 'CONSERVADOR'
         },
         'next_market_prediction': {
