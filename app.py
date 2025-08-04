@@ -150,7 +150,7 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
             'market_noise_filter': 0.05
         },
         '1 Dia': {
-            'volatility_range': 1.0,      # Position: movimentos estruturais
+            'volatility_range': 1.0,      # Position: movimentos estruturais (mantido para compatibilidade)
             'momentum_threshold': 2.5,     
             'stop_protection': 3.0,        # Proteção muito ampla (300% ATR)
             'target_extension': 6.0,       # Alvo extenso (600% ATR)
@@ -158,7 +158,7 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
             'market_noise_filter': 0.02
         },
         '1 Mês': {
-            'volatility_range': 1.5,      # Long-term: movimentos estruturais realistas
+            'volatility_range': 1.5,      # Long-term: movimentos estruturais (mantido para compatibilidade)
             'momentum_threshold': 3.0,     
             'stop_protection': 3.5,        # Proteção realista (350% ATR)
             'target_extension': 7.0,       # Alvo realista (700% ATR)
@@ -524,17 +524,15 @@ def main():
         
         # Presets integrados para máxima coerência (usando valores exatos de HORIZONS)
         temporal_presets = {
-            "Scalping (1-5 min)": {"interval": "1min", "horizon": "1 Hora", "description": "Operações muito rápidas"},
-            "Intraday (15-30 min)": {"interval": "15min", "horizon": "4 Horas", "description": "Operações no mesmo dia"},
-            "Swing (1-4 horas)": {"interval": "60min", "horizon": "1 Dia", "description": "Operações de alguns dias"},
-            "Position (Diário)": {"interval": "daily", "horizon": "1 Dia", "description": "Operações de médio prazo"},
-            "Long-term (Mensal)": {"interval": "daily", "horizon": "1 Mês", "description": "Análise de longo prazo"}
+            "Scalping (1-5 min)": {"interval": "1min", "horizon": "5 Minutos", "description": "Operações muito rápidas"},
+            "Intraday (15-30 min)": {"interval": "15min", "horizon": "1 Hora", "description": "Operações no mesmo dia"},
+            "Swing (1-4 horas)": {"interval": "60min", "horizon": "4 Horas", "description": "Operações de alguns dias"}
         }
         
         preset_choice = st.selectbox(
             "Estratégia Temporal:",
             list(temporal_presets.keys()),
-            index=2,  # Default Swing
+            index=1,  # Default Intraday
             help="Presets otimizados para máxima precisão entre intervalo e horizonte"
         )
         
