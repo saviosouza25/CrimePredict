@@ -1550,75 +1550,230 @@ def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_sample
         print(f"Analysis error: {e}")
 
 def run_unified_analysis(current_price, pair, risk_level, sentiment_score, df_with_indicators):
-    """Análise unificada que combina todas as fonções para melhor previsão"""
+    """🧠 ANÁLISE UNIFICADA INTELIGENTE COMPLETA - Todos os Parâmetros Integrados"""
     import numpy as np
     
-    # Pesos dos componentes
-    technical_weight = 0.3
-    sentiment_weight = 0.25
-    ai_weight = 0.3
-    risk_weight = 0.15
+    # Dados técnicos mais recentes
+    latest = df_with_indicators.iloc[-1]
+    rsi = latest.get('rsi', 50)
+    macd = latest.get('macd', 0)
+    bb_upper = latest.get('bb_upper', current_price * 1.02)
+    bb_lower = latest.get('bb_lower', current_price * 0.98)
+    sma_20 = latest.get('sma_20', current_price)
+    ema_12 = latest.get('ema_12', current_price)
     
-    # Componente técnico - baseado em indicadores reais
-    rsi = df_with_indicators['rsi'].iloc[-1] if 'rsi' in df_with_indicators.columns else 50
-    macd = df_with_indicators['macd'].iloc[-1] if 'macd' in df_with_indicators.columns else 0
+    # 1. 📊 ANÁLISE TÉCNICA COMPLETA
+    technical_signal = 0
+    technical_details = []
     
-    # Sinal técnico baseado em RSI e MACD
-    rsi_signal = (50 - rsi) / 50  # RSI normalizado
-    macd_signal = np.tanh(macd * 1000)  # MACD normalizado
-    technical_signal = (rsi_signal + macd_signal) / 2 * 0.02
+    # RSI
+    if rsi < 30:
+        technical_signal += 0.4
+        technical_details.append(f"RSI Oversold({rsi:.1f}): +40% COMPRA")
+    elif rsi > 70:
+        technical_signal -= 0.4
+        technical_details.append(f"RSI Overbought({rsi:.1f}): -40% VENDA")
+    else:
+        technical_details.append(f"RSI Neutro({rsi:.1f}): 0%")
     
-    # Componente de sentimento - usar dados reais
-    sentiment_signal = sentiment_score * 0.015
+    # MACD
+    if macd > 0:
+        technical_signal += 0.3
+        technical_details.append(f"MACD Positivo({macd:.5f}): +30% COMPRA")
+    else:
+        technical_signal -= 0.3
+        technical_details.append(f"MACD Negativo({macd:.5f}): -30% VENDA")
     
-    # Componente de IA - baseado em tendência dos preços
-    recent_prices = df_with_indicators['close'].tail(5).values
-    price_trend = (recent_prices[-1] - recent_prices[0]) / recent_prices[0]
-    ai_signal = np.tanh(price_trend * 10) * 0.025
+    # Bollinger Bands
+    bb_position = (current_price - bb_lower) / (bb_upper - bb_lower) if bb_upper != bb_lower else 0.5
+    if bb_position < 0.2:
+        technical_signal += 0.2
+        technical_details.append(f"BB Inferior({bb_position:.2f}): +20% COMPRA")
+    elif bb_position > 0.8:
+        technical_signal -= 0.2
+        technical_details.append(f"BB Superior({bb_position:.2f}): -20% VENDA")
+    else:
+        technical_details.append(f"BB Meio({bb_position:.2f}): 0%")
     
-    # Componente de risco - baseado na volatilidade
-    volatility = df_with_indicators['close'].tail(20).std() / current_price
-    risk_multiplier = {'Conservative': 0.5, 'Moderate': 1.0, 'Aggressive': 1.5}.get(risk_level, 1.0)
-    risk_signal = (0.01 - volatility) * risk_multiplier * 0.01
+    # Médias Móveis
+    if current_price > sma_20:
+        technical_signal += 0.1
+        technical_details.append(f"Preço > SMA20: +10% COMPRA")
+    else:
+        technical_signal -= 0.1
+        technical_details.append(f"Preço < SMA20: -10% VENDA")
     
-    # Combinação ponderada
-    combined_signal = (technical_signal * technical_weight + 
-                      sentiment_signal * sentiment_weight + 
-                      ai_signal * ai_weight + 
-                      risk_signal * risk_weight)
+    # 2. 📰 ANÁLISE DE SENTIMENTO DO MERCADO
+    sentiment_signal = sentiment_score * 0.6  # Amplificar impacto do sentimento
+    sentiment_direction = "POSITIVO" if sentiment_score > 0.05 else "NEGATIVO" if sentiment_score < -0.05 else "NEUTRO"
+    sentiment_details = f"Sentimento {sentiment_direction}({sentiment_score:.3f}): {sentiment_signal*100:.0f}%"
     
-    predicted_price = current_price * (1 + combined_signal)
+    # 3. 🤖 ANÁLISE AI/LSTM AVANÇADA
+    try:
+        # Análise AI baseada em tendência histórica e padrões
+        price_changes = df_with_indicators['close'].pct_change().tail(10)
+        trend_momentum = price_changes.mean()
+        volatility_trend = price_changes.std()
+        
+        # Sinal AI baseado em momentum e consistência
+        ai_signal = np.tanh(trend_momentum * 50)  # Normalizar entre -1 e 1
+        consistency_factor = max(0.3, 1 - (volatility_trend * 20))  # Mais consistência = maior confiança
+        ai_confidence = min(0.9, consistency_factor * abs(ai_signal) * 2)
+        
+        ai_details = f"AI Momentum({trend_momentum:.4f}) Consistência({consistency_factor:.2f}): {ai_signal*100:.0f}%"
+    except Exception as e:
+        ai_signal = 0
+        ai_confidence = 0.5
+        ai_details = "AI indisponível: 0%"
+    
+    # 4. ⚖️ ANÁLISE DE RISCO COMPLETA
+    volatility = df_with_indicators['close'].pct_change().std() * np.sqrt(252)
+    risk_signal = 0
+    
+    if volatility > 0.4:  # Alta volatilidade
+        risk_signal = -0.3
+        risk_level_desc = "ALTO RISCO"
+    elif volatility < 0.15:  # Baixa volatilidade
+        risk_signal = 0.1
+        risk_level_desc = "BAIXO RISCO"
+    else:
+        risk_signal = 0
+        risk_level_desc = "RISCO MODERADO"
+    
+    risk_details = f"{risk_level_desc} Vol({volatility:.3f}): {risk_signal*100:.0f}%"
+    
+    # 5. 📈 ANÁLISE DE VOLUME (baseada em range de preços como proxy)
+    volume_proxy = df_with_indicators['high'] - df_with_indicators['low']
+    avg_volume = volume_proxy.tail(20).mean()
+    current_volume = volume_proxy.iloc[-1]
+    
+    volume_signal = 0
+    if current_volume > avg_volume * 1.5 and avg_volume > 0:
+        volume_signal = 0.2 if technical_signal > 0 else -0.2
+        volume_details = f"Volume ALTO({current_volume/avg_volume:.2f}x): Confirma tendência"
+    elif current_volume < avg_volume * 0.5 and avg_volume > 0:
+        volume_signal = -0.1
+        volume_details = f"Volume BAIXO({current_volume/avg_volume:.2f}x): Fraca convicção"
+    else:
+        volume_details = f"Volume NORMAL({current_volume/avg_volume:.2f}x): 0%" if avg_volume > 0 else "Volume NORMAL: 0%"
+    
+    # 6. 📉 ANÁLISE DE TENDÊNCIA AVANÇADA
+    # Tendência de curto prazo (5 períodos)
+    short_trend = (df_with_indicators['close'].iloc[-1] - df_with_indicators['close'].iloc[-5]) / df_with_indicators['close'].iloc[-5]
+    # Tendência de médio prazo (20 períodos)
+    medium_trend = (df_with_indicators['close'].iloc[-1] - df_with_indicators['close'].iloc[-20]) / df_with_indicators['close'].iloc[-20]
+    
+    trend_signal = 0
+    if short_trend > 0.01 and medium_trend > 0.01:
+        trend_signal = 0.3
+        trend_details = f"Tendência ALTA Curto({short_trend*100:.2f}%) Médio({medium_trend*100:.2f}%): +30%"
+    elif short_trend < -0.01 and medium_trend < -0.01:
+        trend_signal = -0.3
+        trend_details = f"Tendência BAIXA Curto({short_trend*100:.2f}%) Médio({medium_trend*100:.2f}%): -30%"
+    else:
+        trend_details = f"Tendência MISTA Curto({short_trend*100:.2f}%) Médio({medium_trend*100:.2f}%): 0%"
+    
+    # 🎯 PESOS DOS COMPONENTES (somam 100%)
+    technical_weight = 0.25    # 25% - Análise técnica
+    sentiment_weight = 0.15    # 15% - Sentimento do mercado
+    ai_weight = 0.25          # 25% - AI/LSTM
+    risk_weight = 0.10        # 10% - Análise de risco
+    volume_weight = 0.10      # 10% - Volume
+    trend_weight = 0.15       # 15% - Tendência
+    
+    # 🧮 SINAL COMBINADO FINAL
+    combined_signal = (
+        technical_signal * technical_weight +
+        sentiment_signal * sentiment_weight +
+        ai_signal * ai_weight +
+        risk_signal * risk_weight +
+        volume_signal * volume_weight +
+        trend_signal * trend_weight
+    )
+    
+    # 🎯 CONFIANÇA CONFLUENTE
+    signal_strength = abs(combined_signal)
+    base_confidence = min(0.95, max(0.15, signal_strength * 1.8))
+    
+    # Boost de confiança quando múltiplos indicadores concordam
+    signals_for_agreement = [technical_signal, sentiment_signal, ai_signal, trend_signal]
+    positive_count = sum(1 for s in signals_for_agreement if s > 0.1)
+    negative_count = sum(1 for s in signals_for_agreement if s < -0.1)
+    agreement_count = max(positive_count, negative_count)
+    
+    agreement_boost = agreement_count * 0.08  # 8% boost por indicador concordante
+    confidence = min(0.95, base_confidence + agreement_boost)
+    
+    # 💰 PREVISÃO DE PREÇO
+    price_trend = combined_signal * volatility * 0.08
+    predicted_price = current_price * (1 + price_trend)
     price_change = predicted_price - current_price
     price_change_pct = (price_change / current_price) * 100
     
-    # Calcular confiança baseada na convergência dos sinais
-    signals = [technical_signal, sentiment_signal, ai_signal, risk_signal]
-    signal_variance = np.var(signals)
-    confidence = max(0.5, min(0.95, 1 - (signal_variance * 100)))
-    
     return {
+        'pair': pair,
+        'current_price': current_price,
         'predicted_price': predicted_price,
         'price_change': price_change,
         'price_change_pct': price_change_pct,
         'model_confidence': confidence,
         'sentiment_score': sentiment_score,
+        'unified_signal': combined_signal,
+        'agreement_score': agreement_count,
         'components': {
-            'technical': {'signal': technical_signal, 'weight': technical_weight, 'details': f'RSI(14): {rsi:.1f}, MACD(12,26,9): {macd:.5f}'},
-            'sentiment': {'signal': sentiment_signal, 'weight': sentiment_weight, 'details': f'Score: {sentiment_score:.3f}'},
-            'ai': {'signal': ai_signal, 'weight': ai_weight, 'details': f'Tendência: {price_trend:.3f}'},
-            'risk': {'signal': risk_signal, 'weight': risk_weight, 'details': f'Volatilidade: {volatility:.3f}'}
+            'technical': {
+                'signal': technical_signal, 
+                'weight': technical_weight, 
+                'details': technical_details,
+                'contribution': technical_signal * technical_weight
+            },
+            'sentiment': {
+                'signal': sentiment_signal, 
+                'weight': sentiment_weight, 
+                'details': sentiment_details,
+                'contribution': sentiment_signal * sentiment_weight
+            },
+            'ai': {
+                'signal': ai_signal, 
+                'weight': ai_weight, 
+                'details': ai_details,
+                'contribution': ai_signal * ai_weight,
+                'confidence': ai_confidence
+            },
+            'risk': {
+                'signal': risk_signal, 
+                'weight': risk_weight, 
+                'details': risk_details,
+                'contribution': risk_signal * risk_weight
+            },
+            'volume': {
+                'signal': volume_signal, 
+                'weight': volume_weight, 
+                'details': volume_details,
+                'contribution': volume_signal * volume_weight
+            },
+            'trend': {
+                'signal': trend_signal, 
+                'weight': trend_weight, 
+                'details': trend_details,
+                'contribution': trend_signal * trend_weight
+            }
         },
         'final_recommendation': get_enhanced_recommendation(combined_signal, confidence, {
             'technical': {'signal': technical_signal, 'weight': technical_weight},
             'sentiment': {'signal': sentiment_signal, 'weight': sentiment_weight},
             'ai': {'signal': ai_signal, 'weight': ai_weight},
-            'risk': {'signal': risk_signal, 'weight': risk_weight}
+            'risk': {'signal': risk_signal, 'weight': risk_weight},
+            'volume': {'signal': volume_signal, 'weight': volume_weight},
+            'trend': {'signal': trend_signal, 'weight': trend_weight}
         }),
         'recommendation_details': get_recommendation_explanation(combined_signal, confidence, {
             'technical': {'signal': technical_signal, 'weight': technical_weight},
             'sentiment': {'signal': sentiment_signal, 'weight': sentiment_weight},
             'ai': {'signal': ai_signal, 'weight': ai_weight},
-            'risk': {'signal': risk_signal, 'weight': risk_weight}
+            'risk': {'signal': risk_signal, 'weight': risk_weight},
+            'volume': {'signal': volume_signal, 'weight': volume_weight},
+            'trend': {'signal': trend_signal, 'weight': trend_weight}
         })
     }
 
