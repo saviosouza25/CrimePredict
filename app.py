@@ -100,6 +100,128 @@ def calculate_market_probabilities_real(lstm_confidence, ai_consensus, sentiment
         }
     }
 
+# FUNÇÃO GLOBAL: Calcular níveis confluentes de stop/take profit
+def calculate_confluent_levels_global(current_price, predicted_price, pair_name, profile, market_probability):
+    """Calcular níveis de stop/take profit baseados na ESTRATÉGIA TEMPORAL UNIFICADA real"""
+    
+    # ATR real por par (dados históricos Alpha Vantage)
+    atr_values = {
+        'EUR/USD': 0.0012, 'USD/JPY': 0.018, 'GBP/USD': 0.0018, 'AUD/USD': 0.0020,
+        'USD/CAD': 0.0014, 'USD/CHF': 0.0016, 'NZD/USD': 0.0022, 'EUR/GBP': 0.0010,
+        'EUR/JPY': 0.020, 'GBP/JPY': 0.025, 'AUD/JPY': 0.022
+    }
+    
+    current_atr = atr_values.get(pair_name, 0.0015)
+    
+    # ESTRATÉGIA TEMPORAL UNIFICADA baseada no horizonte temporal escolhido
+    temporal_strategy = {
+        'Scalping (1-5 min)': {
+            'stop_atr_multiplier': 0.8,  # Stop mais apertado para scalping
+            'take_atr_multiplier': 1.2,  # Take conservador
+            'fibonacci_weight': 0.3,     # Menor peso fibonacci
+            'volatility_adjustment': 0.7 # Ajuste para baixa volatilidade
+        },
+        'Intraday (15-30 min)': {
+            'stop_atr_multiplier': 1.2,  # Stop moderado
+            'take_atr_multiplier': 2.0,  # Take mais amplo
+            'fibonacci_weight': 0.5,     # Peso equilibrado
+            'volatility_adjustment': 1.0 # Volatilidade normal
+        },
+        'Swing (1-4 horas)': {
+            'stop_atr_multiplier': 1.8,  # Stop mais amplo
+            'take_atr_multiplier': 3.5,  # Take extenso
+            'fibonacci_weight': 0.7,     # Maior peso fibonacci
+            'volatility_adjustment': 1.3 # Maior tolerância volatilidade
+        },
+        'Position (Diário)': {
+            'stop_atr_multiplier': 2.5,  # Stop bem amplo
+            'take_atr_multiplier': 5.0,  # Take muito extenso
+            'fibonacci_weight': 0.8,     # Alto peso fibonacci
+            'volatility_adjustment': 1.5 # Alta tolerância
+        },
+        'Trend (Semanal)': {
+            'stop_atr_multiplier': 3.0,  # Stop máximo
+            'take_atr_multiplier': 8.0,  # Take de longo prazo
+            'fibonacci_weight': 0.9,     # Peso máximo fibonacci
+            'volatility_adjustment': 2.0 # Máxima tolerância
+        }
+    }
+    
+    # Obter estratégia temporal do horizonte atual
+    import streamlit as st
+    horizon = st.session_state.get('analysis_horizon', '1 Hora')
+    
+    # Mapear horizonte para estratégia temporal
+    horizon_mapping = {
+        '5 Minutos': 'Scalping (1-5 min)',
+        '15 Minutos': 'Intraday (15-30 min)', 
+        '30 Minutos': 'Intraday (15-30 min)',
+        '1 Hora': 'Swing (1-4 horas)',
+        '4 Horas': 'Swing (1-4 horas)',
+        '1 Dia': 'Position (Diário)',
+        '1 Semana': 'Trend (Semanal)',
+        '1 Mês': 'Trend (Semanal)'
+    }
+    
+    strategy_key = horizon_mapping.get(horizon, 'Swing (1-4 horas)')
+    strategy = temporal_strategy[strategy_key]
+    
+    # Probabilidade confluente ajusta os multiplicadores
+    prob_multiplier = market_probability['confluent_probability']
+    confidence_adjustment = 0.8 + (prob_multiplier * 0.4)  # Entre 0.8 e 1.2
+    
+    # Calcular direção da operação baseada na análise confluente
+    direction = 1 if predicted_price > current_price else -1
+    
+    # CÁLCULO FINAL DOS NÍVEIS baseado na ESTRATÉGIA TEMPORAL UNIFICADA
+    final_stop_multiplier = strategy['stop_atr_multiplier'] * confidence_adjustment
+    final_take_multiplier = strategy['take_atr_multiplier'] * confidence_adjustment
+    
+    # Aplicar ajuste de volatilidade da estratégia temporal
+    volatility_factor = strategy['volatility_adjustment']
+    
+    if direction == 1:  # COMPRA
+        stop_loss_price = current_price - (current_atr * final_stop_multiplier * volatility_factor)
+        take_profit_price = current_price + (current_atr * final_take_multiplier * volatility_factor)
+    else:  # VENDA
+        stop_loss_price = current_price + (current_atr * final_stop_multiplier * volatility_factor)
+        take_profit_price = current_price - (current_atr * final_take_multiplier * volatility_factor)
+    
+    # Converter para pontos (pips)
+    def price_to_points(price1, price2, pair_name):
+        diff = abs(price1 - price2)
+        if 'JPY' in pair_name:
+            return round(diff * 100, 1)  # JPY pairs
+        else:
+            return round(diff * 10000, 1)  # Major pairs
+    
+    stop_points = price_to_points(current_price, stop_loss_price, pair_name)
+    take_points = price_to_points(current_price, take_profit_price, pair_name)
+    
+    # Razão risco/retorno
+    risk_reward_ratio = take_points / stop_points if stop_points > 0 else 0
+    
+    return {
+        'stop_loss_price': stop_loss_price,
+        'take_profit_price': take_profit_price,
+        'stop_loss_points': stop_points,
+        'take_profit_points': take_points,
+        'risk_reward_ratio': risk_reward_ratio,
+        'operation_direction': 'COMPRA' if direction == 1 else 'VENDA',
+        'confluent_probability': market_probability['confluent_probability'],
+        'atr_used': current_atr,
+        'fibonacci_support_ref': current_price - current_atr,
+        'fibonacci_resistance_ref': current_price + current_atr,
+        'position_strength': 'FORTE' if prob_multiplier > 0.75 else 'MODERADA' if prob_multiplier > 0.60 else 'FRACA',
+        'temporal_strategy': strategy_key,
+        'fibonacci_adjustment': 1.0,
+        'volatility_factor': volatility_factor,
+        'final_multipliers': {
+            'stop': final_stop_multiplier,
+            'take': final_take_multiplier
+        }
+    }
+
 # Simple technical indicators class
 class TechnicalIndicators:
     @staticmethod
@@ -2148,169 +2270,13 @@ def display_main_summary(results, analysis_mode):
         )
 
         
-        # Calcular níveis confluentes de stop/take profit
-        confluent_levels = calculate_confluent_levels(
+        # Calcular níveis confluentes de stop/take profit usando função global
+        confluent_levels = calculate_confluent_levels_global(
             current_price, predicted_price, pair_name, profile, market_probabilities
         )
         
-        # 4. ESTRATÉGIA TEMPORAL UNIFICADA: Stop/Take baseado em análise confluente real
-        def calculate_confluent_levels(current_price, predicted_price, pair_name, profile, market_probability):
-            """Calcular níveis de stop/take profit baseados na ESTRATÉGIA TEMPORAL UNIFICADA real"""
-            
-            # ATR real por par (dados históricos Alpha Vantage)
-            atr_values = {
-                'EUR/USD': 0.0012, 'USD/JPY': 0.018, 'GBP/USD': 0.0018, 'AUD/USD': 0.0020,
-                'USD/CAD': 0.0014, 'USD/CHF': 0.0016, 'NZD/USD': 0.0022, 'EUR/GBP': 0.0010,
-                'EUR/JPY': 0.020, 'GBP/JPY': 0.025, 'AUD/JPY': 0.022
-            }
-            
-            current_atr = atr_values.get(pair_name, 0.0015)
-            
-            # ESTRATÉGIA TEMPORAL UNIFICADA baseada no horizonte temporal escolhido
-            temporal_strategy = {
-                'Scalping (1-5 min)': {
-                    'stop_atr_multiplier': 0.8,  # Stop mais apertado para scalping
-                    'take_atr_multiplier': 1.2,  # Take conservador
-                    'fibonacci_weight': 0.3,     # Menor peso fibonacci
-                    'volatility_adjustment': 0.7 # Ajuste para baixa volatilidade
-                },
-                'Intraday (15-30 min)': {
-                    'stop_atr_multiplier': 1.2,  # Stop moderado
-                    'take_atr_multiplier': 2.0,  # Take mais amplo
-                    'fibonacci_weight': 0.5,     # Peso equilibrado
-                    'volatility_adjustment': 1.0 # Volatilidade normal
-                },
-                'Swing (1-4 horas)': {
-                    'stop_atr_multiplier': 1.8,  # Stop mais amplo
-                    'take_atr_multiplier': 3.5,  # Take extenso
-                    'fibonacci_weight': 0.7,     # Maior peso fibonacci
-                    'volatility_adjustment': 1.3 # Maior tolerância volatilidade
-                },
-                'Position (Diário)': {
-                    'stop_atr_multiplier': 2.5,  # Stop bem amplo
-                    'take_atr_multiplier': 5.0,  # Take muito extenso
-                    'fibonacci_weight': 0.8,     # Alto peso fibonacci
-                    'volatility_adjustment': 1.5 # Alta tolerância
-                },
-                'Trend (Semanal)': {
-                    'stop_atr_multiplier': 3.0,  # Stop máximo
-                    'take_atr_multiplier': 8.0,  # Take de longo prazo
-                    'fibonacci_weight': 0.9,     # Peso máximo fibonacci
-                    'volatility_adjustment': 2.0 # Máxima tolerância
-                }
-            }
-            
-            # Obter estratégia temporal do horizonte atual
-            horizon = st.session_state.get('analysis_horizon', '1 Hora')
-            
-            # Mapear horizonte para estratégia temporal
-            horizon_mapping = {
-                '5 Minutos': 'Scalping (1-5 min)',
-                '15 Minutos': 'Intraday (15-30 min)', 
-                '30 Minutos': 'Intraday (15-30 min)',
-                '1 Hora': 'Swing (1-4 horas)',
-                '4 Horas': 'Swing (1-4 horas)',
-                '1 Dia': 'Position (Diário)',
-                '1 Semana': 'Trend (Semanal)',
-                '1 Mês': 'Trend (Semanal)'
-            }
-            
-            strategy_key = horizon_mapping.get(horizon, 'Swing (1-4 horas)')
-            strategy = temporal_strategy[strategy_key]
-            
-            # Probabilidade confluente ajusta os multiplicadores
-            prob_multiplier = market_probability['confluent_probability']
-            confidence_adjustment = 0.8 + (prob_multiplier * 0.4)  # Entre 0.8 e 1.2
-            
-            # Calcular direção da operação baseada na análise confluente
-            direction = 1 if predicted_price > current_price else -1
-            
-            # ANÁLISE CONFLUENTE DOS NÍVEIS DE FIBONACCI PARA AJUSTE TEMPORAL
-            fibonacci_adjustment = 1.0
-            
-            # Se temos níveis de suporte/resistência, usar para ajuste confluente
-            if 'support_levels' in locals() and 'resistance_levels' in locals():
-                if direction == 1:  # Compra
-                    # Encontrar suporte mais próximo para stop
-                    closest_support = max([s for s in support_levels if s < current_price], default=current_price - current_atr * 2)
-                    support_distance = abs(current_price - closest_support)
-                    
-                    # Encontrar resistência mais próxima para take
-                    closest_resistance = min([r for r in resistance_levels if r > current_price], default=current_price + current_atr * 3)
-                    resistance_distance = abs(closest_resistance - current_price)
-                    
-                    # Ajuste fibonacci baseado na distância real dos níveis
-                    fibonacci_adjustment = min(2.0, max(0.5, (support_distance + resistance_distance) / (current_atr * 4)))
-                    
-                else:  # Venda
-                    # Encontrar resistência mais próxima para stop
-                    closest_resistance = min([r for r in resistance_levels if r > current_price], default=current_price + current_atr * 2)
-                    resistance_distance = abs(closest_resistance - current_price)
-                    
-                    # Encontrar suporte mais próximo para take
-                    closest_support = max([s for s in support_levels if s < current_price], default=current_price - current_atr * 3)
-                    support_distance = abs(current_price - closest_support)
-                    
-                    # Ajuste fibonacci baseado na distância real dos níveis
-                    fibonacci_adjustment = min(2.0, max(0.5, (resistance_distance + support_distance) / (current_atr * 4)))
-            
-            # CÁLCULO FINAL DOS NÍVEIS baseado na ESTRATÉGIA TEMPORAL UNIFICADA
-            final_stop_multiplier = strategy['stop_atr_multiplier'] * confidence_adjustment * fibonacci_adjustment
-            final_take_multiplier = strategy['take_atr_multiplier'] * confidence_adjustment * fibonacci_adjustment
-            
-            # Aplicar ajuste de volatilidade da estratégia temporal
-            volatility_factor = strategy['volatility_adjustment']
-            
-            if direction == 1:  # COMPRA
-                stop_loss_price = current_price - (current_atr * final_stop_multiplier * volatility_factor)
-                take_profit_price = current_price + (current_atr * final_take_multiplier * volatility_factor)
-            else:  # VENDA
-                stop_loss_price = current_price + (current_atr * final_stop_multiplier * volatility_factor)
-                take_profit_price = current_price - (current_atr * final_take_multiplier * volatility_factor)
-            
-            # Converter para pontos (pips)
-            def price_to_points(price1, price2, pair_name):
-                diff = abs(price1 - price2)
-                if 'JPY' in pair_name:
-                    return round(diff * 100, 1)  # JPY pairs
-                else:
-                    return round(diff * 10000, 1)  # Major pairs
-            
-            stop_points = price_to_points(current_price, stop_loss_price, pair_name)
-            take_points = price_to_points(current_price, take_profit_price, pair_name)
-            
-            # Razão risco/retorno
-            risk_reward_ratio = take_points / stop_points if stop_points > 0 else 0
-            
-            # Níveis de Fibonacci mais próximos como referência
-            closest_support = min(support_levels, key=lambda x: abs(x - stop_loss_price))
-            closest_resistance = min(resistance_levels, key=lambda x: abs(x - take_profit_price))
-            
-            return {
-                'stop_loss_price': stop_loss_price,
-                'take_profit_price': take_profit_price,
-                'stop_loss_points': stop_points,
-                'take_profit_points': take_points,
-                'risk_reward_ratio': risk_reward_ratio,
-                'operation_direction': 'COMPRA' if direction == 1 else 'VENDA',
-                'confluent_probability': market_probability['confluent_probability'],
-                'atr_used': current_atr,
-                'fibonacci_support_ref': closest_support if 'closest_support' in locals() else current_price - current_atr,
-                'fibonacci_resistance_ref': closest_resistance if 'closest_resistance' in locals() else current_price + current_atr,
-                'position_strength': 'FORTE' if prob_multiplier > 0.75 else 'MODERADA' if prob_multiplier > 0.60 else 'FRACA',
-                'temporal_strategy': strategy_key,
-                'fibonacci_adjustment': fibonacci_adjustment,
-                'volatility_factor': volatility_factor,
-                'final_multipliers': {
-                    'stop': final_stop_multiplier,
-                    'take': final_take_multiplier
-                }
-            }
-        
-        # Aplicar análise confluente
-        confluent_levels = calculate_confluent_levels(
-            current_price, predicted_price, pair_name, profile, market_probabilities
-        )
+        # 4. ESTRATÉGIA TEMPORAL UNIFICADA: função movida para escopo global
+        # Usar função global calculate_confluent_levels_global
         
         # Extrair dados confluentes para exibição
         stop_loss_level = confluent_levels['stop_loss_price']
