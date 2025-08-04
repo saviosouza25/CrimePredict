@@ -120,40 +120,40 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
         '15 Minutos': {
             'volatility_range': 0.25,     # Intraday: movimentos de 25% do ATR
             'momentum_threshold': 1.0,     
-            'stop_protection': 0.9,        # Proteção moderada (90% ATR)
-            'target_extension': 1.8,       # Alvo equilibrado (180% ATR)
+            'stop_protection': 1.0,        # Proteção moderada (100% ATR) - ajustado
+            'target_extension': 2.5,       # Alvo equilibrado (250% ATR) - aumentado
             'trend_confirmation': 3,       
             'market_noise_filter': 0.2
         },
         '30 Minutos': {
             'volatility_range': 0.35,     
             'momentum_threshold': 1.2,     
-            'stop_protection': 1.2,        # (120% ATR)
-            'target_extension': 2.4,       # (240% ATR)
+            'stop_protection': 1.3,        # (130% ATR) - ajustado
+            'target_extension': 3.2,       # (320% ATR) - aumentado
             'trend_confirmation': 4,       
             'market_noise_filter': 0.15
         },
         '1 Hora': {
-            'volatility_range': 0.50,     # Swing: movimentos significativos
+            'volatility_range': 0.50,     # Intraday amplo: movimentos significativos
             'momentum_threshold': 1.5,     
-            'stop_protection': 1.5,        # Proteção padrão (150% ATR)
-            'target_extension': 3.0,       # Alvo padrão (300% ATR)
+            'stop_protection': 1.6,        # Proteção moderada (160% ATR) - ajustado
+            'target_extension': 4.0,       # Alvo amplo (400% ATR) - aumentado
             'trend_confirmation': 5,       
             'market_noise_filter': 0.1
         },
         '4 Horas': {
-            'volatility_range': 0.75,     
+            'volatility_range': 0.75,     # Swing: movimentos estruturais
             'momentum_threshold': 2.0,     
-            'stop_protection': 2.2,        # Proteção ampla (220% ATR)
-            'target_extension': 4.5,       # Alvo amplo (450% ATR)
+            'stop_protection': 2.8,        # Proteção ampla (280% ATR) - aumentado
+            'target_extension': 7.0,       # Alvo extenso (700% ATR) - muito aumentado
             'trend_confirmation': 6,       
             'market_noise_filter': 0.05
         },
         '1 Dia': {
-            'volatility_range': 1.0,      # Position: movimentos estruturais (mantido para compatibilidade)
+            'volatility_range': 1.0,      # Position: movimentos estruturais longos
             'momentum_threshold': 2.5,     
-            'stop_protection': 3.0,        # Proteção muito ampla (300% ATR)
-            'target_extension': 6.0,       # Alvo extenso (600% ATR)
+            'stop_protection': 4.5,        # Proteção muito ampla (450% ATR) - muito aumentado
+            'target_extension': 12.0,      # Alvo muito extenso (1200% ATR) - dobrado
             'trend_confirmation': 8,       
             'market_noise_filter': 0.02
         },
