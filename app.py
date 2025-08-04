@@ -526,7 +526,8 @@ def main():
         temporal_presets = {
             "Scalping (1-5 min)": {"interval": "1min", "horizon": "5 Minutos", "description": "Operações muito rápidas"},
             "Intraday (15-30 min)": {"interval": "15min", "horizon": "1 Hora", "description": "Operações no mesmo dia"},
-            "Swing (1-4 horas)": {"interval": "60min", "horizon": "4 Horas", "description": "Operações de alguns dias"}
+            "Swing (1-4 horas)": {"interval": "60min", "horizon": "4 Horas", "description": "Operações de alguns dias"},
+            "Position (Diário)": {"interval": "daily", "horizon": "1 Dia", "description": "Operações de posição"}
         }
         
         preset_choice = st.selectbox(
