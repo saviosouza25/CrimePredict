@@ -2190,6 +2190,14 @@ def display_main_summary(results, analysis_mode):
         stop_loss_pip_diff = calculate_pip_difference(current_price, stop_loss_level, pair_name)
         take_profit_pip_diff = calculate_pip_difference(current_price, take_profit_level, pair_name)
         
+        # Calcular extensão máxima para cálculo de pips
+        if predicted_price > current_price:  # COMPRA
+            max_extension = take_profit_level * 1.3  # 30% além do target
+        else:  # VENDA
+            max_extension = take_profit_level * 0.7  # 30% além do target
+        
+        extension_pip_diff = calculate_pip_difference(current_price, max_extension, pair_name)
+        
         # Valores monetários realistas baseados no valor do pip calculado
         risco_monetario = stop_loss_pip_diff * pip_value_calculated
         potencial_lucro = take_profit_pip_diff * pip_value_calculated
