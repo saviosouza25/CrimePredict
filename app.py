@@ -3122,11 +3122,15 @@ def display_main_summary(results, analysis_mode):
             # Cálculos de gestão por perfil de risco
             risk_profiles = {
                 'Conservative': {'max_risk_per_trade': 0.01, 'max_monthly_risk': 0.05},  # 1% por trade, 5% mensal
+                'Conservador': {'max_risk_per_trade': 0.01, 'max_monthly_risk': 0.05},   # 1% por trade, 5% mensal
                 'Moderate': {'max_risk_per_trade': 0.02, 'max_monthly_risk': 0.08},      # 2% por trade, 8% mensal  
-                'Aggressive': {'max_risk_per_trade': 0.03, 'max_monthly_risk': 0.12}    # 3% por trade, 12% mensal
+                'Moderado': {'max_risk_per_trade': 0.02, 'max_monthly_risk': 0.08},      # 2% por trade, 8% mensal
+                'Aggressive': {'max_risk_per_trade': 0.03, 'max_monthly_risk': 0.12},   # 3% por trade, 12% mensal
+                'Agressivo': {'max_risk_per_trade': 0.03, 'max_monthly_risk': 0.12}     # 3% por trade, 12% mensal
             }
             
-            current_profile = risk_profiles[risk_level_used]
+            # Garantir que sempre tenha um perfil válido
+            current_profile = risk_profiles.get(risk_level_used, risk_profiles.get('Moderate', risk_profiles['Moderado']))
             risk_per_trade_profile = current_profile['max_risk_per_trade']
             
             # Cálculo do valor de risco por trade
