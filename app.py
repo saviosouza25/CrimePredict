@@ -3125,10 +3125,11 @@ def display_main_summary(results, analysis_mode):
             with col2:
                 manual_lot = st.number_input(
                     "📊 Lote Manual (Opcional)",
-                    min_value=0.01,
+                    min_value=0.0,
                     max_value=100.0,
                     value=0.0,
                     step=0.01,
+                    format="%.2f",
                     help="Digite o lote desejado para comparação (0 = usar cálculo automático)"
                 )
             
