@@ -583,7 +583,7 @@ def main():
         
         # Presets integrados para máxima coerência (usando valores exatos de HORIZONS)
         temporal_presets = {
-            "Scalping (1-5 min)": {"interval": "1min", "horizon": "5 Minutos", "description": "Operações muito rápidas"},
+
             "Intraday (15-30 min)": {"interval": "15min", "horizon": "1 Hora", "description": "Operações no mesmo dia"},
             "Swing (1-4 horas)": {"interval": "60min", "horizon": "4 Horas", "description": "Operações de alguns dias"},
             "Position (Diário)": {"interval": "daily", "horizon": "1 Dia", "description": "Operações de posição"}
@@ -1172,37 +1172,7 @@ def display_comprehensive_tutorial():
         ### 📈 Análise Detalhada por Estratégia Temporal
         """)
         
-        # Scalping
-        st.markdown("#### ⚡ Scalping (1-5 min)")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("""
-            **Características do Mercado:**
-            - Movimentos de 5-15 pips são significativos
-            - Ruído do mercado muito presente
-            - Spreads têm impacto maior no lucro
-            - Liquidez extremamente importante
-            - Reações instantâneas a notícias
-            
-            **Melhores Pares para Scalping:**
-            - EUR/USD (spread baixo, alta liquidez)
-            - GBP/USD (volatilidade adequada)
-            - USD/JPY (movimentos previsíveis)
-            """)
-        with col2:
-            st.markdown("""
-            **Horários Ideais:**
-            - 08:00-12:00 UTC (Sobreposição Londres/Europa)
-            - 13:00-17:00 UTC (Sobreposição Londres/NY)
-            - Evitar: 22:00-06:00 UTC (baixa liquidez)
-            
-            **Relação Horizonte-Resultado:**
-            - Horizonte 1 hora = Máximo 3-5 operações
-            - Foco em momentum imediato
-            - Stop loss: 5-10 pips máximo
-            - Take profit: 8-15 pips típico
-            """)
-        
+
         # Intraday
         st.markdown("#### 📈 Intraday (15-30 min)")
         col1, col2 = st.columns(2)

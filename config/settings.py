@@ -67,9 +67,8 @@ INTERVALS: Dict[str, str] = {
 }
 
 # Prediction Horizons
-HORIZONS: List[str] = ['5 Minutos', '15 Minutos', '1 Hora', '4 Horas', '1 Dia', '1 Mês']
+HORIZONS: List[str] = ['15 Minutos', '1 Hora', '4 Horas', '1 Dia', '1 Mês']
 HORIZON_STEPS: Dict[str, int] = {
-    '5 Minutos': 1,    # 1 step ahead for 5min intervals
     '15 Minutos': 1,   # 1 step ahead for 15min intervals  
     '1 Hora': 1,
     '4 Horas': 4, 
@@ -175,21 +174,7 @@ RISK_PROFILES = {
 
 # Parâmetros de IA específicos por estratégia temporal
 TEMPORAL_AI_PARAMETERS = {
-    '5 Minutos': {  # Scalping - Baseado em estatísticas reais de forex scalping
-        'ai_historical_periods': 24,      # 2 horas de dados (realístico para scalping)
-        'ai_volatility_sensitivity': 2.0, # Muito alta - scalpers precisam reagir rapidamente
-        'ai_news_impact_weight': 0.9,     # Notícias causam movimentos imediatos de 5-15 pips
-        'ai_technical_weight': 0.8,       # Scalping é 80% técnico
-        'ai_sentiment_decay': 0.95,       # Sentimento muda em minutos
-        'ai_probability_threshold': 0.55,  # Threshold baixo para capturar movimentos rápidos
-        'ai_trend_confirmation': 2,        # Apenas 2 períodos - velocidade é crucial
-        'ai_support_resistance_range': 0.0003,  # 3 pips em pares majors
-        'ai_momentum_periods': 3,          # Momentum de 15 minutos
-        'ai_reversal_sensitivity': 1.5,    # Reversões acontecem em segundos
-        'ai_success_rate_target': 0.60,    # 60% taxa de sucesso típica scalping
-        'ai_avg_movement_pips': 8,         # Movimento médio esperado
-        'ai_max_holding_periods': 6        # Máximo 30 minutos
-    },
+
     '15 Minutos': {  # Scalping Avançado - Baseado em dados de day traders
         'ai_historical_periods': 32,       # 8 horas de dados
         'ai_volatility_sensitivity': 1.6,
