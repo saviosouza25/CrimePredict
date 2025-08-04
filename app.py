@@ -396,7 +396,8 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
     # Converter para pontos (pips)
     def price_to_points(price1, price2, pair_name):
         diff = abs(price1 - price2)
-        if 'JPY' in pair_name:
+        pair_str = str(pair_name)  # Garantir que é string
+        if 'JPY' in pair_str:
             return round(diff * 100, 1)
         else:
             return round(diff * 10000, 1)
@@ -776,7 +777,8 @@ def main():
                 extension_pips = results['extension_pips']
                 
                 # Calcular valor do pip baseado no par selecionado
-                if 'JPY' in pair:
+                pair_str = str(pair)  # Garantir que é string
+                if 'JPY' in pair_str:
                     pip_value_per_lot = 10.0
                 elif pair in ['XAUUSD', 'GOLD']:
                     pip_value_per_lot = 1.0
@@ -2649,7 +2651,8 @@ def display_main_summary(results, analysis_mode):
             point_values = []
             for level in support_levels + resistance_levels:
                 diff = abs(level - current_price)
-                if 'JPY' in pair_name:
+                pair_name_str = str(pair_name)  # Garantir que é string
+                if 'JPY' in pair_name_str:
                     points = diff * 100  # JPY pairs: 100 pontos = 1 pip
                 else:
                     points = diff * 10000  # Major pairs: 10000 pontos = 1 pip
@@ -2782,7 +2785,8 @@ def display_main_summary(results, analysis_mode):
         # Calcular diferenças em pips de forma DETERMINÍSTICA
         def calculate_pip_difference(price1, price2, pair):
             """Calcular diferença em pips de forma determinística"""
-            if 'JPY' in pair:
+            pair_str = str(pair)  # Garantir que é string
+            if 'JPY' in pair_str:
                 # Para pares JPY, 1 pip = 0.01
                 return abs(price1 - price2) * 100
             else:
@@ -3126,7 +3130,8 @@ def display_main_summary(results, analysis_mode):
             lot_size = st.session_state.get('lot_size', 0.1)
             
             # Cálculo simples do valor do pip baseado no par
-            if 'JPY' in pair_name:
+            pair_name_str = str(pair_name)  # Garantir que é string
+            if 'JPY' in pair_name_str:
                 pip_value_per_lot = 10.0  # JPY pairs: 0.01 = $10 per standard lot
             elif pair_name in ['XAUUSD', 'GOLD']:
                 pip_value_per_lot = 1.0   # Gold: 0.1 = $1 per 0.1 lot
