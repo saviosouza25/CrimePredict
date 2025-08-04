@@ -477,8 +477,9 @@ class CacheManager:
     @staticmethod
     def clear_cache():
         for key in list(st.session_state.keys()):
-            if key.startswith('cache_'):
-                del st.session_state[key]
+            if key.startswith(('cache_', 'analysis_', 'unified_', 'ai_result_')):
+                if key != 'analysis_results':  # Preservar resultado final
+                    del st.session_state[key]
 
 def apply_theme_css():
     """Apply theme-specific CSS based on current theme"""
@@ -1535,9 +1536,16 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
             progress_bar = st.progress(0)
             status_text = st.empty()
             
-            # Step 1: Initialize
+            # Step 1: Initialize - Limpar cache para nova análise
             status_text.text("🔄 Inicializando análise...")
             progress_bar.progress(10)
+            
+            # Limpar estados de cache que podem interferir na reavaliação
+            cache_keys_to_clear = [k for k in st.session_state.keys() 
+                                 if k.startswith(('cache_', 'analysis_', 'unified_', 'ai_result_'))]
+            for key in cache_keys_to_clear:
+                if key != 'analysis_results':  # Manter apenas o resultado final
+                    del st.session_state[key]
             
             if analysis_mode == 'unified':
                 status_text.text("🧠 Executando Análise Unificada Inteligente...")
