@@ -1942,6 +1942,32 @@ def display_main_summary(results, analysis_mode):
         # Sistema aprimorado de cálculo baseado em probabilidades reais
         predicted_movement = abs(predicted_price - current_price)
         
+        # DEFINIR FUNÇÃO DE CONFIANÇA CONFLUENTE PRIMEIRO
+        def calculate_real_confidence_score(lstm_confidence, ai_confidence, sentiment_score, direction_strength, predicted_price, current_price):
+            """Calcular confiança real baseada na confluência de todas as análises"""
+            
+            # 1. Confiança base do modelo LSTM (40% do peso)
+            lstm_component = lstm_confidence * 0.4
+            
+            # 2. Confiança da IA unificada (30% do peso)
+            ai_component = ai_confidence * 0.3
+            
+            # 3. Força do sentiment (20% do peso)
+            sentiment_strength = min(abs(sentiment_score), 1.0)  # Normalizar entre 0-1
+            sentiment_component = sentiment_strength * 0.2
+            
+            # 4. Consistência direcional (10% do peso)
+            # Quando LSTM e sentiment concordam na direção, adicionar bônus
+            lstm_direction = 1 if predicted_price > current_price else -1
+            sentiment_direction = 1 if sentiment_score > 0 else -1
+            consistency_bonus = 0.1 if lstm_direction == sentiment_direction else 0.05
+            
+            # Calcular confiança final
+            final_confidence = lstm_component + ai_component + sentiment_component + consistency_bonus
+            
+            # Garantir que esteja entre 15% e 85% (valores realísticos)
+            return max(0.15, min(0.85, final_confidence))
+
         # INTEGRAÇÃO DA IA UNIFICADA COM PARÂMETROS SEPARADOS
         try:
             # Preparar dados para análise de IA
@@ -1977,98 +2003,19 @@ def display_main_summary(results, analysis_mode):
             
             # Calcular confiança confluente final
             enhanced_confidence = calculate_real_confidence_score(
-                confidence, ai_confidence_boost, sentiment_score, ai_direction_strength
-            )
-            
-            # CALCULAR CONFIANÇA CONFLUENTE REAL baseada em múltiplos fatores
-            def calculate_real_confidence_score(lstm_confidence, ai_confidence, sentiment_score, direction_strength):
-                """Calcular confiança real baseada na confluência de todas as análises"""
-                
-                # 1. Confiança base do modelo LSTM (40% do peso)
-                lstm_component = lstm_confidence * 0.4
-                
-                # 2. Confiança da IA unificada (30% do peso)
-                ai_component = ai_confidence * 0.3
-                
-                # 3. Força do sentiment (20% do peso)
-                sentiment_strength = min(abs(sentiment_score), 1.0)  # Normalizar entre 0-1
-                sentiment_component = sentiment_strength * 0.2
-                
-                # 4. Consistência direcional (10% do peso)
-                # Quando LSTM e sentiment concordam na direção, adicionar bônus
-                lstm_direction = 1 if predicted_price > current_price else -1
-                sentiment_direction = 1 if sentiment_score > 0 else -1
-                consistency_bonus = 0.1 if lstm_direction == sentiment_direction else 0.05
-                
-                # Calcular confiança final
-                final_confidence = lstm_component + ai_component + sentiment_component + consistency_bonus
-                
-                # Garantir que esteja entre 15% e 85% (valores realísticos)
-                return max(0.15, min(0.85, final_confidence))
-                ai_component = ai_confidence * 0.3
-                
-                # 3. Força da direção do sentiment (20% do peso)
-                sentiment_strength = min(1.0, abs(sentiment_score) * 2)  # Normalizar para 0-1
-                sentiment_component = sentiment_strength * 0.2
-                
-                # 4. Consistência da direção entre análises (10% do peso)
-                # Verificar se LSTM e sentiment apontam na mesma direção
-                lstm_direction = 1 if lstm_confidence > 0.5 else -1
-                sentiment_direction = 1 if sentiment_score > 0 else -1
-                direction_consistency = 1.0 if lstm_direction == sentiment_direction else 0.3
-                consistency_component = direction_consistency * 0.1
-                
-                # Confiança total confluente
-                total_confidence = lstm_component + ai_component + sentiment_component + consistency_component
-                
-                # Limitar entre 15% e 95% (valores realistas)
-                final_confidence = max(0.15, min(0.95, total_confidence))
-                
-                return final_confidence, {
-                    'lstm_weight': lstm_component,
-                    'ai_weight': ai_component, 
-                    'sentiment_weight': sentiment_component,
-                    'consistency_weight': consistency_component,
-                    'direction_alignment': direction_consistency == 1.0
-                }
-            
-            # Aplicar cálculo de confiança confluente
-            enhanced_confidence, confidence_breakdown = calculate_real_confidence_score(
-                confidence, ai_confidence_boost, sentiment_score, ai_direction_strength
+                confidence, ai_confidence_boost, sentiment_score, ai_direction_strength, predicted_price, current_price
             )
             
         except Exception as e:
-            st.warning(f"IA indisponível, usando análise técnica: {e}")
+            st.warning(f"IA indisponível, usando análise técnica: {str(e)}")
             ai_analysis = None
             
-            # Confiança conservadora sem IA (baseada apenas em LSTM + sentiment)
-            def calculate_conservative_confidence(lstm_confidence, sentiment_score):
-                """Calcular confiança sem IA disponível"""
-                
-                # Base do LSTM (70% do peso)
-                lstm_component = lstm_confidence * 0.7
-                
-                # Força do sentiment (30% do peso)
-                sentiment_strength = min(1.0, abs(sentiment_score) * 2)
-                sentiment_component = sentiment_strength * 0.3
-                
-                # Penalidade por falta de IA (-10%)
-                ai_penalty = 0.1
-                
-                total_confidence = lstm_component + sentiment_component - ai_penalty
-                
-                # Limitar entre 10% e 80% (mais conservador sem IA)
-                return max(0.10, min(0.80, total_confidence))
-            
-            enhanced_confidence = calculate_conservative_confidence(confidence, sentiment_score)
-            confidence_breakdown = {
-                'lstm_weight': confidence * 0.7,
-                'sentiment_weight': min(1.0, abs(sentiment_score) * 2) * 0.3,
-                'ai_penalty': -0.1,
-                'direction_alignment': False
-            }
-            ai_direction_strength = 0.5
+            # Fallback para quando IA não está disponível - usar análise confluente simplificada
+            ai_confidence_boost = confidence
             ai_consensus = 0.5
+            enhanced_confidence = calculate_real_confidence_score(
+                confidence, confidence, sentiment_score, 0.5, predicted_price, current_price
+            )
         
         # ANÁLISE TÉCNICA REAL PARA NÍVEIS DE STOP E TARGET
         
