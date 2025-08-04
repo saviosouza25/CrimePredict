@@ -1783,6 +1783,9 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     confidence = max(0.55, min(0.95, base_confidence - volatility_penalty))
     
     # === 7. DIREÇÃO CLARA E PROBABILIDADES ===
+    # Converter para float padrão para evitar problemas com numpy.float32
+    unified_signal = float(unified_signal)
+    
     if unified_signal > 0.4:
         direction = "COMPRA FORTE"
         probability = min(85, 65 + (unified_signal * 25))
@@ -1800,10 +1803,14 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
         probability = 50
     
     # === 8. PREVISÃO DE PREÇO BASEADA EM VOLATILIDADE ===
-    expected_move = unified_signal * volatility * 2.5  # Fator de movimento
-    predicted_price = current_price * (1 + expected_move)
+    expected_move = float(unified_signal) * float(volatility) * 2.5  # Fator de movimento
+    predicted_price = float(current_price) * (1 + expected_move)
     price_change = predicted_price - current_price
     price_change_pct = (price_change / current_price) * 100
+    
+    # Garantir que todos os valores são tipos Python padrão
+    confidence = float(confidence)
+    probability = float(probability)
     
     # Calcular drawdown e extensão baseados na nova análise
     drawdown_extension_data = calculate_realistic_drawdown_and_extensions(
@@ -2340,16 +2347,17 @@ def display_main_summary(results, analysis_mode):
             probability = results.get('success_probability', results['model_confidence'] * 100)
             
             # Color and icon based on direction
-            if 'COMPRA FORTE' in direction:
+            direction_str = str(direction)  # Garantir que é string
+            if 'COMPRA FORTE' in direction_str:
                 direction_color = "#00C851"
                 direction_icon = "🚀"
-            elif 'COMPRA' in direction:
+            elif 'COMPRA' in direction_str:
                 direction_color = "#4CAF50"
                 direction_icon = "📈"
-            elif 'VENDA FORTE' in direction:
+            elif 'VENDA FORTE' in direction_str:
                 direction_color = "#FF3547"
                 direction_icon = "🔴"
-            elif 'VENDA' in direction:
+            elif 'VENDA' in direction_str:
                 direction_color = "#F44336"
                 direction_icon = "📉"
             else:
@@ -3708,16 +3716,17 @@ def display_analysis_results():
         agreement = results.get('agreement_score', 0)
         
         # Color coding based on direction and probability
-        if 'COMPRA FORTE' in direction:
+        direction_str = str(direction)  # Garantir que é string
+        if 'COMPRA FORTE' in direction_str:
             direction_color = "#00C851"  # Strong green
             direction_icon = "🚀"
-        elif 'COMPRA' in direction:
+        elif 'COMPRA' in direction_str:
             direction_color = "#4CAF50"  # Green
             direction_icon = "📈"
-        elif 'VENDA FORTE' in direction:
+        elif 'VENDA FORTE' in direction_str:
             direction_color = "#FF3547"  # Strong red
             direction_icon = "🔴"
-        elif 'VENDA' in direction:
+        elif 'VENDA' in direction_str:
             direction_color = "#F44336"  # Red
             direction_icon = "📉"
         else:
