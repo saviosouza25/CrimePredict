@@ -73,7 +73,8 @@ def calculate_realistic_drawdown_and_extensions(current_price, pair_name, horizo
     risk_profile = RISK_PROFILES.get(risk_level, RISK_PROFILES['Moderate'])
     
     # Calcular ATR para volatilidade base
-    pip_value = 0.0001 if 'JPY' not in pair_name else 0.01
+    pair_name_str = str(pair_name)  # Garantir que é string
+    pip_value = 0.0001 if 'JPY' not in pair_name_str else 0.01
     
     # Probabilidades realísticas baseadas em dados históricos
     drawdown_probability = temporal_params.get('ai_drawdown_probability', 0.30)
@@ -780,7 +781,7 @@ def main():
                 pair_str = str(pair)  # Garantir que é string
                 if 'JPY' in pair_str:
                     pip_value_per_lot = 10.0
-                elif pair in ['XAUUSD', 'GOLD']:
+                elif str(pair) in ['XAUUSD', 'GOLD']:
                     pip_value_per_lot = 1.0
                 else:
                     pip_value_per_lot = 10.0
@@ -3133,7 +3134,7 @@ def display_main_summary(results, analysis_mode):
             pair_name_str = str(pair_name)  # Garantir que é string
             if 'JPY' in pair_name_str:
                 pip_value_per_lot = 10.0  # JPY pairs: 0.01 = $10 per standard lot
-            elif pair_name in ['XAUUSD', 'GOLD']:
+            elif str(pair_name) in ['XAUUSD', 'GOLD']:
                 pip_value_per_lot = 1.0   # Gold: 0.1 = $1 per 0.1 lot
             else:
                 pip_value_per_lot = 10.0  # Major pairs: 0.0001 = $10 per standard lot
