@@ -122,16 +122,16 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
     import streamlit as st
     horizon = st.session_state.get('analysis_horizon', '1 Hora')
     
-    # AJUSTE TEMPORAL baseado no horizonte (NÃO substituir o perfil, apenas ajustar)
+    # AJUSTE TEMPORAL CORRETO: Períodos mais longos = stops/takes MAIORES
     temporal_adjustments = {
-        '5 Minutos': {'stop_adj': 0.7, 'take_adj': 0.8},    # Scalping: stops mais apertados
-        '15 Minutos': {'stop_adj': 0.9, 'take_adj': 0.9},   # Intraday: leve ajuste
-        '30 Minutos': {'stop_adj': 1.0, 'take_adj': 1.0},   # Normal
-        '1 Hora': {'stop_adj': 1.0, 'take_adj': 1.0},       # Normal  
-        '4 Horas': {'stop_adj': 1.2, 'take_adj': 1.3},      # Swing: mais amplo
-        '1 Dia': {'stop_adj': 1.5, 'take_adj': 1.8},        # Position: bem amplo
-        '1 Semana': {'stop_adj': 2.0, 'take_adj': 2.5},     # Trend: máximo
-        '1 Mês': {'stop_adj': 2.5, 'take_adj': 3.0}         # Long-term: ultra amplo
+        '5 Minutos': {'stop_adj': 0.5, 'take_adj': 0.6},    # Scalping: stops muito apertados
+        '15 Minutos': {'stop_adj': 0.7, 'take_adj': 0.8},   # Intraday: stops apertados
+        '30 Minutos': {'stop_adj': 0.9, 'take_adj': 1.0},   # Intraday: quase normal
+        '1 Hora': {'stop_adj': 1.0, 'take_adj': 1.0},       # Base normal  
+        '4 Horas': {'stop_adj': 1.4, 'take_adj': 1.6},      # Swing: bem mais amplo
+        '1 Dia': {'stop_adj': 2.0, 'take_adj': 2.5},        # Position: muito amplo
+        '1 Semana': {'stop_adj': 3.0, 'take_adj': 4.0},     # Trend: extremamente amplo
+        '1 Mês': {'stop_adj': 4.0, 'take_adj': 6.0}         # Long-term: máximo amplo
     }
     
     # Obter ajustes temporais
@@ -189,7 +189,7 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
         'fibonacci_support_ref': current_price - current_atr,
         'fibonacci_resistance_ref': current_price + current_atr,
         'position_strength': 'FORTE' if prob_multiplier > 0.75 else 'MODERADA' if prob_multiplier > 0.60 else 'FRACA',
-        'temporal_strategy': strategy_display,
+        'temporal_strategy': f"{profile.get('name', 'Moderate')} × {horizon}",
         'fibonacci_adjustment': confidence_adjustment,
         'volatility_factor': 1.0,
         'final_multipliers': {
