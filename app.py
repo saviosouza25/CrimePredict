@@ -867,7 +867,7 @@ def main():
     # Process analysis requests from sidebar buttons
     if analyze_button or quick_analysis:
         run_analysis(
-            pair, interval, horizon, risk_level, lookback_period, 
+            pair, interval, horizon, lookback_period, 
             mc_samples, epochs, quick_analysis
         )
     
