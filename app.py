@@ -485,6 +485,62 @@ def apply_theme_css():
     """Apply theme-specific CSS based on current theme"""
     current_theme = st.session_state.get('theme', 'light')
     
+    # CSS para ocultar elementos de carregamento do Streamlit
+    hide_loading_css = """
+    <style>
+        /* Ocultar spinner de carregamento no canto superior direito */
+        .stSpinner > div {
+            display: none !important;
+        }
+        
+        /* Ocultar indicador de running no header */
+        .stApp > header [data-testid="stHeader"] .stSpinner {
+            display: none !important;
+        }
+        
+        /* Ocultar status de "Running" */
+        .stStatus {
+            display: none !important;
+        }
+        
+        /* Ocultar todos os spinners do sistema */
+        div[data-testid="stSpinner"] {
+            display: none !important;
+        }
+        
+        /* Ocultar loading overlay */
+        .stLoadingOverlay {
+            display: none !important;
+        }
+        
+        /* Indicador de carregamento personalizado */
+        .custom-loader {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            z-index: 9999;
+            display: none;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Mostrar loader personalizado quando necessário */
+        .show-custom-loader .custom-loader {
+            display: block !important;
+        }
+    </style>
+    """
+    st.markdown(hide_loading_css, unsafe_allow_html=True)
+    
     if current_theme == 'dark':
         st.markdown("""
         <style>
@@ -1540,6 +1596,9 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
             status_text.text("🔄 Inicializando análise...")
             progress_bar.progress(10)
             
+            # Adicionar loader personalizado discreto
+            st.markdown('<div class="custom-loader"></div>', unsafe_allow_html=True)
+            
             # Limpar estados de cache que podem interferir na reavaliação
             cache_keys_to_clear = [k for k in st.session_state.keys() 
                                  if k.startswith(('cache_', 'analysis_', 'unified_', 'ai_result_'))]
@@ -1648,6 +1707,13 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
             import time
             time.sleep(1)
             progress_container.empty()
+            
+            # Remover loader personalizado
+            st.markdown("""
+            <script>
+                document.querySelectorAll('.custom-loader').forEach(el => el.remove());
+            </script>
+            """, unsafe_allow_html=True)
             
             # Trigger rerun to show results
             st.rerun()
