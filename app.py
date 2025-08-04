@@ -1811,6 +1811,9 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     # Garantir que todos os valores são tipos Python padrão
     confidence = float(confidence)
     probability = float(probability)
+    max_agreement = int(max_agreement)
+    confluence_strength = int(confluence_strength)
+    direction = str(direction)
     
     # Calcular drawdown e extensão baseados na nova análise
     drawdown_extension_data = calculate_realistic_drawdown_and_extensions(
@@ -1844,26 +1847,26 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
             'sentiment': {
                 'signal': sentiment_impact, 
                 'weight': sentiment_weight, 
-                'details': f"Sentimento {sentiment_score:.3f}: {direction}",
+                'details': f"Sentimento {float(sentiment_score):.3f}: {str(direction)}",
                 'contribution': sentiment_impact * sentiment_weight
             },
             'trend': {
                 'signal': trend_alignment, 
                 'weight': trend_weight, 
-                'details': f"Tendência Multi-TF: {trend_5*100:.2f}%/5p {trend_10*100:.2f}%/10p {trend_20*100:.2f}%/20p",
+                'details': f"Tendência Multi-TF: {float(trend_5)*100:.2f}%/5p {float(trend_10)*100:.2f}%/10p {float(trend_20)*100:.2f}%/20p",
                 'contribution': trend_alignment * trend_weight
             },
             'volume': {
                 'signal': volume_confirmation, 
                 'weight': volume_weight, 
-                'details': f"Volume Ratio: {volume_ratio:.2f}x",
+                'details': f"Volume Ratio: {float(volume_ratio):.2f}x",
                 'contribution': volume_confirmation * volume_weight
             }
         },
-        'analysis_focus': f'ANÁLISE UNIFICADA AVANÇADA - Confluência: {max_agreement}/4 componentes | Força: {confluence_strength} sinais fortes',
-        'final_recommendation': f"{direction} - {probability:.0f}% de probabilidade",
-        'recommendation_details': f"Confluência de {max_agreement} componentes com {confluence_strength} sinais fortes. " +
-                                f"Volatilidade: {volatility*100:.2f}%. Confiança: {confidence*100:.0f}%."
+        'analysis_focus': f'ANÁLISE UNIFICADA AVANÇADA - Confluência: {int(max_agreement)}/4 componentes | Força: {int(confluence_strength)} sinais fortes',
+        'final_recommendation': f"{str(direction)} - {float(probability):.0f}% de probabilidade",
+        'recommendation_details': f"Confluência de {int(max_agreement)} componentes com {int(confluence_strength)} sinais fortes. " +
+                                f"Volatilidade: {float(volatility)*100:.2f}%. Confiança: {float(confidence)*100:.0f}%."
     }
 
 def get_enhanced_recommendation(combined_signal, confidence, components):
