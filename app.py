@@ -143,7 +143,7 @@ def calculate_realistic_drawdown_and_extensions(current_price, pair_name, horizo
     
     return {
         'direction': direction,
-        'max_drawdown_pips': int(realistic_max_drawdown / pip_value),
+        'drawdown_pips': int(realistic_max_drawdown / pip_value),
         'max_adverse_level': max_adverse_level,
         'drawdown_probability': final_drawdown_prob,
         'extension_pips': int(realistic_extension / pip_value),
