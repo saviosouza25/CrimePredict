@@ -3062,87 +3062,78 @@ def display_main_summary(results, analysis_mode):
                 results.get('df_with_indicators'), horizon, sentiment_score
             )
             
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, rgba(96,125,139,0.15), rgba(55,71,79,0.15));
-                border-left: 4px solid #607D8B;
-                border-radius: 10px;
-                padding: 2rem;
-                margin: 1.5rem 0;
-                box-shadow: 0 4px 15px rgba(96,125,139,0.2);
-            ">
-                <h4 style="color: #607D8B; margin: 0 0 1.5rem 0; font-size: 1.2rem; text-align: center;">
-                    🔮 Previsão Futura para Execução de Ordens
-                </h4>
-                <div style="background: rgba(255,255,255,0.8); padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                    <h5 style="color: #37474F; margin: 0 0 1rem 0; text-align: center;">📊 Cenários de Breakout Probabilísticos</h5>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                        <div style="background: rgba(76,175,80,0.1); padding: 1rem; border-radius: 6px; border: 2px solid #4CAF50;">
-                            <h6 style="color: #4CAF50; margin: 0 0 0.5rem 0; text-align: center;">📈 CENÁRIO ALTA</h6>
-                            <p style="margin: 0; color: #333; font-size: 0.9rem; text-align: center;">
-                                <strong>Entrada:</strong> {future_prediction['bullish']['entry_price']:.5f}<br>
-                                <strong>Take Profit:</strong> {future_prediction['bullish']['take_profit']:.5f}<br>
-                                <strong>Stop Loss:</strong> {future_prediction['bullish']['stop_loss']:.5f}<br>
-                                <strong>Probabilidade:</strong> {future_prediction['bullish']['probability']:.0%}
-                            </p>
-                        </div>
-                        <div style="background: rgba(244,67,54,0.1); padding: 1rem; border-radius: 6px; border: 2px solid #F44336;">
-                            <h6 style="color: #F44336; margin: 0 0 0.5rem 0; text-align: center;">📉 CENÁRIO BAIXA</h6>
-                            <p style="margin: 0; color: #333; font-size: 0.9rem; text-align: center;">
-                                <strong>Entrada:</strong> {future_prediction['bearish']['entry_price']:.5f}<br>
-                                <strong>Take Profit:</strong> {future_prediction['bearish']['take_profit']:.5f}<br>
-                                <strong>Stop Loss:</strong> {future_prediction['bearish']['stop_loss']:.5f}<br>
-                                <strong>Probabilidade:</strong> {future_prediction['bearish']['probability']:.0%}
-                            </p>
-                        </div>
-                    </div>
-                    
-                    <div style="background: rgba(33,150,243,0.1); padding: 1rem; border-radius: 6px; text-align: center;">
-                        <p style="margin: 0; color: #1976D2; font-size: 0.9rem;">
-                            <strong>🎯 Recomendação:</strong> {future_prediction['recommendation']}<br>
-                            <strong>⏰ Timeframe Ideal:</strong> {future_prediction['timeframe']}<br>
-                            <strong>🔄 Volatilidade Esperada:</strong> {future_prediction['expected_volatility']:.2%}
-                        </p>
-                    </div>
-                </div>
-                
-                <div style="background: rgba(255,255,255,0.8); padding: 1.5rem; border-radius: 8px;">
-                    <h5 style="color: #37474F; margin: 0 0 1rem 0; text-align: center;">💰 Gestão de Risco para Execução</h5>
-                    
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem;">
-                        <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
-                            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Lote Sugerido</strong></p>
-                            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #FF9800;">{future_prediction['risk_management']['suggested_lot_size']}</p>
-                            <p style="margin: 0; color: #888; font-size: 0.7rem;">Para perfil {risk_level_used}</p>
-                        </div>
-                        <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
-                            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Risco Máximo</strong></p>
-                            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: red;">${future_prediction['risk_management']['max_risk_amount']:,.0f}</p>
-                            <p style="margin: 0; color: #888; font-size: 0.7rem;">{future_prediction['risk_management']['risk_percentage']:.1f}% da banca</p>
-                        </div>
-                        <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
-                            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Potencial Lucro</strong></p>
-                            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: green;">${future_prediction['risk_management']['potential_profit']:,.0f}</p>
-                            <p style="margin: 0; color: #888; font-size: 0.7rem;">R:R 1:{future_prediction['risk_management']['risk_reward_ratio']:.1f}</p>
-                        </div>
-                        <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
-                            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Tempo Execução</strong></p>
-                            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #607D8B;">{future_prediction['execution_timing']['time']}</p>
-                            <p style="margin: 0; color: #888; font-size: 0.7rem;">{future_prediction['execution_timing']['session']}</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(96,125,139,0.1); border-radius: 6px;">
-                    <p style="margin: 0; color: #37474F; font-size: 0.9rem; text-align: center;">
-                        <strong>⚠️ Atenção:</strong> Esta é uma funcionalidade experimental para mercados indecisos. 
-                        Execute ordens apenas após confirmação de breakout dos níveis indicados. 
-                        Monitore constantemente e ajuste stops conforme necessário.
-                    </p>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            # Exibir previsão futura usando componentes estruturados do Streamlit
+            st.markdown("---")
+            st.markdown("### 🔮 Previsão Futura para Execução de Ordens")
+            st.info("Sistema ativado durante verdadeira indecisão - Aguarde confirmação de breakout para executar")
+            
+            # Cenários de breakout
+            st.markdown("#### 📊 Cenários de Breakout Probabilísticos")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.success("📈 **CENÁRIO ALTA**")
+                st.write(f"**Entrada:** {future_prediction['bullish']['entry_price']:.5f}")
+                st.write(f"**Take Profit:** {future_prediction['bullish']['take_profit']:.5f}")
+                st.write(f"**Stop Loss:** {future_prediction['bullish']['stop_loss']:.5f}")
+                st.write(f"**Probabilidade:** {future_prediction['bullish']['probability']:.0%}")
+            
+            with col2:
+                st.error("📉 **CENÁRIO BAIXA**")
+                st.write(f"**Entrada:** {future_prediction['bearish']['entry_price']:.5f}")
+                st.write(f"**Take Profit:** {future_prediction['bearish']['take_profit']:.5f}")
+                st.write(f"**Stop Loss:** {future_prediction['bearish']['stop_loss']:.5f}")
+                st.write(f"**Probabilidade:** {future_prediction['bearish']['probability']:.0%}")
+            
+            # Informações gerais
+            st.info(f"""
+            **🎯 Recomendação:** {future_prediction['recommendation']}
+            
+            **⏰ Timeframe Ideal:** {future_prediction['timeframe']}
+            
+            **🔄 Volatilidade Esperada:** {future_prediction['expected_volatility']:.2%}
+            """)
+            
+            # Gestão de risco
+            st.markdown("#### 💰 Gestão de Risco para Execução")
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric(
+                    "Lote Sugerido", 
+                    f"{future_prediction['risk_management']['suggested_lot_size']}", 
+                    f"Para perfil {risk_level_used}"
+                )
+            
+            with col2:
+                st.metric(
+                    "Risco Máximo", 
+                    f"${future_prediction['risk_management']['max_risk_amount']:,.0f}", 
+                    f"{future_prediction['risk_management']['risk_percentage']:.1f}% da banca"
+                )
+            
+            with col3:
+                st.metric(
+                    "Potencial Lucro", 
+                    f"${future_prediction['risk_management']['potential_profit']:,.0f}", 
+                    f"R:R 1:{future_prediction['risk_management']['risk_reward_ratio']:.1f}"
+                )
+            
+            with col4:
+                st.metric(
+                    "Tempo Execução", 
+                    f"{future_prediction['execution_timing']['time']}", 
+                    f"{future_prediction['execution_timing']['session']}"
+                )
+            
+            # Aviso importante
+            st.warning("""
+            ⚠️ **Atenção:** Esta é uma funcionalidade experimental para mercados indecisos. 
+            Execute ordens apenas após confirmação de breakout dos níveis indicados. 
+            Monitore constantemente e ajuste stops conforme necessário.
+            """)
         
         # ANÁLISE DE RISCO AVANÇADA - Exibir apenas se NÃO houver indecisão
         if not is_indecision:
