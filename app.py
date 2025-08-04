@@ -157,21 +157,13 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
             'trend_confirmation': 8,       
             'market_noise_filter': 0.02
         },
-        '1 Semana': {
-            'volatility_range': 1.5,      # Trend: movimentos macro
-            'momentum_threshold': 3.0,     
-            'stop_protection': 4.0,        # Proteção macro (400% ATR)
-            'target_extension': 8.0,       # Alvo macro (800% ATR)
-            'trend_confirmation': 10,      
-            'market_noise_filter': 0.01
-        },
         '1 Mês': {
-            'volatility_range': 2.0,      # Long-term: movimentos estruturais
-            'momentum_threshold': 4.0,     
-            'stop_protection': 5.0,        # Proteção máxima (500% ATR)
-            'target_extension': 12.0,      # Alvo máximo (1200% ATR)
-            'trend_confirmation': 15,      
-            'market_noise_filter': 0.005
+            'volatility_range': 1.5,      # Long-term: movimentos estruturais realistas
+            'momentum_threshold': 3.0,     
+            'stop_protection': 3.5,        # Proteção realista (350% ATR)
+            'target_extension': 7.0,       # Alvo realista (700% ATR)
+            'trend_confirmation': 12,      
+            'market_noise_filter': 0.01
         }
     }
     
@@ -194,22 +186,40 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
     # GATILHO DE MOMENTUM: Verificar se movimento supera threshold do período
     momentum_confirmed = price_momentum >= (triggers['momentum_threshold'] * current_atr / current_price)
     
-    # AJUSTE DINÂMICO baseado na força do sinal
-    if momentum_confirmed and prob_strength > 0.7:
-        # Sinal forte: usar gatilhos completos
-        stop_multiplier = triggers['stop_protection']
-        take_multiplier = triggers['target_extension']
+    # CONFLUÊNCIA COMPLETA: Todas as análises trabalhando juntas
+    # 1. Força do perfil de trading (Conservative/Moderate/Aggressive)
+    profile_risk_tolerance = profile.get('risk_tolerance', 0.5)  # 0.3=Conservative, 0.5=Moderate, 0.7=Aggressive
+    profile_multiplier = 0.7 + (profile_risk_tolerance * 0.6)  # Entre 0.7 e 1.3
+    
+    # 2. Possibilidade real de movimentação (baseada no momentum + probabilidade)
+    market_opportunity = (price_momentum * 100) * prob_strength  # Oportunidade real do mercado
+    opportunity_factor = min(1.2, 0.8 + (market_opportunity * 0.4))  # Entre 0.8 e 1.2
+    
+    # 3. Avaliação de risco vs oportunidade confluente
+    if momentum_confirmed and prob_strength > 0.75 and market_opportunity > 0.5:
+        # CONFLUÊNCIA FORTE: Todas as análises confirmam
+        stop_multiplier = triggers['stop_protection'] * profile_multiplier
+        take_multiplier = triggers['target_extension'] * profile_multiplier * opportunity_factor
+        confluence_strength = "ALTA CONFLUÊNCIA"
         confidence_boost = 1.0
-    elif prob_strength > 0.5:
-        # Sinal moderado: usar gatilhos reduzidos
-        stop_multiplier = triggers['stop_protection'] * 0.8
-        take_multiplier = triggers['target_extension'] * 0.8
+    elif prob_strength > 0.6 and market_opportunity > 0.3:
+        # CONFLUÊNCIA MODERADA: Maioria das análises confirmam
+        stop_multiplier = triggers['stop_protection'] * profile_multiplier * 0.85
+        take_multiplier = triggers['target_extension'] * profile_multiplier * opportunity_factor * 0.85
+        confluence_strength = "CONFLUÊNCIA MODERADA"
         confidence_boost = 0.9
-    else:
-        # Sinal fraco: usar gatilhos conservadores
-        stop_multiplier = triggers['stop_protection'] * 0.6
-        take_multiplier = triggers['target_extension'] * 0.6
+    elif prob_strength > 0.5:
+        # CONFLUÊNCIA BAIXA: Poucas análises confirmam
+        stop_multiplier = triggers['stop_protection'] * profile_multiplier * 0.7
+        take_multiplier = triggers['target_extension'] * profile_multiplier * opportunity_factor * 0.7
+        confluence_strength = "BAIXA CONFLUÊNCIA"
         confidence_boost = 0.8
+    else:
+        # SEM CONFLUÊNCIA: Análises divergentes - posição conservadora
+        stop_multiplier = triggers['stop_protection'] * 0.5
+        take_multiplier = triggers['target_extension'] * 0.5
+        confluence_strength = "SEM CONFLUÊNCIA"
+        confidence_boost = 0.7
     
     # APLICAR FILTRO DE RUÍDO (reduz em mercados laterais)
     noise_factor = 1.0 - triggers['market_noise_filter']
@@ -264,11 +274,19 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
         'alpha_triggers': triggers,
         'momentum_confirmed': momentum_confirmed,
         'temporal_period': horizon,
+        'confluence_analysis': {
+            'strength': confluence_strength,
+            'profile_factor': profile_multiplier,
+            'opportunity_factor': opportunity_factor,
+            'market_opportunity': market_opportunity,
+            'risk_evaluation': 'FAVORÁVEL' if confidence_boost > 0.85 else 'MODERADO' if confidence_boost > 0.75 else 'ALTO'
+        },
         'next_market_prediction': {
             'direction': 'ALTA' if direction == 1 else 'BAIXA',
             'strength': trend_strength,
             'time_confirmation': f"{triggers['trend_confirmation']} períodos",
-            'volatility_expected': f"{triggers['volatility_range']*100:.0f}% do ATR"
+            'volatility_expected': f"{triggers['volatility_range']*100:.0f}% do ATR",
+            'confluence_rating': confluence_strength
         }
     }
 
@@ -509,8 +527,8 @@ def main():
             "Scalping (1-5 min)": {"interval": "1min", "horizon": "1 Hora", "description": "Operações muito rápidas"},
             "Intraday (15-30 min)": {"interval": "15min", "horizon": "4 Horas", "description": "Operações no mesmo dia"},
             "Swing (1-4 horas)": {"interval": "60min", "horizon": "1 Dia", "description": "Operações de alguns dias"},
-            "Position (Diário)": {"interval": "daily", "horizon": "1 Semana", "description": "Operações de médio prazo"},
-            "Trend (Semanal)": {"interval": "daily", "horizon": "1 Mês", "description": "Análise de tendência longa"}
+            "Position (Diário)": {"interval": "daily", "horizon": "1 Dia", "description": "Operações de médio prazo"},
+            "Long-term (Mensal)": {"interval": "daily", "horizon": "1 Mês", "description": "Análise de longo prazo"}
         }
         
         preset_choice = st.selectbox(
