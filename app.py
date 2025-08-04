@@ -2185,14 +2185,18 @@ def display_main_summary(results, analysis_mode):
         stop_loss_pip_diff = calculate_pip_difference(current_price, stop_loss_level, pair_name)
         take_profit_pip_diff = calculate_pip_difference(current_price, take_profit_level, pair_name)
         
-        # Calcular extensão máxima DETERMINÍSTICA primeiro
+        # Calcular extensão máxima REALÍSTICA baseada no movimento esperado
         if predicted_price > current_price:  # COMPRA
-            max_extension = take_profit_level * 1.3  # 30% além do target
+            # Extensão máxima = take profit + 20% do movimento previsto
+            movement_size = take_profit_level - current_price
+            max_extension = take_profit_level + (movement_size * 0.2)  # Apenas 20% além
             extension_direction = "ALTA"
             extension_description = f"Movimento ascendente até {max_extension:.5f}"
             max_risk_scenario = "Reversão abrupta por notícias negativas ou falha de suporte técnico"
         else:  # VENDA
-            max_extension = take_profit_level * 0.7  # 30% além do target
+            # Extensão máxima = take profit + 20% do movimento previsto
+            movement_size = current_price - take_profit_level
+            max_extension = take_profit_level - (movement_size * 0.2)  # Apenas 20% além
             extension_direction = "BAIXA"
             extension_description = f"Movimento descendente até {max_extension:.5f}"
             max_risk_scenario = "Reversão por suporte forte ou notícias positivas inesperadas"
