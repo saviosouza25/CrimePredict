@@ -2185,13 +2185,14 @@ def display_main_summary(results, analysis_mode):
         stop_loss_pip_diff = calculate_pip_difference(current_price, stop_loss_level, pair_name)
         take_profit_pip_diff = calculate_pip_difference(current_price, take_profit_level, pair_name)
         
-        # Calcular CENÁRIO TÉCNICO REAL de extensão máxima
+        # Calcular CENÁRIO TÉCNICO REAL de extensão máxima (SEMPRE MAIOR QUE TAKE PROFIT)
         if predicted_price > current_price:  # COMPRA
-            # Cenário otimista: próximo nível de resistência major
-            next_resistance = resistance_levels[2] if len(resistance_levels) > 2 else resistance_levels[-1]  # Nível 50% Fibonacci
-            max_extension = min(next_resistance, take_profit_level + (take_profit_level - current_price) * 0.618)  # Golden ratio
+            # Cenário otimista: extensão 161.8% Fibonacci ou resistência major
+            fibonacci_extension = take_profit_level + (take_profit_level - current_price) * 1.618  # Extensão completa
+            next_resistance = resistance_levels[-1] if resistance_levels else take_profit_level * 1.02  # Última resistência
+            max_extension = max(fibonacci_extension, next_resistance, take_profit_level * 1.15)  # Garantir que seja maior
             extension_direction = "ALTA"
-            extension_description = f"Cenário otimista: ruptura para {max_extension:.5f}"
+            extension_description = f"Ruptura técnica para {max_extension:.5f}"
             
             # Risco máximo: se romper suporte crítico abaixo do stop
             critical_support = support_levels[1] if len(support_levels) > 1 else support_levels[0]  # Nível 38.2%
@@ -2199,11 +2200,12 @@ def display_main_summary(results, analysis_mode):
             max_risk_scenario = f"Reversão crítica: rompimento de {critical_support:.5f} pode levar até {max_risk_level:.5f}"
             
         else:  # VENDA
-            # Cenário otimista: próximo nível de suporte major
-            next_support = support_levels[2] if len(support_levels) > 2 else support_levels[0]  # Nível 50% Fibonacci
-            max_extension = max(next_support, take_profit_level - (current_price - take_profit_level) * 0.618)  # Golden ratio
+            # Cenário otimista: extensão 161.8% Fibonacci ou suporte major
+            fibonacci_extension = take_profit_level - (current_price - take_profit_level) * 1.618  # Extensão completa
+            next_support = support_levels[0] if support_levels else take_profit_level * 0.98  # Primeiro suporte
+            max_extension = min(fibonacci_extension, next_support, take_profit_level * 0.85)  # Garantir que seja menor para venda
             extension_direction = "BAIXA"
-            extension_description = f"Cenário otimista: queda para {max_extension:.5f}"
+            extension_description = f"Queda técnica para {max_extension:.5f}"
             
             # Risco máximo: se romper resistência crítica acima do stop
             critical_resistance = resistance_levels[1] if len(resistance_levels) > 1 else resistance_levels[0]  # Nível 38.2%
@@ -2223,10 +2225,47 @@ def display_main_summary(results, analysis_mode):
         reward_percentage = abs((take_profit_level - current_price) / current_price) * 100
         extension_percentage = abs((max_extension - current_price) / current_price) * 100
         
-        # Agora calcular tempo usando extension_percentage definido
-        estimated_time_hours = 8 + (extension_percentage * 2)  # Base 8h + complexidade
-        time_days = max(1, min(7, estimated_time_hours / 24))  # Entre 1 e 7 dias
-        time_description = f"{time_days:.1f} dias" if time_days >= 1 else f"{estimated_time_hours:.0f} horas"
+        # Calcular PROBABILIDADE DE TEMPO baseada em análise de IA combinada
+        def calculate_ai_time_probability(extension_percentage, confidence, ai_consensus, pair_volatility, analysis_mode):
+            """Calcular tempo e probabilidade usando múltiplos fatores de IA"""
+            
+            # Fator base de volatilidade do par
+            volatility_factor = {
+                'EUR/USD': 1.0, 'USD/JPY': 1.1, 'GBP/USD': 1.3, 'AUD/USD': 1.4,
+                'USD/CAD': 1.2, 'USD/CHF': 1.1, 'NZD/USD': 1.5
+            }.get(pair_name, 1.2)
+            
+            # Fator de confiança da análise (quanto maior, mais rápido)
+            confidence_multiplier = confidence * 1.5  # 0.5 a 1.5x
+            
+            # Fator de consenso de IA (múltiplas análises concordam)
+            ai_multiplier = ai_consensus * 1.3 if analysis_mode == 'unified' else 1.0
+            
+            # Cálculo do tempo base (em horas)
+            base_time_hours = (extension_percentage / 2) * volatility_factor  # Base proporcional
+            adjusted_time = base_time_hours / (confidence_multiplier * ai_multiplier)
+            
+            # Converter para dias e limitar entre 0.5 e 10 dias
+            time_days = max(0.5, min(10, adjusted_time / 24))
+            
+            # Calcular probabilidade baseada em múltiplos fatores
+            probability_base = confidence * 100  # Base da confiança
+            probability_consensus = ai_consensus * 20 if analysis_mode == 'unified' else 0  # Bônus IA
+            probability_volatility = max(0, 30 - (volatility_factor * 10))  # Menos volátil = mais provável
+            
+            total_probability = min(95, probability_base + probability_consensus + probability_volatility)
+            
+            return time_days, total_probability
+        
+        # Aplicar cálculo de tempo com IA
+        ai_consensus_value = ai_consensus if 'ai_consensus' in locals() else 0.5
+        estimated_time_days, scenario_probability = calculate_ai_time_probability(
+            extension_percentage, confidence, ai_consensus_value, 
+            pair_params['volatility'], analysis_mode
+        )
+        
+        time_description = f"{estimated_time_days:.1f} dias" if estimated_time_days >= 1 else f"{estimated_time_days*24:.0f} horas"
+        probability_description = f"{scenario_probability:.0f}% probabilidade"
         
         # Calcular risk_reward_ratio após definir os percentuais
         risk_reward_ratio = reward_percentage / risk_percentage if risk_percentage > 0 else 0
@@ -2349,6 +2388,7 @@ def display_main_summary(results, analysis_mode):
                         <p style="margin: 0; font-size: 1rem; font-weight: bold; color: blue;">+${potencial_extensao:,.2f}</p>
                         <p style="margin: 0; color: #888; font-size: 0.72rem;">{extension_pip_diff:.1f} pips • {extension_direction}</p>
                         <p style="margin: 0; color: #888; font-size: 0.70rem;">🎯 {max_extension:.5f}</p>
+                        <p style="margin: 0; color: #2e7d32; font-size: 0.69rem; font-weight: bold;">📊 {probability_description} • ⏱️ {time_description}</p>
                     </div>
                     <div>
                         <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Risco Máximo</strong></p>
@@ -2397,8 +2437,9 @@ def display_main_summary(results, analysis_mode):
                         com potencial de extensão até <strong>{max_extension:.5f}</strong> em cenário otimista.
                     </p>
                     <p style="margin: 0 0 0.5rem 0; color: #555; font-size: 0.9rem;">
-                        <strong>🎯 Cenário Técnico Otimista:</strong> {extension_description} baseado em níveis de suporte/resistência Fibonacci. 
-                        Tempo estimado: <strong>{time_description}</strong> para atingir este nível técnico.
+                        <strong>🎯 Cenário Técnico Otimista:</strong> {extension_description} baseado em extensão Fibonacci 161.8%. 
+                        <span style="color: #2e7d32;"><strong>Probabilidade IA:</strong> {probability_description}</span> em <strong>{time_description}</strong> 
+                        considerando volatilidade do par, confiança da previsão e consenso das análises.
                     </p>
                     <p style="margin: 0 0 0.5rem 0; color: #d32f2f; font-size: 0.9rem;">
                         <strong>⚠️ Alerta de Reversão Máxima:</strong> {max_risk_scenario}. 
