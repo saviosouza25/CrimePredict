@@ -764,6 +764,51 @@ def main():
         st.session_state['bank_value'] = bank_value
         st.session_state['lot_size'] = lot_size
         
+        # Calculadora de DD/Extensão Independente
+        st.markdown("---")
+        st.markdown("**🧮 Calculadora de DD/Extensão**")
+        
+        # Usar análise mais recente se disponível
+        if st.session_state.get('analysis_results'):
+            results = st.session_state['analysis_results']
+            if 'drawdown_pips' in results and 'extension_pips' in results:
+                drawdown_pips = results['drawdown_pips']
+                extension_pips = results['extension_pips']
+                
+                # Calcular valor do pip baseado no par selecionado
+                if 'JPY' in pair:
+                    pip_value_per_lot = 10.0
+                elif pair in ['XAUUSD', 'GOLD']:
+                    pip_value_per_lot = 1.0
+                else:
+                    pip_value_per_lot = 10.0
+                
+                # Calcular valores em dólares
+                dd_usd = drawdown_pips * pip_value_per_lot * lot_size
+                ext_usd = extension_pips * pip_value_per_lot * lot_size
+                dd_pct = (dd_usd / bank_value) * 100
+                ext_pct = (ext_usd / bank_value) * 100
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric(
+                        "📉 Drawdown Máximo",
+                        f"${dd_usd:.2f}",
+                        f"{dd_pct:.2f}% da banca"
+                    )
+                with col2:
+                    st.metric(
+                        "📈 Extensão Máxima", 
+                        f"${ext_usd:.2f}",
+                        f"{ext_pct:.2f}% da banca"
+                    )
+                
+                st.caption(f"💡 Baseado em DD: {drawdown_pips} pips | Extensão: {extension_pips} pips")
+            else:
+                st.info("🔍 Execute uma análise para ver os cálculos de DD/Extensão")
+        else:
+            st.info("🔍 Execute uma análise para ver os cálculos de DD/Extensão")
+        
         # Configurações de IA colapsáveis
         with st.expander("🤖 Configurações Avançadas de IA"):
             lookback_period = st.slider("Histórico de Dados", 30, 120, LOOKBACK_PERIOD)
