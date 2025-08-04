@@ -1,0 +1,64 @@
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div style="background: rgba(76,175,80,0.1); padding: 1rem; border-radius: 6px; border: 2px solid #4CAF50;">
+            <h6 style="color: #4CAF50; margin: 0 0 0.5rem 0; text-align: center;">📈 CENÁRIO ALTA</h6>
+            <p style="margin: 0; color: #333; font-size: 0.9rem; text-align: center;">
+                <strong>Entrada:</strong> 1.15786<br>
+                <strong>Take Profit:</strong> 1.16017<br>
+                <strong>Stop Loss:</strong> 1.15554<br>
+                <strong>Probabilidade:</strong> 50%
+            </p>
+        </div>
+        <div style="background: rgba(244,67,54,0.1); padding: 1rem; border-radius: 6px; border: 2px solid #F44336;">
+            <h6 style="color: #F44336; margin: 0 0 0.5rem 0; text-align: center;">📉 CENÁRIO BAIXA</h6>
+            <p style="margin: 0; color: #333; font-size: 0.9rem; text-align: center;">
+                <strong>Entrada:</strong> 1.15554<br>
+                <strong>Take Profit:</strong> 1.15323<br>
+                <strong>Stop Loss:</strong> 1.15786<br>
+                <strong>Probabilidade:</strong> 50%
+            </p>
+        </div>
+    </div>
+
+    <div style="background: rgba(33,150,243,0.1); padding: 1rem; border-radius: 6px; text-align: center;">
+        <p style="margin: 0; color: #1976D2; font-size: 0.9rem;">
+            <strong>🎯 Recomendação:</strong> Aguardar confirmação de direção<br>
+            <strong>⏰ Timeframe Ideal:</strong> 1 Hora<br>
+            <strong>🔄 Volatilidade Esperada:</strong> 0.10%
+        </p>
+    </div>
+</div>
+
+<div style="background: rgba(255,255,255,0.8); padding: 1.5rem; border-radius: 8px;">
+    <h5 style="color: #37474F; margin: 0 0 1rem 0; text-align: center;">💰 Gestão de Risco para Execução</h5>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem;">
+        <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Lote Sugerido</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #FF9800;">0.1</p>
+            <p style="margin: 0; color: #888; font-size: 0.7rem;">Para perfil Moderate</p>
+        </div>
+        <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Risco Máximo</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: red;">$200</p>
+            <p style="margin: 0; color: #888; font-size: 0.7rem;">2.0% da banca</p>
+        </div>
+        <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Potencial Lucro</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: green;">$300</p>
+            <p style="margin: 0; color: #888; font-size: 0.7rem;">R:R 1:1.5</p>
+        </div>
+        <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Tempo Execução</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #607D8B;">30-60 min</p>
+            <p style="margin: 0; color: #888; font-size: 0.7rem;">Horário Principal</p>
+        </div>
+    </div>
+</div>
+
+<div style="margin-top: 1.5rem; padding: 1rem; background: rgba(96,125,139,0.1); border-radius: 6px;">
+    <p style="margin: 0; color: #37474F; font-size: 0.9rem; text-align: center;">
+        <strong>⚠️ Atenção:</strong> Esta é uma funcionalidade experimental para mercados indecisos. 
+        Execute ordens apenas após confirmação de breakout dos níveis indicados. 
+        Monitore constantemente e ajuste stops conforme necessário.
+    </p>
+</div>

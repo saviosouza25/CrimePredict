@@ -53,11 +53,10 @@ def calculate_future_execution_levels(current_price, pair_name, risk_level, df_i
     Funcionalidade extra para sugerir pontos ideais de entrada, take e stop
     """
     try:
-        from config.settings import RISK_PROFILES, PAIR_CONFIGS
+        from config.settings import RISK_PROFILES
         
         # Obter configurações do par e perfil
         profile = RISK_PROFILES.get(risk_level, RISK_PROFILES['Moderate'])
-        pair_config = PAIR_CONFIGS.get(pair_name, PAIR_CONFIGS['EUR/USD'])
         
         # Calcular ATR para volatilidade
         atr = df_indicators['atr'].iloc[-1] if 'atr' in df_indicators else current_price * 0.001
