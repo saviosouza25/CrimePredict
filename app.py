@@ -2185,24 +2185,40 @@ def display_main_summary(results, analysis_mode):
         stop_loss_pip_diff = calculate_pip_difference(current_price, stop_loss_level, pair_name)
         take_profit_pip_diff = calculate_pip_difference(current_price, take_profit_level, pair_name)
         
-        # Calcular extensão máxima REALÍSTICA baseada no movimento esperado
+        # Calcular CENÁRIO TÉCNICO REAL de extensão máxima
         if predicted_price > current_price:  # COMPRA
-            # Extensão máxima = take profit + 20% do movimento previsto
-            movement_size = take_profit_level - current_price
-            max_extension = take_profit_level + (movement_size * 0.2)  # Apenas 20% além
+            # Cenário otimista: próximo nível de resistência major
+            next_resistance = resistance_levels[2] if len(resistance_levels) > 2 else resistance_levels[-1]  # Nível 50% Fibonacci
+            max_extension = min(next_resistance, take_profit_level + (take_profit_level - current_price) * 0.618)  # Golden ratio
             extension_direction = "ALTA"
-            extension_description = f"Movimento ascendente até {max_extension:.5f}"
-            max_risk_scenario = "Reversão abrupta por notícias negativas ou falha de suporte técnico"
+            extension_description = f"Cenário otimista: ruptura para {max_extension:.5f}"
+            
+            # Risco máximo: se romper suporte crítico abaixo do stop
+            critical_support = support_levels[1] if len(support_levels) > 1 else support_levels[0]  # Nível 38.2%
+            max_risk_level = critical_support - (current_price - critical_support) * 0.382  # Extensão da queda
+            max_risk_scenario = f"Reversão crítica: rompimento de {critical_support:.5f} pode levar até {max_risk_level:.5f}"
+            
         else:  # VENDA
-            # Extensão máxima = take profit + 20% do movimento previsto
-            movement_size = current_price - take_profit_level
-            max_extension = take_profit_level - (movement_size * 0.2)  # Apenas 20% além
+            # Cenário otimista: próximo nível de suporte major
+            next_support = support_levels[2] if len(support_levels) > 2 else support_levels[0]  # Nível 50% Fibonacci
+            max_extension = max(next_support, take_profit_level - (current_price - take_profit_level) * 0.618)  # Golden ratio
             extension_direction = "BAIXA"
-            extension_description = f"Movimento descendente até {max_extension:.5f}"
-            max_risk_scenario = "Reversão por suporte forte ou notícias positivas inesperadas"
+            extension_description = f"Cenário otimista: queda para {max_extension:.5f}"
+            
+            # Risco máximo: se romper resistência crítica acima do stop
+            critical_resistance = resistance_levels[1] if len(resistance_levels) > 1 else resistance_levels[0]  # Nível 38.2%
+            max_risk_level = critical_resistance + (critical_resistance - current_price) * 0.382  # Extensão da subida
+            max_risk_scenario = f"Reversão crítica: rompimento de {critical_resistance:.5f} pode levar até {max_risk_level:.5f}"
         
-        # Calcular pip differences e percentuais
+        # Calcular pip differences e distâncias técnicas
         extension_pip_diff = calculate_pip_difference(current_price, max_extension, pair_name)
+        max_risk_pip_diff = calculate_pip_difference(current_price, max_risk_level, pair_name)
+        
+        # Calcular distâncias técnicas em vez de percentuais
+        extension_distance = abs(max_extension - current_price)
+        max_risk_distance = abs(max_risk_level - current_price)
+        
+        # Manter percentuais para cálculos internos
         risk_percentage = abs((stop_loss_level - current_price) / current_price) * 100
         reward_percentage = abs((take_profit_level - current_price) / current_price) * 100
         extension_percentage = abs((max_extension - current_price) / current_price) * 100
@@ -2219,6 +2235,7 @@ def display_main_summary(results, analysis_mode):
         risco_monetario = stop_loss_pip_diff * pip_value_calculated
         potencial_lucro = take_profit_pip_diff * pip_value_calculated
         potencial_extensao = extension_pip_diff * pip_value_calculated
+        potencial_risco_maximo = max_risk_pip_diff * pip_value_calculated
         
         # Calcular margem necessária baseada no tamanho da posição
         position_value = 100000 * lot_size_real  # Valor padrão do lote
@@ -2328,10 +2345,16 @@ def display_main_summary(results, analysis_mode):
                         <p style="margin: 0; color: #888; font-size: 0.75rem;">{take_profit_pip_diff:.1f} pips</p>
                     </div>
                     <div>
-                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Potencial Máximo</strong></p>
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Cenário Otimista</strong></p>
                         <p style="margin: 0; font-size: 1rem; font-weight: bold; color: blue;">+${potencial_extensao:,.2f}</p>
                         <p style="margin: 0; color: #888; font-size: 0.72rem;">{extension_pip_diff:.1f} pips • {extension_direction}</p>
-                        <p style="margin: 0; color: #888; font-size: 0.70rem;">⏱️ {time_description}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.70rem;">🎯 {max_extension:.5f}</p>
+                    </div>
+                    <div>
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Risco Máximo</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #d32f2f;">-${potencial_risco_maximo:,.2f}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.72rem;">{max_risk_pip_diff:.1f} pips • REVERSÃO</p>
+                        <p style="margin: 0; color: #888; font-size: 0.70rem;">⚠️ {max_risk_level:.5f}</p>
                     </div>
                 </div>
             </div>
@@ -2374,8 +2397,12 @@ def display_main_summary(results, analysis_mode):
                         com potencial de extensão até <strong>{max_extension:.5f}</strong> em cenário otimista.
                     </p>
                     <p style="margin: 0 0 0.5rem 0; color: #555; font-size: 0.9rem;">
-                        <strong>🎯 Potencial Máximo:</strong> {extension_description} em aproximadamente <strong>{time_description}</strong>. 
-                        <span style="color: #d32f2f;"><strong>Risco Máximo:</strong> {max_risk_scenario}</span>
+                        <strong>🎯 Cenário Técnico Otimista:</strong> {extension_description} baseado em níveis de suporte/resistência Fibonacci. 
+                        Tempo estimado: <strong>{time_description}</strong> para atingir este nível técnico.
+                    </p>
+                    <p style="margin: 0 0 0.5rem 0; color: #d32f2f; font-size: 0.9rem;">
+                        <strong>⚠️ Alerta de Reversão Máxima:</strong> {max_risk_scenario}. 
+                        Este seria o cenário de invalidação total da análise com reversão completa.
                     </p>
                     <p style="margin: 0; color: #555; font-size: 0.9rem;">
                         <strong>Alerta de Reversão:</strong> Se o preço se mover {risk_direction} além de <strong>{reversal_level:.5f}</strong>, 
