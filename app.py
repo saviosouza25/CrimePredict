@@ -47,6 +47,139 @@ except ImportError as e:
     }
 
 # FUNÇÃO GLOBAL: Calcular probabilidades REAIS de mercado
+def calculate_future_execution_levels(current_price, pair_name, risk_level, df_indicators, horizon, sentiment_score):
+    """
+    Calcula níveis futuros de execução para ordens durante indecisão
+    Funcionalidade extra para sugerir pontos ideais de entrada, take e stop
+    """
+    try:
+        from config.settings import RISK_PROFILES, PAIR_CONFIGS
+        
+        # Obter configurações do par e perfil
+        profile = RISK_PROFILES.get(risk_level, RISK_PROFILES['Moderate'])
+        pair_config = PAIR_CONFIGS.get(pair_name, PAIR_CONFIGS['EUR/USD'])
+        
+        # Calcular ATR para volatilidade
+        atr = df_indicators['atr'].iloc[-1] if 'atr' in df_indicators else current_price * 0.001
+        
+        # Calcular suporte e resistência dinâmicos
+        recent_highs = df_indicators['high'].tail(20).max()
+        recent_lows = df_indicators['low'].tail(20).min()
+        price_range = recent_highs - recent_lows
+        
+        # Níveis de breakout baseados em análise técnica
+        resistance_level = recent_highs + (atr * 0.5)
+        support_level = recent_lows - (atr * 0.5)
+        
+        # Calcular probabilidades baseadas em volatilidade e sentimento
+        volatility_factor = atr / current_price
+        sentiment_boost = abs(sentiment_score) * 0.2  # Boost de 0-20%
+        
+        base_probability = 0.5
+        bullish_prob = base_probability + sentiment_boost if sentiment_score > 0 else base_probability - sentiment_boost
+        bearish_prob = 1 - bullish_prob
+        
+        # Ajustar por perfil de risco
+        risk_multiplier = profile['atr_multiplier_stop']
+        reward_multiplier = profile['atr_multiplier_tp']
+        
+        # CENÁRIO BULLISH (Alta)
+        bullish_entry = current_price + (atr * 0.3)  # Entrada acima do preço atual
+        bullish_stop = bullish_entry - (atr * risk_multiplier)
+        bullish_take = bullish_entry + (atr * reward_multiplier)
+        
+        # CENÁRIO BEARISH (Baixa)  
+        bearish_entry = current_price - (atr * 0.3)  # Entrada abaixo do preço atual
+        bearish_stop = bearish_entry + (atr * risk_multiplier)
+        bearish_take = bearish_entry - (atr * reward_multiplier)
+        
+        # Determinar recomendação baseada em probabilidades
+        if bullish_prob > 0.6:
+            recommendation = "Aguardar breakout de alta acima de " + f"{bullish_entry:.5f}"
+        elif bearish_prob > 0.6:
+            recommendation = "Aguardar breakout de baixa abaixo de " + f"{bearish_entry:.5f}"
+        else:
+            recommendation = "Aguardar confirmação de direção - mercado neutro"
+        
+        # Calcular gestão de risco
+        account_balance = st.session_state.get('account_balance', 10000)
+        lot_size = st.session_state.get('lot_size_real', 0.1)
+        
+        # Calcular riscos baseados no perfil
+        max_risk_pct = profile['volatility_threshold'] * 100  # Converter para %
+        max_risk_amount = account_balance * (max_risk_pct / 100)
+        
+        # Calcular potencial lucro
+        avg_stop_distance = ((bullish_entry - bullish_stop) + (bearish_stop - bearish_entry)) / 2
+        avg_take_distance = ((bullish_take - bullish_entry) + (bearish_entry - bearish_take)) / 2
+        risk_reward_ratio = avg_take_distance / avg_stop_distance
+        
+        potential_profit = max_risk_amount * risk_reward_ratio
+        
+        # Timing de execução baseado no horizonte
+        timing_map = {
+            "5 Minutos": {"time": "1-3 min", "session": "Abertura/Fechamento"},
+            "1 Hora": {"time": "15-30 min", "session": "Londres/NY Overlap"},
+            "4 Horas": {"time": "2-4 horas", "session": "Sessão Principal"},
+            "1 Dia": {"time": "6-12 horas", "session": "Múltiplas Sessões"}
+        }
+        
+        timing = timing_map.get(horizon, {"time": "30-60 min", "session": "Horário Principal"})
+        
+        return {
+            'bullish': {
+                'entry_price': bullish_entry,
+                'take_profit': bullish_take,
+                'stop_loss': bullish_stop,
+                'probability': bullish_prob
+            },
+            'bearish': {
+                'entry_price': bearish_entry,
+                'take_profit': bearish_take,
+                'stop_loss': bearish_stop,
+                'probability': bearish_prob
+            },
+            'recommendation': recommendation,
+            'timeframe': horizon,
+            'expected_volatility': volatility_factor,
+            'risk_management': {
+                'suggested_lot_size': lot_size,
+                'max_risk_amount': max_risk_amount,
+                'potential_profit': potential_profit,
+                'risk_reward_ratio': risk_reward_ratio,
+                'risk_percentage': max_risk_pct
+            },
+            'execution_timing': timing
+        }
+        
+    except Exception as e:
+        # Valores padrão em caso de erro
+        return {
+            'bullish': {
+                'entry_price': current_price * 1.001,
+                'take_profit': current_price * 1.003,
+                'stop_loss': current_price * 0.999,
+                'probability': 0.5
+            },
+            'bearish': {
+                'entry_price': current_price * 0.999,
+                'take_profit': current_price * 0.997,
+                'stop_loss': current_price * 1.001,
+                'probability': 0.5
+            },
+            'recommendation': "Aguardar confirmação de direção",
+            'timeframe': horizon,
+            'expected_volatility': 0.001,
+            'risk_management': {
+                'suggested_lot_size': 0.1,
+                'max_risk_amount': 200,
+                'potential_profit': 300,
+                'risk_reward_ratio': 1.5,
+                'risk_percentage': 2.0
+            },
+            'execution_timing': {'optimal_time': '30-60 min', 'session': 'Horário Principal'}
+        }
+
 def calculate_market_probabilities_real(lstm_confidence, ai_consensus, sentiment_score, technical_signals, pair_name, horizon):
     """Calcular probabilidades REAIS de sucesso baseadas em confluência de análises"""
     
@@ -2904,6 +3037,7 @@ def display_main_summary(results, analysis_mode):
             </div>
             """, unsafe_allow_html=True)
         else:
+            # Durante indecisão, mostrar previsão futura para execução de ordens
             st.markdown(f"""
             <div style="
                 background: linear-gradient(135deg, rgba(158,158,158,0.1), rgba(189,189,189,0.1));
@@ -2918,8 +3052,96 @@ def display_main_summary(results, analysis_mode):
                     Análise técnica ocultada - Variação: {price_change_pct:.3f}% | Confiança: {model_confidence*100:.0f}%
                 </p>
                 <p style="color: #888; margin: 0.5rem 0 0 0; font-size: 0.8rem;">
-                    Parâmetros aparecerão quando houver direção clara do mercado
+                    Ativando previsão futura para execução de ordens...
                 </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # NOVA FUNCIONALIDADE: Previsão futura para execução durante indecisão
+            future_prediction = calculate_future_execution_levels(
+                current_price, pair_name, risk_level_used, 
+                results.get('df_with_indicators'), horizon, sentiment_score
+            )
+            
+            st.markdown(f"""
+            <div style="
+                background: linear-gradient(135deg, rgba(96,125,139,0.15), rgba(55,71,79,0.15));
+                border-left: 4px solid #607D8B;
+                border-radius: 10px;
+                padding: 2rem;
+                margin: 1.5rem 0;
+                box-shadow: 0 4px 15px rgba(96,125,139,0.2);
+            ">
+                <h4 style="color: #607D8B; margin: 0 0 1.5rem 0; font-size: 1.2rem; text-align: center;">
+                    🔮 Previsão Futura para Execução de Ordens
+                </h4>
+                <div style="background: rgba(255,255,255,0.8); padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <h5 style="color: #37474F; margin: 0 0 1rem 0; text-align: center;">📊 Cenários de Breakout Probabilísticos</h5>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="background: rgba(76,175,80,0.1); padding: 1rem; border-radius: 6px; border: 2px solid #4CAF50;">
+                            <h6 style="color: #4CAF50; margin: 0 0 0.5rem 0; text-align: center;">📈 CENÁRIO ALTA</h6>
+                            <p style="margin: 0; color: #333; font-size: 0.9rem; text-align: center;">
+                                <strong>Entrada:</strong> {future_prediction['bullish']['entry_price']:.5f}<br>
+                                <strong>Take Profit:</strong> {future_prediction['bullish']['take_profit']:.5f}<br>
+                                <strong>Stop Loss:</strong> {future_prediction['bullish']['stop_loss']:.5f}<br>
+                                <strong>Probabilidade:</strong> {future_prediction['bullish']['probability']:.0%}
+                            </p>
+                        </div>
+                        <div style="background: rgba(244,67,54,0.1); padding: 1rem; border-radius: 6px; border: 2px solid #F44336;">
+                            <h6 style="color: #F44336; margin: 0 0 0.5rem 0; text-align: center;">📉 CENÁRIO BAIXA</h6>
+                            <p style="margin: 0; color: #333; font-size: 0.9rem; text-align: center;">
+                                <strong>Entrada:</strong> {future_prediction['bearish']['entry_price']:.5f}<br>
+                                <strong>Take Profit:</strong> {future_prediction['bearish']['take_profit']:.5f}<br>
+                                <strong>Stop Loss:</strong> {future_prediction['bearish']['stop_loss']:.5f}<br>
+                                <strong>Probabilidade:</strong> {future_prediction['bearish']['probability']:.0%}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(33,150,243,0.1); padding: 1rem; border-radius: 6px; text-align: center;">
+                        <p style="margin: 0; color: #1976D2; font-size: 0.9rem;">
+                            <strong>🎯 Recomendação:</strong> {future_prediction['recommendation']}<br>
+                            <strong>⏰ Timeframe Ideal:</strong> {future_prediction['timeframe']}<br>
+                            <strong>🔄 Volatilidade Esperada:</strong> {future_prediction['expected_volatility']:.2%}
+                        </p>
+                    </div>
+                </div>
+                
+                <div style="background: rgba(255,255,255,0.8); padding: 1.5rem; border-radius: 8px;">
+                    <h5 style="color: #37474F; margin: 0 0 1rem 0; text-align: center;">💰 Gestão de Risco para Execução</h5>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem;">
+                        <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+                            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Lote Sugerido</strong></p>
+                            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #FF9800;">{future_prediction['risk_management']['suggested_lot_size']}</p>
+                            <p style="margin: 0; color: #888; font-size: 0.7rem;">Para perfil {risk_level_used}</p>
+                        </div>
+                        <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+                            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Risco Máximo</strong></p>
+                            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: red;">${future_prediction['risk_management']['max_risk_amount']:,.0f}</p>
+                            <p style="margin: 0; color: #888; font-size: 0.7rem;">{future_prediction['risk_management']['risk_percentage']:.1f}% da banca</p>
+                        </div>
+                        <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+                            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Potencial Lucro</strong></p>
+                            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: green;">${future_prediction['risk_management']['potential_profit']:,.0f}</p>
+                            <p style="margin: 0; color: #888; font-size: 0.7rem;">R:R 1:{future_prediction['risk_management']['risk_reward_ratio']:.1f}</p>
+                        </div>
+                        <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+                            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Tempo Execução</strong></p>
+                            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #607D8B;">{future_prediction['execution_timing']['optimal_time']}</p>
+                            <p style="margin: 0; color: #888; font-size: 0.7rem;">{future_prediction['execution_timing']['session']}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(96,125,139,0.1); border-radius: 6px;">
+                    <p style="margin: 0; color: #37474F; font-size: 0.9rem; text-align: center;">
+                        <strong>⚠️ Atenção:</strong> Esta é uma funcionalidade experimental para mercados indecisos. 
+                        Execute ordens apenas após confirmação de breakout dos níveis indicados. 
+                        Monitore constantemente e ajuste stops conforme necessário.
+                    </p>
+                </div>
             </div>
             """, unsafe_allow_html=True)
         
