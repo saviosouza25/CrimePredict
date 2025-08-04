@@ -2650,16 +2650,22 @@ def display_main_summary(results, analysis_mode):
         # Color coding based on profile
         risk_color = "red" if risk_percentage > profile['volatility_threshold'] * 100 else "orange" if risk_percentage > profile['volatility_threshold'] * 50 else "green"
         
-        # PAINEL DE ANÁLISE TÉCNICA REAL
-        st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, rgba(156,39,176,0.1), rgba(33,150,243,0.1));
-            border-left: 4px solid #9C27B0;
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 1rem 0;
-        ">
-            <h4 style="color: #9C27B0; margin: 0 0 0.8rem 0; font-size: 1rem;">📊 Análise Técnica Real - Níveis de Mercado</h4>
+        # Verificar se há indecisão no mercado para ocultar análise técnica
+        is_indecision = ('final_recommendation' in results and "INDECISÃO" in results['final_recommendation']) or \
+                       (results.get('price_change', 0) == 0) or \
+                       (abs(results.get('price_change_pct', 0)) < 0.05)  # Menos de 0.05% de variação
+        
+        # PAINEL DE ANÁLISE TÉCNICA REAL - Exibir apenas se NÃO houver indecisão
+        if not is_indecision:
+            st.markdown(f"""
+            <div style="
+                background: linear-gradient(135deg, rgba(156,39,176,0.1), rgba(33,150,243,0.1));
+                border-left: 4px solid #9C27B0;
+                border-radius: 8px;
+                padding: 1rem;
+                margin: 1rem 0;
+            ">
+                <h4 style="color: #9C27B0; margin: 0 0 0.8rem 0; font-size: 1rem;">📊 Análise Técnica Real - Níveis de Mercado</h4>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.8rem; text-align: center;">
                 <div style="background: rgba(244,67,54,0.1); padding: 0.8rem; border-radius: 6px;">
                     <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Stop Loss Técnico</strong></p>
@@ -2688,18 +2694,34 @@ def display_main_summary(results, analysis_mode):
                     <p style="margin: 0; color: #888; font-size: 0.70rem;">Não em gestão financeira</p>
                 </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="
+                background: linear-gradient(135deg, rgba(158,158,158,0.1), rgba(189,189,189,0.1));
+                border-left: 4px solid #9E9E9E;
+                border-radius: 8px;
+                padding: 1.5rem;
+                margin: 1rem 0;
+                text-align: center;
+            ">
+                <h4 style="color: #666; margin: 0 0 0.8rem 0; font-size: 1rem;">⚪ Mercado em Indecisão</h4>
+                <p style="color: #888; margin: 0; font-size: 0.9rem;">Análise técnica ocultada devido à falta de direção clara do mercado</p>
+            </div>
+            """, unsafe_allow_html=True)
         
-        st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, rgba(255,193,7,0.1), rgba(255,87,34,0.1));
-            border-left: 4px solid #FF9800;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-        ">
-            <h4 style="color: #FF9800; margin: 0 0 1rem 0; font-size: 1.1rem;">⚠️ Análise de Risco Avançada - Perfil: {risk_level_used}</h4>
+        # ANÁLISE DE RISCO AVANÇADA - Exibir apenas se NÃO houver indecisão
+        if not is_indecision:
+            st.markdown(f"""
+            <div style="
+                background: linear-gradient(135deg, rgba(255,193,7,0.1), rgba(255,87,34,0.1));
+                border-left: 4px solid #FF9800;
+                border-radius: 8px;
+                padding: 1.5rem;
+                margin: 1rem 0;
+            ">
+                <h4 style="color: #FF9800; margin: 0 0 1rem 0; font-size: 1.1rem;">⚠️ Análise de Risco Avançada - Perfil: {risk_level_used}</h4>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; text-align: center; margin-bottom: 1rem;">
                 <div style="background: rgba(244,67,54,0.1); padding: 0.8rem; border-radius: 6px;">
                     <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Stop Loss</strong></p>
@@ -2800,8 +2822,22 @@ def display_main_summary(results, analysis_mode):
                     </p>
                 </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="
+                background: linear-gradient(135deg, rgba(158,158,158,0.1), rgba(189,189,189,0.1));
+                border-left: 4px solid #9E9E9E;
+                border-radius: 8px;
+                padding: 1.5rem;
+                margin: 1rem 0;
+                text-align: center;
+            ">
+                <h4 style="color: #666; margin: 0 0 0.8rem 0; font-size: 1rem;">⚪ Análise de Risco Indisponível</h4>
+                <p style="color: #888; margin: 0; font-size: 0.9rem;">Análise de risco avançada ocultada durante indecisão do mercado</p>
+            </div>
+            """, unsafe_allow_html=True)
     
     # Show unified analysis components if available
     if analysis_mode == 'unified' and 'components' in results:
