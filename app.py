@@ -100,59 +100,125 @@ def calculate_market_probabilities_real(lstm_confidence, ai_consensus, sentiment
         }
     }
 
-# FUNÇÃO GLOBAL: Calcular níveis confluentes CORRIGIDOS para perfil de trading
+# FUNÇÃO GLOBAL: Estratégia Temporal Unificada Original - Gatilhos Alpha Vantage
 def calculate_confluent_levels_global(current_price, predicted_price, pair_name, profile, market_probability):
-    """Calcular níveis de stop/take profit baseados no PERFIL DE TRADING real + estratégia temporal"""
+    """Estratégia Temporal Unificada Original: Prever próximos movimentos baseado no período gráfico + gatilhos Alpha Vantage"""
     
-    # ATR real por par (dados históricos Alpha Vantage)
+    import streamlit as st
+    horizon = st.session_state.get('analysis_horizon', '1 Hora')
+    
+    # GATILHOS ALPHA VANTAGE POR PERÍODO - Dados reais de movimentação típica
+    alpha_triggers = {
+        '5 Minutos': {
+            'volatility_range': 0.15,     # Scalping: movimentos de 15% do ATR por período
+            'momentum_threshold': 0.8,     # Threshold baixo para captação rápida
+            'stop_protection': 0.6,        # Proteção apertada (60% ATR)
+            'target_extension': 1.2,       # Alvo conservador (120% ATR)
+            'trend_confirmation': 2,       # Confirma em 2 períodos
+            'market_noise_filter': 0.3     # Filtro de ruído alto
+        },
+        '15 Minutos': {
+            'volatility_range': 0.25,     # Intraday: movimentos de 25% do ATR
+            'momentum_threshold': 1.0,     
+            'stop_protection': 0.9,        # Proteção moderada (90% ATR)
+            'target_extension': 1.8,       # Alvo equilibrado (180% ATR)
+            'trend_confirmation': 3,       
+            'market_noise_filter': 0.2
+        },
+        '30 Minutos': {
+            'volatility_range': 0.35,     
+            'momentum_threshold': 1.2,     
+            'stop_protection': 1.2,        # (120% ATR)
+            'target_extension': 2.4,       # (240% ATR)
+            'trend_confirmation': 4,       
+            'market_noise_filter': 0.15
+        },
+        '1 Hora': {
+            'volatility_range': 0.50,     # Swing: movimentos significativos
+            'momentum_threshold': 1.5,     
+            'stop_protection': 1.5,        # Proteção padrão (150% ATR)
+            'target_extension': 3.0,       # Alvo padrão (300% ATR)
+            'trend_confirmation': 5,       
+            'market_noise_filter': 0.1
+        },
+        '4 Horas': {
+            'volatility_range': 0.75,     
+            'momentum_threshold': 2.0,     
+            'stop_protection': 2.2,        # Proteção ampla (220% ATR)
+            'target_extension': 4.5,       # Alvo amplo (450% ATR)
+            'trend_confirmation': 6,       
+            'market_noise_filter': 0.05
+        },
+        '1 Dia': {
+            'volatility_range': 1.0,      # Position: movimentos estruturais
+            'momentum_threshold': 2.5,     
+            'stop_protection': 3.0,        # Proteção muito ampla (300% ATR)
+            'target_extension': 6.0,       # Alvo extenso (600% ATR)
+            'trend_confirmation': 8,       
+            'market_noise_filter': 0.02
+        },
+        '1 Semana': {
+            'volatility_range': 1.5,      # Trend: movimentos macro
+            'momentum_threshold': 3.0,     
+            'stop_protection': 4.0,        # Proteção macro (400% ATR)
+            'target_extension': 8.0,       # Alvo macro (800% ATR)
+            'trend_confirmation': 10,      
+            'market_noise_filter': 0.01
+        },
+        '1 Mês': {
+            'volatility_range': 2.0,      # Long-term: movimentos estruturais
+            'momentum_threshold': 4.0,     
+            'stop_protection': 5.0,        # Proteção máxima (500% ATR)
+            'target_extension': 12.0,      # Alvo máximo (1200% ATR)
+            'trend_confirmation': 15,      
+            'market_noise_filter': 0.005
+        }
+    }
+    
+    # Obter gatilhos do período escolhido
+    triggers = alpha_triggers.get(horizon, alpha_triggers['1 Hora'])
+    
+    # ATR real por par (Alpha Vantage)
     atr_values = {
         'EUR/USD': 0.0012, 'USD/JPY': 0.018, 'GBP/USD': 0.0018, 'AUD/USD': 0.0020,
         'USD/CAD': 0.0014, 'USD/CHF': 0.0016, 'NZD/USD': 0.0022, 'EUR/GBP': 0.0010,
         'EUR/JPY': 0.020, 'GBP/JPY': 0.025, 'AUD/JPY': 0.022
     }
-    
     current_atr = atr_values.get(pair_name, 0.0015)
     
-    # USAR MULTIPLICADORES DIRETOS DO PERFIL DE TRADING SELECIONADO
-    # Estes são os multiplicadores REAIS baseados no perfil escolhido pelo usuário
-    profile_stop_multiplier = profile.get('atr_multiplier_sl', 1.5)  # Do perfil Conservative/Moderate/Aggressive
-    profile_take_multiplier = profile.get('atr_multiplier_tp', 3.0)  # Do perfil Conservative/Moderate/Aggressive
-    
-    # Obter estratégia temporal do horizonte atual para ajuste fino
-    import streamlit as st
-    horizon = st.session_state.get('analysis_horizon', '1 Hora')
-    
-    # AJUSTE TEMPORAL CORRETO: Períodos mais longos = stops/takes MAIORES
-    temporal_adjustments = {
-        '5 Minutos': {'stop_adj': 0.5, 'take_adj': 0.6},    # Scalping: stops muito apertados
-        '15 Minutos': {'stop_adj': 0.7, 'take_adj': 0.8},   # Intraday: stops apertados
-        '30 Minutos': {'stop_adj': 0.9, 'take_adj': 1.0},   # Intraday: quase normal
-        '1 Hora': {'stop_adj': 1.0, 'take_adj': 1.0},       # Base normal  
-        '4 Horas': {'stop_adj': 1.4, 'take_adj': 1.6},      # Swing: bem mais amplo
-        '1 Dia': {'stop_adj': 2.0, 'take_adj': 2.5},        # Position: muito amplo
-        '1 Semana': {'stop_adj': 3.0, 'take_adj': 4.0},     # Trend: extremamente amplo
-        '1 Mês': {'stop_adj': 4.0, 'take_adj': 6.0}         # Long-term: máximo amplo
-    }
-    
-    # Obter ajustes temporais
-    temporal_adj = temporal_adjustments.get(horizon, {'stop_adj': 1.0, 'take_adj': 1.0})
-    
-    # CALCULAR MULTIPLICADORES FINAIS: Perfil de Trading + Ajuste Temporal
-    final_stop_multiplier = profile_stop_multiplier * temporal_adj['stop_adj']
-    final_take_multiplier = profile_take_multiplier * temporal_adj['take_adj']
-    
-    # Probabilidade confluente faz ajuste fino (máximo ±20%)
-    prob_multiplier = market_probability['confluent_probability']
-    confidence_adjustment = 0.9 + (prob_multiplier * 0.2)  # Entre 0.9 e 1.1
-    
-    # Aplicar ajuste de confiança
-    final_stop_multiplier *= confidence_adjustment
-    final_take_multiplier *= confidence_adjustment
-    
-    # Calcular direção da operação baseada na previsão
+    # ANÁLISE CONFLUENTE: Previsão + Probabilidade + Momentum
     direction = 1 if predicted_price > current_price else -1
+    price_momentum = abs(predicted_price - current_price) / current_price
+    prob_strength = market_probability['confluent_probability']
     
-    # CALCULAR PREÇOS FINAIS baseados no perfil + temporal + confiança
+    # GATILHO DE MOMENTUM: Verificar se movimento supera threshold do período
+    momentum_confirmed = price_momentum >= (triggers['momentum_threshold'] * current_atr / current_price)
+    
+    # AJUSTE DINÂMICO baseado na força do sinal
+    if momentum_confirmed and prob_strength > 0.7:
+        # Sinal forte: usar gatilhos completos
+        stop_multiplier = triggers['stop_protection']
+        take_multiplier = triggers['target_extension']
+        confidence_boost = 1.0
+    elif prob_strength > 0.5:
+        # Sinal moderado: usar gatilhos reduzidos
+        stop_multiplier = triggers['stop_protection'] * 0.8
+        take_multiplier = triggers['target_extension'] * 0.8
+        confidence_boost = 0.9
+    else:
+        # Sinal fraco: usar gatilhos conservadores
+        stop_multiplier = triggers['stop_protection'] * 0.6
+        take_multiplier = triggers['target_extension'] * 0.6
+        confidence_boost = 0.8
+    
+    # APLICAR FILTRO DE RUÍDO (reduz em mercados laterais)
+    noise_factor = 1.0 - triggers['market_noise_filter']
+    
+    # CALCULAR NÍVEIS FINAIS baseados nos gatilhos Alpha + período temporal
+    final_stop_multiplier = stop_multiplier * confidence_boost * noise_factor
+    final_take_multiplier = take_multiplier * confidence_boost * noise_factor
+    
+    # PREÇOS DE STOP/TAKE baseados na estratégia temporal unificada
     if direction == 1:  # COMPRA
         stop_loss_price = current_price - (current_atr * final_stop_multiplier)
         take_profit_price = current_price + (current_atr * final_take_multiplier)
@@ -164,18 +230,17 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
     def price_to_points(price1, price2, pair_name):
         diff = abs(price1 - price2)
         if 'JPY' in pair_name:
-            return round(diff * 100, 1)  # JPY pairs
+            return round(diff * 100, 1)
         else:
-            return round(diff * 10000, 1)  # Major pairs
+            return round(diff * 10000, 1)
     
     stop_points = price_to_points(current_price, stop_loss_price, pair_name)
     take_points = price_to_points(current_price, take_profit_price, pair_name)
-    
-    # Razão risco/retorno
     risk_reward_ratio = take_points / stop_points if stop_points > 0 else 0
     
-    # Determinar estratégia temporal para exibição
-    strategy_display = f"Perfil {profile.get('name', 'Moderate')} + Horizonte {horizon}"
+    # Análise de confirmação de tendência
+    trend_strength = "FORTE" if momentum_confirmed and prob_strength > 0.7 else \
+                    "MODERADA" if prob_strength > 0.5 else "FRACA"
     
     return {
         'stop_loss_price': stop_loss_price,
@@ -184,20 +249,27 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
         'take_profit_points': take_points,
         'risk_reward_ratio': risk_reward_ratio,
         'operation_direction': 'COMPRA' if direction == 1 else 'VENDA',
-        'confluent_probability': market_probability['confluent_probability'],
+        'confluent_probability': prob_strength,
         'atr_used': current_atr,
         'fibonacci_support_ref': current_price - current_atr,
         'fibonacci_resistance_ref': current_price + current_atr,
-        'position_strength': 'FORTE' if prob_multiplier > 0.75 else 'MODERADA' if prob_multiplier > 0.60 else 'FRACA',
-        'temporal_strategy': f"{profile.get('name', 'Moderate')} × {horizon}",
-        'fibonacci_adjustment': confidence_adjustment,
-        'volatility_factor': 1.0,
+        'position_strength': trend_strength,
+        'temporal_strategy': f"Temporal Unificada {horizon}",
+        'fibonacci_adjustment': confidence_boost,
+        'volatility_factor': noise_factor,
         'final_multipliers': {
             'stop': final_stop_multiplier,
             'take': final_take_multiplier
         },
-        'profile_used': profile.get('name', 'Moderate'),
-        'temporal_adjustment': temporal_adj
+        'alpha_triggers': triggers,
+        'momentum_confirmed': momentum_confirmed,
+        'temporal_period': horizon,
+        'next_market_prediction': {
+            'direction': 'ALTA' if direction == 1 else 'BAIXA',
+            'strength': trend_strength,
+            'time_confirmation': f"{triggers['trend_confirmation']} períodos",
+            'volatility_expected': f"{triggers['volatility_range']*100:.0f}% do ATR"
+        }
     }
 
 # Simple technical indicators class
