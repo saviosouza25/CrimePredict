@@ -2288,74 +2288,74 @@ def display_main_summary(results, analysis_mode):
         reward_percentage = abs((take_profit_level - current_price) / current_price) * 100
         extension_percentage = abs((max_extension - current_price) / current_price) * 100
         
-        # Calcular TEMPO E PROBABILIDADE REAIS baseados em análise técnica profunda
-        def calculate_realistic_scenario_analysis(extension_percentage, enhanced_confidence, predicted_price, current_price, pair_name):
-            """Calcular tempo e probabilidade REAIS para cenário otimista com máximo de 30 dias"""
+        # Calcular CENÁRIO OTIMISTA REALÍSTICO baseado em análise confluente de curto prazo
+        def calculate_realistic_short_term_scenario(extension_percentage, enhanced_confidence, predicted_price, current_price, pair_name, sentiment_score):
+            """Calcular cenário otimista REAL baseado em confluência de análises para próximos dias"""
             
-            # 1. ANÁLISE TÉCNICA DE VOLATILIDADE REAL POR PAR
-            pair_analysis = {
-                'EUR/USD': {'daily_volatility': 0.65, 'avg_trend_days': 8, 'breakout_probability': 0.25},
-                'USD/JPY': {'daily_volatility': 0.70, 'avg_trend_days': 6, 'breakout_probability': 0.30},
-                'GBP/USD': {'daily_volatility': 0.85, 'avg_trend_days': 5, 'breakout_probability': 0.35},
-                'AUD/USD': {'daily_volatility': 0.80, 'avg_trend_days': 7, 'breakout_probability': 0.28},
-                'USD/CAD': {'daily_volatility': 0.60, 'avg_trend_days': 9, 'breakout_probability': 0.22},
-                'USD/CHF': {'daily_volatility': 0.55, 'avg_trend_days': 10, 'breakout_probability': 0.20},
-                'NZD/USD': {'daily_volatility': 0.90, 'avg_trend_days': 4, 'breakout_probability': 0.40}
+            # 1. ANÁLISE DE REALIDADE DO MOVIMENTO (movimentos forex típicos)
+            typical_daily_moves = {
+                'EUR/USD': 0.5, 'USD/JPY': 0.6, 'GBP/USD': 0.8, 'AUD/USD': 0.7,
+                'USD/CAD': 0.4, 'USD/CHF': 0.4, 'NZD/USD': 0.9, 'GBP/JPY': 1.2
             }
             
-            # Obter dados específicos do par ou usar EUR/USD como padrão
-            pair_data = pair_analysis.get(pair_name, pair_analysis['EUR/USD'])
+            daily_move = typical_daily_moves.get(pair_name, 0.6)  # Movimento típico diário
             
-            # 2. CALCULAR TAMANHO DO MOVIMENTO NECESSÁRIO
-            movement_size = abs(predicted_price - current_price) / current_price * 100  # Em percentual
-            extension_movement = extension_percentage  # Movimento para cenário otimista
+            # 2. CALCULAR SE O MOVIMENTO É REALÍSTICO
+            movement_needed = extension_percentage  # Percentual necessário para cenário otimista
             
-            # 3. ANÁLISE REALÍSTICA DE TEMPO BASEADA EM DADOS HISTÓRICOS
-            # Tempo base: movimentos maiores precisam mais tempo
-            base_time_factor = extension_movement / pair_data['daily_volatility']  # Quantos dias de volatilidade normal
+            # Se o movimento for maior que 5 dias típicos, é irreal
+            if movement_needed > (daily_move * 5):
+                # Ajustar para um movimento mais realístico (máximo 3-4 dias típicos)
+                realistic_movement = daily_move * 3.5
+                movement_needed = min(movement_needed, realistic_movement)
             
-            # Ajustar pelo padrão de tendência do par
-            trend_adjustment = pair_data['avg_trend_days'] * (extension_movement / 2)  # Fator de tendência
+            # 3. TEMPO BASEADO EM CONFLUÊNCIA DE ANÁLISES
+            # Base: LSTM + Sentiment + IA concordando aceleram o movimento
+            base_days = movement_needed / daily_move  # Dias necessários pelo movimento típico
             
-            # Calcular tempo estimado (média realística)
-            estimated_days = max(3, min(30, (base_time_factor + trend_adjustment) / 2))
+            # Fator de confluence (quando todas análises concordam)
+            lstm_direction = 1 if predicted_price > current_price else -1
+            sentiment_direction = 1 if sentiment_score > 0 else -1
+            confluence_bonus = 1.0 if lstm_direction == sentiment_direction else 1.3  # Concordância acelera
             
-            # 4. ANÁLISE DE PROBABILIDADE BASEADA EM FATORES REAIS
-            # Probabilidade base: inversamente proporcional ao tamanho do movimento
-            base_probability = max(10, 70 - (extension_movement * 2))  # Maior movimento = menor probabilidade
+            # Fator de confiança (alta confiança = movimento mais rápido)
+            confidence_speed = max(0.7, 2 - enhanced_confidence)  # Confiança alta acelera
             
-            # Fator de confiança da análise (peso importante)
-            confidence_factor = enhanced_confidence * 30  # Máximo 30% de bônus
+            # Tempo realístico final
+            realistic_days = max(1, min(7, base_days * confluence_bonus * confidence_speed))
             
-            # Fator de breakout do par (histórico de rompimentos)
-            breakout_factor = pair_data['breakout_probability'] * 40  # Histórico de rompimentos
+            # 4. PROBABILIDADE BASEADA EM CONFLUÊNCIA REAL
+            # Base: movimento pequeno = mais provável
+            base_probability = max(20, 75 - (movement_needed / daily_move * 8))
             
-            # Fator temporal (movimentos em tempo menor = mais difíceis)
-            time_difficulty = max(0, (15 - estimated_days) * 1.5)  # Penalidade para tempo curto
+            # Bônus por confluência de análises
+            confluence_probability = 15 if lstm_direction == sentiment_direction else 0
+            
+            # Bônus por confiança alta
+            confidence_probability = enhanced_confidence * 20  # Máximo 20%
+            
+            # Penalidade por tempo muito curto (pressão temporal)
+            time_pressure_penalty = max(0, (3 - realistic_days) * 5)
             
             # Probabilidade final realística
-            final_probability = max(8, min(65, base_probability + confidence_factor + breakout_factor - time_difficulty))
+            final_probability = max(15, min(70, base_probability + confluence_probability + confidence_probability - time_pressure_penalty))
             
-            # 5. VALIDAÇÃO E AJUSTES FINAIS
-            # Se o movimento for muito grande (>3%), reduzir probabilidade e aumentar tempo
-            if extension_movement > 3.0:
-                final_probability *= 0.8  # Reduzir 20%
-                estimated_days *= 1.3     # Aumentar 30% no tempo
-            
-            # Se confiança for muito baixa (<30%), ser mais conservador
-            if enhanced_confidence < 0.30:
+            # 5. AJUSTES FINAIS PARA REALISMO
+            # Se for fim de semana ou período de baixa liquidez, reduzir probabilidade
+            # Se movimento for > 2% em menos de 3 dias, é muito otimista
+            if movement_needed > 2.0 and realistic_days < 3:
                 final_probability *= 0.7  # Reduzir 30%
-                estimated_days *= 1.2     # Aumentar 20% no tempo
+                realistic_days = max(3, realistic_days)  # Mínimo 3 dias
             
-            # Garantir limites finais
-            final_days = max(1, min(30, estimated_days))
-            final_probability = max(5, min(60, final_probability))
+            # Limitar a valores ultra-realísticos
+            final_days = max(1, min(7, realistic_days))  # Máximo 1 semana
+            final_probability = max(12, min(65, final_probability))  # Probabilidades realistas
             
             return final_days, final_probability
         
-        # Aplicar análise realística de cenário otimista (máximo 30 dias)
-        estimated_time_days, scenario_probability = calculate_realistic_scenario_analysis(
-            extension_percentage, enhanced_confidence, predicted_price, current_price, pair_name
+        # Aplicar análise realística de curto prazo (máximo 7 dias)
+        estimated_time_days, scenario_probability = calculate_realistic_short_term_scenario(
+            extension_percentage, enhanced_confidence, predicted_price, current_price, pair_name, sentiment_score
         )
         
         time_description = f"{estimated_time_days:.1f} dias" if estimated_time_days >= 1 else f"{estimated_time_days*24:.0f} horas"
@@ -2531,9 +2531,9 @@ def display_main_summary(results, analysis_mode):
                         com potencial de extensão até <strong>{max_extension:.5f}</strong> em cenário otimista.
                     </p>
                     <p style="margin: 0 0 0.5rem 0; color: #555; font-size: 0.9rem;">
-                        <strong>🎯 Cenário Técnico Otimista:</strong> {extension_description} baseado em extensão Fibonacci 161.8%. 
-                        <span style="color: #2e7d32;"><strong>Probabilidade IA:</strong> {probability_description}</span> em <strong>{time_description}</strong> 
-                        considerando volatilidade do par, confiança da previsão e consenso das análises.
+                        <strong>🎯 Cenário Realístico de Curto Prazo:</strong> {extension_description} baseado em confluência LSTM + Sentiment + IA. 
+                        <span style="color: #2e7d32;"><strong>Probabilidade Real:</strong> {probability_description}</span> em <strong>{time_description}</strong> 
+                        considerando movimentos típicos do par e concordância entre análises.
                     </p>
                     <p style="margin: 0 0 0.5rem 0; color: #d32f2f; font-size: 0.9rem;">
                         <strong>⚠️ Alerta de Reversão Máxima:</strong> {max_risk_scenario}. 
