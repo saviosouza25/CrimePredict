@@ -37,11 +37,13 @@ Preferred communication style: Simple, everyday language.
 - **Training**: Configurable batch size, learning rate, and epoch parameters
 - **Prediction**: Realistic short-term forecasting (maximum 7 days) with confluent confidence system
 - **Confidence System**: Combined LSTM (40%), AI (30%), sentiment (20%), and consistency (10%) weights
+- **Unified Analysis**: Position, Swing, and Intraday trading use same realistic probability calculations and risk management approach
 
 ### Technical Analysis Engine
 - **Indicators**: Comprehensive set including SMA, EMA, RSI, MACD, Bollinger Bands, and Stochastic
 - **Signal Generation**: Automated buy/sell signal generation based on indicator crossovers
 - **Risk Management**: Configurable risk levels (Conservative, Moderate, Aggressive)
+- **Position Trading**: Unified realistic conditions aligned with Swing and Intraday analyses
 
 ### Sentiment Analysis System
 - **News Processing**: Real-time news sentiment analysis using VADER sentiment analyzer

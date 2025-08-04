@@ -2960,16 +2960,17 @@ def display_main_summary(results, analysis_mode):
             
 
         
-        # ANÁLISE REALÍSTICA DE DRAWDOWN E EXTENSÕES - Foco 100% em Swing e Intraday
+        # ANÁLISE REALÍSTICA DE DRAWDOWN E EXTENSÕES - Foco 100% em Swing, Intraday e Position
         if not is_indecision:
             # Calcular valores realísticos diretamente sem função externa
             pip_value = 0.0001 if 'JPY' not in pair_name else 0.01
             
-            # Parâmetros por horizonte temporal
+            # Parâmetros por horizonte temporal - MESMAS CONDIÇÕES REALÍSTICAS
             horizon_params = {
                 '15 Minutos': {'base_target': 25, 'drawdown_prob': 0.25, 'extension_prob': 0.70, 'adverse_pips': 12},
                 '1 Hora': {'base_target': 40, 'drawdown_prob': 0.30, 'extension_prob': 0.75, 'adverse_pips': 25},
-                '4 Horas': {'base_target': 90, 'drawdown_prob': 0.35, 'extension_prob': 0.80, 'adverse_pips': 45}
+                '4 Horas': {'base_target': 90, 'drawdown_prob': 0.35, 'extension_prob': 0.80, 'adverse_pips': 45},
+                '1 Dia': {'base_target': 180, 'drawdown_prob': 0.40, 'extension_prob': 0.85, 'adverse_pips': 90}  # Position Trader com mesmas condições realísticas
             }
             
             params = horizon_params.get(horizon, horizon_params['1 Hora'])
