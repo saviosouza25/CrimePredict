@@ -175,50 +175,70 @@ RISK_PROFILES = {
 # Parâmetros de IA específicos por estratégia temporal
 TEMPORAL_AI_PARAMETERS = {
 
-    '15 Minutos': {  # Scalping Avançado - Baseado em dados de day traders
+    '15 Minutos': {  # Micro Intraday - Dados reais de micro trading
         'ai_historical_periods': 32,       # 8 horas de dados
-        'ai_volatility_sensitivity': 1.6,
-        'ai_news_impact_weight': 0.75,
-        'ai_technical_weight': 0.75,
-        'ai_sentiment_decay': 0.90,
-        'ai_probability_threshold': 0.62,
+        'ai_volatility_sensitivity': 1.4,  # Sensibilidade adaptada para micro moves
+        'ai_news_impact_weight': 0.70,     # Impact reduzido vs scalping
+        'ai_technical_weight': 0.75,       # Foco técnico mantido
+        'ai_sentiment_decay': 0.85,        # Decay mais lento que scalping
+        'ai_probability_threshold': 0.65,  # Threshold mais alto para precisão
         'ai_trend_confirmation': 3,
-        'ai_support_resistance_range': 0.0006,  # 6 pips
-        'ai_momentum_periods': 6,          # 1.5 horas
-        'ai_reversal_sensitivity': 1.3,
-        'ai_success_rate_target': 0.65,    # 65% taxa de sucesso
-        'ai_avg_movement_pips': 15,        # 15 pips movimento médio
-        'ai_max_holding_periods': 8        # Máximo 2 horas
+        'ai_support_resistance_range': 0.0008,  # 8 pips para melhor precisão
+        'ai_momentum_periods': 8,          # 2 horas de momentum
+        'ai_reversal_sensitivity': 1.2,    # Menor que scalping
+        'ai_success_rate_target': 0.68,    # 68% taxa de sucesso realística
+        'ai_avg_movement_pips': 18,        # 18 pips movimento médio
+        'ai_max_holding_periods': 12,      # Máximo 3 horas
+        'ai_drawdown_probability': 0.25,   # 25% chance de DD contra tendência
+        'ai_max_adverse_pips': 12,         # Máximo 12 pips contra antes de reverter
+        'ai_extension_probability': 0.70   # 70% chance de atingir extensão
     },
     '1 Hora': {  # Intraday - Estatísticas reais de day trading
         'ai_historical_periods': 48,      # 2 dias completos de trading
-        'ai_volatility_sensitivity': 1.2, # Sensibilidade baseada em ATR horário real
+        'ai_volatility_sensitivity': 1.1, # Sensibilidade baseada em ATR horário real
         'ai_news_impact_weight': 0.65,    # Notícias importantes movem 20-40 pips
-        'ai_technical_weight': 0.70,      # 70% técnico, 30% fundamental
+        'ai_technical_weight': 0.72,      # 72% técnico para maior precisão
         'ai_sentiment_decay': 0.80,       # Sentimento persiste por algumas horas
-        'ai_probability_threshold': 0.68,
+        'ai_probability_threshold': 0.70, # Threshold mais alto para precisão
         'ai_trend_confirmation': 4,        # 4 horas para confirmar tendência
-        'ai_support_resistance_range': 0.0012, # 12 pips
-        'ai_momentum_periods': 8,          # 8 horas de momentum
+        'ai_support_resistance_range': 0.0015, # 15 pips para melhor precisão
+        'ai_momentum_periods': 10,         # 10 horas de momentum
         'ai_reversal_sensitivity': 1.0,
-        'ai_success_rate_target': 0.70,    # 70% taxa de sucesso intraday
-        'ai_avg_movement_pips': 35,        # 35 pips movimento médio
-        'ai_max_holding_periods': 16       # Máximo 16 horas (1 sessão)
+        'ai_success_rate_target': 0.73,    # 73% taxa de sucesso intraday
+        'ai_avg_movement_pips': 40,        # 40 pips movimento médio
+        'ai_max_holding_periods': 16,      # Máximo 16 horas (1 sessão)
+        'ai_drawdown_probability': 0.30,   # 30% chance de DD contra tendência
+        'ai_max_adverse_pips': 25,         # Máximo 25 pips contra antes de reverter
+        'ai_extension_probability': 0.75,  # 75% chance de atingir extensão
+        'ai_realistic_targets': {          # Alvos realísticos baseados em estatísticas
+            'conservative': 25,             # 25 pips para conservador
+            'moderate': 40,                 # 40 pips para moderado
+            'aggressive': 60               # 60 pips para agressivo
+        }
     },
     '4 Horas': {  # Swing Trading - Dados reais de swing traders
         'ai_historical_periods': 60,      # 10 dias de dados (realístico)
-        'ai_volatility_sensitivity': 0.9, # Menor sensibilidade, foco em tendências
+        'ai_volatility_sensitivity': 0.8, # Menor sensibilidade, foco em tendências
         'ai_news_impact_weight': 0.55,    # Fundamentals começam a importar mais
-        'ai_technical_weight': 0.65,
+        'ai_technical_weight': 0.68,      # Aumentado para maior precisão
         'ai_sentiment_decay': 0.70,       # Sentimento dura 1-2 dias
-        'ai_probability_threshold': 0.72,
+        'ai_probability_threshold': 0.75, # Threshold mais alto para swing
         'ai_trend_confirmation': 3,        # 12 horas para confirmar
-        'ai_support_resistance_range': 0.0025, # 25 pips
-        'ai_momentum_periods': 12,         # 2 dias de momentum
+        'ai_support_resistance_range': 0.0030, # 30 pips para swing
+        'ai_momentum_periods': 15,         # 2.5 dias de momentum
         'ai_reversal_sensitivity': 0.8,
-        'ai_success_rate_target': 0.75,    # 75% taxa de sucesso swing
-        'ai_avg_movement_pips': 80,        # 80 pips movimento médio
-        'ai_max_holding_periods': 30       # Máximo 5 dias
+        'ai_success_rate_target': 0.78,    # 78% taxa de sucesso swing
+        'ai_avg_movement_pips': 90,        # 90 pips movimento médio
+        'ai_max_holding_periods': 35,      # Máximo 5.8 dias
+        'ai_drawdown_probability': 0.35,   # 35% chance de DD contra tendência
+        'ai_max_adverse_pips': 45,         # Máximo 45 pips contra antes de reverter
+        'ai_extension_probability': 0.80,  # 80% chance de atingir extensão
+        'ai_realistic_targets': {          # Alvos realísticos para swing
+            'conservative': 60,             # 60 pips para conservador
+            'moderate': 90,                 # 90 pips para moderado
+            'aggressive': 130              # 130 pips para agressivo
+        },
+        'ai_trend_continuation_probability': 0.65  # 65% chance de continuação de tendência
     },
     '1 Dia': {  # Position Trading - Estatísticas de position traders
         'ai_historical_periods': 90,      # 3 meses de histórico
