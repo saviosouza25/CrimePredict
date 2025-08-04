@@ -3128,7 +3128,7 @@ def display_main_summary(results, analysis_mode):
                         </div>
                         <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
                             <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Tempo Execução</strong></p>
-                            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #607D8B;">{future_prediction['execution_timing']['optimal_time']}</p>
+                            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #607D8B;">{future_prediction['execution_timing']['time']}</p>
                             <p style="margin: 0; color: #888; font-size: 0.7rem;">{future_prediction['execution_timing']['session']}</p>
                         </div>
                     </div>
