@@ -3021,8 +3021,13 @@ def display_main_summary(results, analysis_mode):
             base_target = params['base_target']
             adjusted_target = int(base_target * (1 + confidence_boost + sentiment_boost))
             
-            # Direção do movimento
-            direction = "ALTA" if prediction == "compra" else "BAIXA"
+            # Direção do movimento baseada na mudança de preço
+            if results['price_change'] > 0:
+                direction = "ALTA"
+            elif results['price_change'] < 0:
+                direction = "BAIXA"
+            else:
+                direction = "LATERAL"
             
             # Cálculos de drawdown e extensão
             drawdown_pips = params['adverse_pips']
