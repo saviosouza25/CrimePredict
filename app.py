@@ -2805,10 +2805,18 @@ def display_main_summary(results, analysis_mode):
         # Color coding based on profile
         risk_color = "red" if risk_percentage > profile['volatility_threshold'] * 100 else "orange" if risk_percentage > profile['volatility_threshold'] * 50 else "green"
         
-        # Verificar se há indecisão no mercado para ocultar análise técnica
-        is_indecision = ('final_recommendation' in results and "INDECISÃO" in results['final_recommendation']) or \
-                       (results.get('price_change', 0) == 0) or \
-                       (abs(results.get('price_change_pct', 0)) < 0.05)  # Menos de 0.05% de variação
+        # Verificar se há VERDADEIRA indecisão no mercado - critérios mais rigorosos
+        final_rec = results.get('final_recommendation', '')
+        price_change_pct = abs(results.get('price_change_pct', 0))
+        model_confidence = results.get('model_confidence', 0)
+        
+        # Indecisão só ocorre quando:
+        # 1. Recomendação explicitamente indica INDECISÃO 
+        # 2. E variação de preço é praticamente zero (< 0.01%)
+        # 3. E confiança do modelo é muito baixa (< 40%)
+        is_indecision = ("INDECISÃO" in final_rec and 
+                        price_change_pct < 0.01 and 
+                        model_confidence < 0.4)
         
         # PAINEL DE ANÁLISE TÉCNICA REAL - Exibir apenas se NÃO houver indecisão
         if not is_indecision:
@@ -2852,7 +2860,7 @@ def display_main_summary(results, analysis_mode):
             </div>
             """, unsafe_allow_html=True)
         else:
-            st.markdown("""
+            st.markdown(f"""
             <div style="
                 background: linear-gradient(135deg, rgba(158,158,158,0.1), rgba(189,189,189,0.1));
                 border-left: 4px solid #9E9E9E;
@@ -2861,8 +2869,13 @@ def display_main_summary(results, analysis_mode):
                 margin: 1rem 0;
                 text-align: center;
             ">
-                <h4 style="color: #666; margin: 0 0 0.8rem 0; font-size: 1rem;">⚪ Mercado em Indecisão</h4>
-                <p style="color: #888; margin: 0; font-size: 0.9rem;">Análise técnica ocultada devido à falta de direção clara do mercado</p>
+                <h4 style="color: #666; margin: 0 0 0.8rem 0; font-size: 1rem;">⚪ Mercado em Verdadeira Indecisão</h4>
+                <p style="color: #888; margin: 0; font-size: 0.9rem;">
+                    Análise técnica ocultada - Variação: {price_change_pct:.3f}% | Confiança: {model_confidence*100:.0f}%
+                </p>
+                <p style="color: #888; margin: 0.5rem 0 0 0; font-size: 0.8rem;">
+                    Parâmetros aparecerão quando houver direção clara do mercado
+                </p>
             </div>
             """, unsafe_allow_html=True)
         
@@ -2980,7 +2993,7 @@ def display_main_summary(results, analysis_mode):
             </div>
             """, unsafe_allow_html=True)
         else:
-            st.markdown("""
+            st.markdown(f"""
             <div style="
                 background: linear-gradient(135deg, rgba(158,158,158,0.1), rgba(189,189,189,0.1));
                 border-left: 4px solid #9E9E9E;
@@ -2990,7 +3003,12 @@ def display_main_summary(results, analysis_mode):
                 text-align: center;
             ">
                 <h4 style="color: #666; margin: 0 0 0.8rem 0; font-size: 1rem;">⚪ Análise de Risco Indisponível</h4>
-                <p style="color: #888; margin: 0; font-size: 0.9rem;">Análise de risco avançada ocultada durante indecisão do mercado</p>
+                <p style="color: #888; margin: 0; font-size: 0.9rem;">
+                    Análise de risco ocultada durante verdadeira indecisão - Confiança: {model_confidence*100:.0f}%
+                </p>
+                <p style="color: #888; margin: 0.5rem 0 0 0; font-size: 0.8rem;">
+                    Parâmetros de risco aparecerão quando análise indicar direção
+                </p>
             </div>
             """, unsafe_allow_html=True)
     
