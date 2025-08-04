@@ -186,40 +186,63 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
     # GATILHO DE MOMENTUM: Verificar se movimento supera threshold do período
     momentum_confirmed = price_momentum >= (triggers['momentum_threshold'] * current_atr / current_price)
     
-    # CONFLUÊNCIA COMPLETA: Todas as análises trabalhando juntas
-    # 1. Força do perfil de trading (Conservative/Moderate/Aggressive)
-    profile_risk_tolerance = profile.get('risk_tolerance', 0.5)  # 0.3=Conservative, 0.5=Moderate, 0.7=Aggressive
-    profile_multiplier = 0.7 + (profile_risk_tolerance * 0.6)  # Entre 0.7 e 1.3
+    # ANÁLISE CORRIGIDA: Perfil de Trading + Período Temporal Coerente
     
-    # 2. Possibilidade real de movimentação (baseada no momentum + probabilidade)
-    market_opportunity = (price_momentum * 100) * prob_strength  # Oportunidade real do mercado
-    opportunity_factor = min(1.2, 0.8 + (market_opportunity * 0.4))  # Entre 0.8 e 1.2
+    # 1. PERFIL BASE - Multiplicadores diretos do perfil selecionado
+    profile_name = profile.get('name', 'Moderate')
     
-    # 3. Avaliação de risco vs oportunidade confluente
-    if momentum_confirmed and prob_strength > 0.75 and market_opportunity > 0.5:
-        # CONFLUÊNCIA FORTE: Todas as análises confirmam
-        stop_multiplier = triggers['stop_protection'] * profile_multiplier
-        take_multiplier = triggers['target_extension'] * profile_multiplier * opportunity_factor
+    # Perfis reais de mercado baseados em dados históricos
+    if profile_name == 'Conservative':
+        base_stop_atr = 1.2    # Conservative: stops menores, takes conservadores
+        base_take_atr = 2.4    # Ratio 1:2
+        risk_factor = 0.8      # Reduz posições
+    elif profile_name == 'Aggressive':
+        base_stop_atr = 2.0    # Aggressive: stops maiores, takes amplos  
+        base_take_atr = 5.0    # Ratio 1:2.5
+        risk_factor = 1.2      # Aumenta posições
+    else:  # Moderate
+        base_stop_atr = 1.5    # Moderate: equilíbrio
+        base_take_atr = 3.5    # Ratio 1:2.3
+        risk_factor = 1.0      # Posição padrão
+    
+    # 2. AJUSTE TEMPORAL - O período gráfico multiplica a base do perfil
+    temporal_multipliers = {
+        '5 Minutos': {'stop_mult': 0.4, 'take_mult': 0.5},    # Scalping: muito apertado
+        '15 Minutos': {'stop_mult': 0.7, 'take_mult': 0.8},   # Intraday: moderado
+        '30 Minutos': {'stop_mult': 0.9, 'take_mult': 1.0},   # Intraday amplo
+        '1 Hora': {'stop_mult': 1.0, 'take_mult': 1.2},       # Base temporal
+        '4 Horas': {'stop_mult': 1.8, 'take_mult': 2.0},      # Swing: amplo
+        '1 Dia': {'stop_mult': 3.0, 'take_mult': 3.5},        # Position: muito amplo
+        '1 Mês': {'stop_mult': 4.0, 'take_mult': 5.0}         # Long-term: máximo
+    }
+    
+    # Obter multiplicadores temporais
+    temp_mult = temporal_multipliers.get(horizon, {'stop_mult': 1.0, 'take_mult': 1.2})
+    
+    # 3. CÁLCULO FINAL COERENTE: Perfil × Temporal × Confiança
+    final_stop_atr = base_stop_atr * temp_mult['stop_mult'] * risk_factor
+    final_take_atr = base_take_atr * temp_mult['take_mult'] * risk_factor
+    
+    # 4. AJUSTE DE CONFIANÇA (máximo ±15% para manter coerência)
+    confidence_adjustment = 0.9 + (prob_strength * 0.2)  # Entre 0.9 e 1.1
+    
+    # Aplicar ajuste final
+    stop_multiplier = final_stop_atr * confidence_adjustment
+    take_multiplier = final_take_atr * confidence_adjustment
+    
+    # Determinar força da confluência
+    if prob_strength > 0.75 and momentum_confirmed:
         confluence_strength = "ALTA CONFLUÊNCIA"
         confidence_boost = 1.0
-    elif prob_strength > 0.6 and market_opportunity > 0.3:
-        # CONFLUÊNCIA MODERADA: Maioria das análises confirmam
-        stop_multiplier = triggers['stop_protection'] * profile_multiplier * 0.85
-        take_multiplier = triggers['target_extension'] * profile_multiplier * opportunity_factor * 0.85
-        confluence_strength = "CONFLUÊNCIA MODERADA"
-        confidence_boost = 0.9
+    elif prob_strength > 0.6:
+        confluence_strength = "CONFLUÊNCIA MODERADA" 
+        confidence_boost = 0.95
     elif prob_strength > 0.5:
-        # CONFLUÊNCIA BAIXA: Poucas análises confirmam
-        stop_multiplier = triggers['stop_protection'] * profile_multiplier * 0.7
-        take_multiplier = triggers['target_extension'] * profile_multiplier * opportunity_factor * 0.7
         confluence_strength = "BAIXA CONFLUÊNCIA"
-        confidence_boost = 0.8
+        confidence_boost = 0.9
     else:
-        # SEM CONFLUÊNCIA: Análises divergentes - posição conservadora
-        stop_multiplier = triggers['stop_protection'] * 0.5
-        take_multiplier = triggers['target_extension'] * 0.5
         confluence_strength = "SEM CONFLUÊNCIA"
-        confidence_boost = 0.7
+        confidence_boost = 0.85
     
     # APLICAR FILTRO DE RUÍDO (reduz em mercados laterais)
     noise_factor = 1.0 - triggers['market_noise_filter']
@@ -276,10 +299,13 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
         'temporal_period': horizon,
         'confluence_analysis': {
             'strength': confluence_strength,
-            'profile_factor': profile_multiplier,
-            'opportunity_factor': opportunity_factor,
-            'market_opportunity': market_opportunity,
-            'risk_evaluation': 'FAVORÁVEL' if confidence_boost > 0.85 else 'MODERADO' if confidence_boost > 0.75 else 'ALTO'
+            'profile_used': profile_name,
+            'base_stop_atr': base_stop_atr,
+            'base_take_atr': base_take_atr,
+            'temporal_multiplier': temp_mult,
+            'final_stop_atr': final_stop_atr,
+            'final_take_atr': final_take_atr,
+            'risk_evaluation': 'FAVORÁVEL' if confidence_boost > 0.95 else 'MODERADO' if confidence_boost > 0.9 else 'CONSERVADOR'
         },
         'next_market_prediction': {
             'direction': 'ALTA' if direction == 1 else 'BAIXA',
