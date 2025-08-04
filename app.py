@@ -2936,48 +2936,8 @@ def display_main_summary(results, analysis_mode):
                         price_change_pct < 0.01 and 
                         model_confidence < 0.4)
         
-        # PAINEL DE ANÁLISE TÉCNICA REAL - Exibir apenas se NÃO houver indecisão
-        if not is_indecision:
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, rgba(156,39,176,0.1), rgba(33,150,243,0.1));
-                border-left: 4px solid #9C27B0;
-                border-radius: 8px;
-                padding: 1rem;
-                margin: 1rem 0;
-            ">
-                <h4 style="color: #9C27B0; margin: 0 0 0.8rem 0; font-size: 1rem;">📊 Análise Técnica Real - Níveis de Mercado</h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.8rem; text-align: center;">
-                <div style="background: rgba(244,67,54,0.1); padding: 0.8rem; border-radius: 6px;">
-                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Stop Loss Técnico</strong></p>
-                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #f44336;">{stop_loss_level:.5f}</p>
-                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Baseado em {stop_reason}</p>
-                    <p style="margin: 0; color: #888; font-size: 0.70rem;">Ref: {stop_reference_level:.5f}</p>
-                </div>
-                <div style="background: rgba(76,175,80,0.1); padding: 0.8rem; border-radius: 6px;">
-                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Take Profit Técnico</strong></p>
-                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4caf50;">{take_profit_level:.5f}</p>
-                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Baseado em {target_reason}</p>
-                    <p style="margin: 0; color: #888; font-size: 0.70rem;">Ref: {target_reference_level:.5f}</p>
-                </div>
-                <div style="background: rgba(33,150,243,0.1); padding: 0.8rem; border-radius: 6px;">
-                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Confiança Confluente</strong></p>
-                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #2196f3;">{(enhanced_confidence * 100):.0f}%</p>
-                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Integração de análises</p>
-                    <p style="margin: 0; color: #888; font-size: 0.70rem;">
-                        LSTM({confidence*100:.0f}%) + Sentiment({abs(sentiment_score)*100:.0f}%)
-                    </p>
-                </div>
-                <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px;">
-                    <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Risco vs Retorno</strong></p>
-                    <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #ff9800;">1:{(profit_distance/stop_distance):.1f}</p>
-                    <p style="margin: 0; color: #888; font-size: 0.75rem;">Baseado em níveis reais</p>
-                    <p style="margin: 0; color: #888; font-size: 0.70rem;">Não em gestão financeira</p>
-                </div>
-            </div>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
+        # Durante indecisão, mostrar previsão futura para execução de ordens
+        if is_indecision:
             # Durante indecisão, mostrar previsão futura para execução de ordens
             st.markdown(f"""
             <div style="
