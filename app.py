@@ -46,6 +46,60 @@ except ImportError as e:
         'ai_unified_service': MockService()
     }
 
+# FUNÇÃO GLOBAL: Calcular probabilidades REAIS de mercado
+def calculate_market_probabilities_real(lstm_confidence, ai_consensus, sentiment_score, technical_signals, pair_name, horizon):
+    """Calcular probabilidades REAIS de sucesso baseadas em confluência de análises"""
+    
+    # Obter parâmetros realísticos por horizonte temporal
+    temporal_params = TEMPORAL_AI_PARAMETERS.get(horizon, TEMPORAL_AI_PARAMETERS['1 Hora'])
+    success_rate_base = temporal_params.get('ai_success_rate_target', 0.70)
+    
+    # 1. LSTM Probability (40% do peso total)
+    lstm_prob = min(0.95, max(0.30, lstm_confidence * 1.2))  # Entre 30-95%
+    
+    # 2. AI Consensus Probability (30% do peso total)
+    ai_prob = min(0.90, max(0.25, ai_consensus * 1.1))  # Entre 25-90%
+    
+    # 3. Sentiment Probability (20% do peso total)
+    sentiment_normalized = abs(sentiment_score)
+    sentiment_prob = min(0.85, max(0.40, 0.5 + (sentiment_normalized * 0.4)))  # Entre 40-85%
+    
+    # 4. Technical Signals Probability (10% do peso total)
+    technical_prob = min(0.80, max(0.35, technical_signals * 0.8 + 0.35))  # Entre 35-80%
+    
+    # Calcular probabilidade confluente REAL
+    confluent_probability = (
+        lstm_prob * 0.40 +
+        ai_prob * 0.30 + 
+        sentiment_prob * 0.20 + 
+        technical_prob * 0.10
+    )
+    
+    # Ajuste por par de moeda (volatilidade real)
+    pair_adjustment = PAIR_AI_ADJUSTMENTS.get(pair_name, {'prediction_confidence_boost': 1.0})
+    adjusted_probability = confluent_probability * pair_adjustment['prediction_confidence_boost']
+    
+    # Limitar entre probabilidades realísticas por horizonte
+    min_prob = success_rate_base * 0.6  # 60% da taxa base mínima
+    max_prob = min(0.95, success_rate_base * 1.3)  # Máximo 95% ou 130% da base
+    
+    final_probability = max(min_prob, min(max_prob, adjusted_probability))
+    
+    return {
+        'confluent_probability': final_probability,
+        'lstm_component': lstm_prob * 0.40,
+        'ai_component': ai_prob * 0.30,
+        'sentiment_component': sentiment_prob * 0.20,
+        'technical_component': technical_prob * 0.10,
+        'base_success_rate': success_rate_base,
+        'confidence_breakdown': {
+            'Very High (>85%)': final_probability > 0.85,
+            'High (70-85%)': 0.70 <= final_probability <= 0.85,
+            'Medium (55-70%)': 0.55 <= final_probability < 0.70,
+            'Low (<55%)': final_probability < 0.55
+        }
+    }
+
 # Simple technical indicators class
 class TechnicalIndicators:
     @staticmethod
@@ -2082,64 +2136,17 @@ def display_main_summary(results, analysis_mode):
             total_signals = len(signals)
             technical_signals_strength = buy_signals / total_signals if total_signals > 0 else 0.5
         
-        # Calcular probabilidades REAIS de mercado
-        market_probabilities = calculate_market_probabilities(
+        # Usar a função global de probabilidades
+        pass  # Já calculado acima
+        
+        # 2. FUNÇÃO GLOBAL: Calcular probabilidades REAIS de mercado
+        pass  # Placeholder - função já definida globalmente
+        
+        # Calcular probabilidades usando a função global
+        market_probabilities = calculate_market_probabilities_real(
             confidence, ai_consensus, sentiment_score, technical_signals_strength, pair_name, horizon
         )
-        
-        # 2. Calcular probabilidades REAIS de mercado baseadas em análises confluentes
-        def calculate_market_probabilities(lstm_confidence, ai_consensus, sentiment_score, technical_signals, pair_name, horizon):
-            """Calcular probabilidades REAIS de sucesso baseadas em confluência de análises"""
-            
-            # Obter parâmetros realísticos por horizonte temporal
-            temporal_params = TEMPORAL_AI_PARAMETERS.get(horizon, TEMPORAL_AI_PARAMETERS['1 Hora'])
-            success_rate_base = temporal_params.get('ai_success_rate_target', 0.70)
-            
-            # 1. LSTM Probability (40% do peso total)
-            lstm_prob = min(0.95, max(0.30, lstm_confidence * 1.2))  # Entre 30-95%
-            
-            # 2. AI Consensus Probability (30% do peso total)
-            ai_prob = min(0.90, max(0.25, ai_consensus * 1.1))  # Entre 25-90%
-            
-            # 3. Sentiment Probability (20% do peso total)
-            sentiment_normalized = abs(sentiment_score)
-            sentiment_prob = min(0.85, max(0.40, 0.5 + (sentiment_normalized * 0.4)))  # Entre 40-85%
-            
-            # 4. Technical Signals Probability (10% do peso total)
-            technical_prob = min(0.80, max(0.35, technical_signals * 0.8 + 0.35))  # Entre 35-80%
-            
-            # Calcular probabilidade confluente REAL
-            confluent_probability = (
-                lstm_prob * 0.40 +
-                ai_prob * 0.30 + 
-                sentiment_prob * 0.20 + 
-                technical_prob * 0.10
-            )
-            
-            # Ajuste por par de moeda (volatilidade real)
-            pair_adjustment = PAIR_AI_ADJUSTMENTS.get(pair_name, {'prediction_confidence_boost': 1.0})
-            adjusted_probability = confluent_probability * pair_adjustment['prediction_confidence_boost']
-            
-            # Limitar entre probabilidades realísticas por horizonte
-            min_prob = success_rate_base * 0.6  # 60% da taxa base mínima
-            max_prob = min(0.95, success_rate_base * 1.3)  # Máximo 95% ou 130% da base
-            
-            final_probability = max(min_prob, min(max_prob, adjusted_probability))
-            
-            return {
-                'confluent_probability': final_probability,
-                'lstm_component': lstm_prob * 0.40,
-                'ai_component': ai_prob * 0.30,
-                'sentiment_component': sentiment_prob * 0.20,
-                'technical_component': technical_prob * 0.10,
-                'base_success_rate': success_rate_base,
-                'confidence_breakdown': {
-                    'Very High (>85%)': final_probability > 0.85,
-                    'High (70-85%)': 0.70 <= final_probability <= 0.85,
-                    'Medium (55-70%)': 0.55 <= final_probability < 0.70,
-                    'Low (<55%)': final_probability < 0.55
-                }
-            }
+
         
         # Calcular níveis confluentes de stop/take profit
         confluent_levels = calculate_confluent_levels(
