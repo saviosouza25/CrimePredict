@@ -52,7 +52,21 @@ def calculate_realistic_drawdown_and_extensions(current_price, pair_name, horizo
     Calcula drawdown máximo realístico e extensões de preço baseadas em estatísticas reais do mercado
     Focado 100% em precisão para Swing e Intraday trading
     """
-    from config.settings import TEMPORAL_AI_PARAMETERS, RISK_PROFILES
+    # Importar configurações localmente para evitar erros de circular import
+    try:
+        from config.settings import TEMPORAL_AI_PARAMETERS, RISK_PROFILES
+    except ImportError:
+        # Fallback com parâmetros básicos se a importação falhar
+        TEMPORAL_AI_PARAMETERS = {
+            '15 Minutos': {'ai_drawdown_probability': 0.25, 'ai_max_adverse_pips': 12, 'ai_extension_probability': 0.70, 'ai_realistic_targets': {'conservative': 18, 'moderate': 25, 'aggressive': 35}},
+            '1 Hora': {'ai_drawdown_probability': 0.30, 'ai_max_adverse_pips': 25, 'ai_extension_probability': 0.75, 'ai_realistic_targets': {'conservative': 25, 'moderate': 40, 'aggressive': 60}},
+            '4 Horas': {'ai_drawdown_probability': 0.35, 'ai_max_adverse_pips': 45, 'ai_extension_probability': 0.80, 'ai_realistic_targets': {'conservative': 60, 'moderate': 90, 'aggressive': 130}}
+        }
+        RISK_PROFILES = {
+            'Conservative': {'atr_multiplier_stop': 1.5},
+            'Moderate': {'atr_multiplier_stop': 2.0},
+            'Aggressive': {'atr_multiplier_stop': 2.5}
+        }
     
     # Obter parâmetros específicos do horizonte temporal
     temporal_params = TEMPORAL_AI_PARAMETERS.get(horizon, TEMPORAL_AI_PARAMETERS['1 Hora'])
@@ -2988,13 +3002,19 @@ def display_main_summary(results, analysis_mode):
         
         # ANÁLISE REALÍSTICA DE DRAWDOWN E EXTENSÕES - Foco 100% em Swing e Intraday
         if not is_indecision:
-            # Calcular análise realística
-            realistic_analysis = calculate_realistic_drawdown_and_extensions(
-                current_price, pair_name, horizon, risk_level_used, 
-                sentiment_score, confidence
-            )
+            # Calcular análise realística com tratamento de erro
+            try:
+                realistic_analysis = calculate_realistic_drawdown_and_extensions(
+                    current_price, pair_name, horizon, risk_level_used, 
+                    sentiment_score, confidence
+                )
+                show_realistic_analysis = True
+            except Exception as e:
+                st.error(f"Erro na análise realística: {str(e)}")
+                show_realistic_analysis = False
             
-            st.markdown(f"""
+            if show_realistic_analysis:
+                st.markdown(f"""
             <div style="
                 background: linear-gradient(135deg, rgba(139,69,19,0.1), rgba(255,140,0,0.1));
                 border-left: 4px solid #FF8C00;

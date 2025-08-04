@@ -1,0 +1,59 @@
+<div style="background: rgba(255,255,255,0.9); padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+    <h5 style="color: #8B4513; margin: 0 0 0.8rem 0; text-align: center;">
+        📊 Projeção de Movimento - Direção: BAIXA
+    </h5>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div style="background: rgba(220,20,60,0.1); padding: 1rem; border-radius: 6px; border: 2px solid #DC143C;">
+            <h6 style="color: #DC143C; margin: 0 0 0.5rem 0; text-align: center;">⚠️ DRAWDOWN MÁXIMO</h6>
+            <p style="margin: 0; color: #333; font-size: 0.9rem; text-align: center;">
+                <strong>Nível:</strong> 1.16460<br>
+                <strong>Distância:</strong> 81 pips<br>
+                <strong>Probabilidade:</strong> 31%
+            </p>
+        </div>
+        <div style="background: rgba(34,139,34,0.1); padding: 1rem; border-radius: 6px; border: 2px solid #228B22;">
+            <h6 style="color: #228B22; margin: 0 0 0.5rem 0; text-align: center;">🎯 EXTENSÃO MÁXIMA</h6>
+            <p style="margin: 0; color: #333; font-size: 0.9rem; text-align: center;">
+                <strong>Nível:</strong> 1.14696<br>
+                <strong>Distância:</strong> 95 pips<br>
+                <strong>Probabilidade:</strong> 84%
+            </p>
+        </div>
+    </div>
+</div>
+
+<div style="background: rgba(255,255,255,0.8); padding: 1rem; border-radius: 6px;">
+    <h5 style="color: #8B4513; margin: 0 0 0.8rem 0; text-align: center;">📈 Detalhes da Análise Especializada</h5>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.8rem;">
+        <div style="background: rgba(70,130,180,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Alvo Base 4 Horas</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4682B4;">90 pips</p>
+            <p style="margin: 0; color: #888; font-size: 0.7rem;">Estatística histórica</p>
+        </div>
+        <div style="background: rgba(70,130,180,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Alvo Ajustado</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4682B4;">95 pips</p>
+            <p style="margin: 0; color: #888; font-size: 0.7rem;">Com confiança + sentimento</p>
+        </div>
+        <div style="background: rgba(70,130,180,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Ajuste Confiança</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4682B4;">+4.0%</p>
+            <p style="margin: 0; color: #888; font-size: 0.7rem;">Baseado no modelo LSTM</p>
+        </div>
+        <div style="background: rgba(70,130,180,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Impacto Sentimento</strong></p>
+            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4682B4;">+0.0%</p>
+            <p style="margin: 0; color: #888; font-size: 0.7rem;">Análise de notícias</p>
+        </div>
+    </div>
+</div>
+
+<div style="margin-top: 1rem; padding: 1rem; background: rgba(255,215,0,0.1); border-radius: 6px;">
+    <p style="margin: 0; color: #8B4513; font-size: 0.9rem; text-align: center;">
+        <strong>💡 Estratégia Especializada:</strong> 
+        Esta análise integra parâmetros realísticos de 4 horas com seu perfil moderado. 
+        Os níveis são baseados em estatísticas reais de traders profissionais desta estratégia temporal.
+    </p>
+</div>
