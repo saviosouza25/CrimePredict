@@ -2185,32 +2185,25 @@ def display_main_summary(results, analysis_mode):
         stop_loss_pip_diff = calculate_pip_difference(current_price, stop_loss_level, pair_name)
         take_profit_pip_diff = calculate_pip_difference(current_price, take_profit_level, pair_name)
         
-        # Calcular extensão máxima DETERMINÍSTICA e tempo de previsão
+        # Calcular extensão máxima DETERMINÍSTICA primeiro
         if predicted_price > current_price:  # COMPRA
             max_extension = take_profit_level * 1.3  # 30% além do target
             extension_direction = "ALTA"
             extension_description = f"Movimento ascendente até {max_extension:.5f}"
             max_risk_scenario = "Reversão abrupta por notícias negativas ou falha de suporte técnico"
-            estimated_time_hours = 8 + (extension_percentage * 2)  # Base 8h + complexidade
         else:  # VENDA
             max_extension = take_profit_level * 0.7  # 30% além do target
             extension_direction = "BAIXA"
             extension_description = f"Movimento descendente até {max_extension:.5f}"
             max_risk_scenario = "Reversão por suporte forte ou notícias positivas inesperadas"
-            estimated_time_hours = 8 + (extension_percentage * 2)  # Base 8h + complexidade
         
-        # Calcular tempo médio baseado na volatilidade do par e percentual de movimento
-        time_days = max(1, min(7, estimated_time_hours / 24))  # Entre 1 e 7 dias
-        time_description = f"{time_days:.1f} dias" if time_days >= 1 else f"{estimated_time_hours:.0f} horas"
-        
+        # Calcular pip differences e percentuais
         extension_pip_diff = calculate_pip_difference(current_price, max_extension, pair_name)
-        
-        # Calcular percentuais ANTES de usar no tempo
         risk_percentage = abs((stop_loss_level - current_price) / current_price) * 100
         reward_percentage = abs((take_profit_level - current_price) / current_price) * 100
         extension_percentage = abs((max_extension - current_price) / current_price) * 100
         
-        # Recalcular tempo usando extension_percentage já definido
+        # Agora calcular tempo usando extension_percentage definido
         estimated_time_hours = 8 + (extension_percentage * 2)  # Base 8h + complexidade
         time_days = max(1, min(7, estimated_time_hours / 24))  # Entre 1 e 7 dias
         time_description = f"{time_days:.1f} dias" if time_days >= 1 else f"{estimated_time_hours:.0f} horas"
