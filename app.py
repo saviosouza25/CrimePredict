@@ -3002,91 +3002,78 @@ def display_main_summary(results, analysis_mode):
         
         # ANÁLISE REALÍSTICA DE DRAWDOWN E EXTENSÕES - Foco 100% em Swing e Intraday
         if not is_indecision:
-            # Calcular análise realística com tratamento de erro
-            try:
-                realistic_analysis = calculate_realistic_drawdown_and_extensions(
-                    current_price, pair_name, horizon, risk_level_used, 
-                    sentiment_score, confidence
-                )
-                show_realistic_analysis = True
-            except Exception as e:
-                st.error(f"Erro na análise realística: {str(e)}")
-                show_realistic_analysis = False
+            # Calcular valores realísticos diretamente sem função externa
+            pip_value = 0.0001 if 'JPY' not in pair_name else 0.01
             
-            if show_realistic_analysis:
-                st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, rgba(139,69,19,0.1), rgba(255,140,0,0.1));
-                border-left: 4px solid #FF8C00;
-                border-radius: 8px;
-                padding: 1.5rem;
-                margin: 1rem 0;
-            ">
-                <h4 style="color: #FF8C00; margin: 0 0 1rem 0; font-size: 1.1rem;">
-                    🎯 Análise Realística para {horizon} - Perfil: {risk_level_used}
+            # Parâmetros por horizonte temporal
+            horizon_params = {
+                '15 Minutos': {'base_target': 25, 'drawdown_prob': 0.25, 'extension_prob': 0.70, 'adverse_pips': 12},
+                '1 Hora': {'base_target': 40, 'drawdown_prob': 0.30, 'extension_prob': 0.75, 'adverse_pips': 25},
+                '4 Horas': {'base_target': 90, 'drawdown_prob': 0.35, 'extension_prob': 0.80, 'adverse_pips': 45}
+            }
+            
+            params = horizon_params.get(horizon, horizon_params['1 Hora'])
+            
+            # Ajustar por confiança e sentimento
+            confidence_boost = (confidence - 0.5) * 0.4
+            sentiment_boost = abs(sentiment_score) * 0.15
+            
+            base_target = params['base_target']
+            adjusted_target = int(base_target * (1 + confidence_boost + sentiment_boost))
+            
+            # Direção do movimento
+            direction = "ALTA" if prediction == "compra" else "BAIXA"
+            
+            # Cálculos de drawdown e extensão
+            drawdown_pips = params['adverse_pips']
+            extension_pips = adjusted_target
+            
+            if direction == "ALTA":
+                max_adverse_level = current_price - (drawdown_pips * pip_value)
+                extension_level = current_price + (extension_pips * pip_value)
+            else:
+                max_adverse_level = current_price + (drawdown_pips * pip_value)
+                extension_level = current_price - (extension_pips * pip_value)
+            
+            drawdown_prob = max(0.15, min(0.50, params['drawdown_prob'] - confidence_boost))
+            extension_prob = min(0.95, max(0.50, params['extension_prob'] + confidence_boost))
+            
+            # Interface simplificada e direta
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, rgba(139,69,19,0.1), rgba(255,140,0,0.1)); 
+                        border-left: 4px solid #FF8C00; border-radius: 8px; padding: 1.5rem; margin: 1rem 0;">
+                <h4 style="color: #FF8C00; margin: 0 0 1rem 0; text-align: center;">
+                    🎯 Análise Realística Especializada
                 </h4>
-                
-                <div style="background: rgba(255,255,255,0.9); padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
-                    <h5 style="color: #8B4513; margin: 0 0 0.8rem 0; text-align: center;">
-                        📊 Projeção de Movimento - Direção: {realistic_analysis['direction']}
-                    </h5>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div style="background: rgba(220,20,60,0.1); padding: 1rem; border-radius: 6px; border: 2px solid #DC143C;">
-                            <h6 style="color: #DC143C; margin: 0 0 0.5rem 0; text-align: center;">⚠️ DRAWDOWN MÁXIMO</h6>
-                            <p style="margin: 0; color: #333; font-size: 0.9rem; text-align: center;">
-                                <strong>Nível:</strong> {realistic_analysis['max_adverse_level']:.5f}<br>
-                                <strong>Distância:</strong> {realistic_analysis['max_drawdown_pips']} pips<br>
-                                <strong>Probabilidade:</strong> {realistic_analysis['drawdown_probability']:.0%}
-                            </p>
-                        </div>
-                        <div style="background: rgba(34,139,34,0.1); padding: 1rem; border-radius: 6px; border: 2px solid #228B22;">
-                            <h6 style="color: #228B22; margin: 0 0 0.5rem 0; text-align: center;">🎯 EXTENSÃO MÁXIMA</h6>
-                            <p style="margin: 0; color: #333; font-size: 0.9rem; text-align: center;">
-                                <strong>Nível:</strong> {realistic_analysis['extension_level']:.5f}<br>
-                                <strong>Distância:</strong> {realistic_analysis['extension_pips']} pips<br>
-                                <strong>Probabilidade:</strong> {realistic_analysis['extension_probability']:.0%}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="background: rgba(255,255,255,0.8); padding: 1rem; border-radius: 6px;">
-                    <h5 style="color: #8B4513; margin: 0 0 0.8rem 0; text-align: center;">📈 Detalhes da Análise Especializada</h5>
-                    
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.8rem;">
-                        <div style="background: rgba(70,130,180,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
-                            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Alvo Base {horizon}</strong></p>
-                            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4682B4;">{realistic_analysis['horizon_base_target']:.0f} pips</p>
-                            <p style="margin: 0; color: #888; font-size: 0.7rem;">Estatística histórica</p>
-                        </div>
-                        <div style="background: rgba(70,130,180,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
-                            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Alvo Ajustado</strong></p>
-                            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4682B4;">{realistic_analysis['adjusted_target']} pips</p>
-                            <p style="margin: 0; color: #888; font-size: 0.7rem;">Com confiança + sentimento</p>
-                        </div>
-                        <div style="background: rgba(70,130,180,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
-                            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Ajuste Confiança</strong></p>
-                            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4682B4;">{realistic_analysis['confidence_adjustment']:+.1%}</p>
-                            <p style="margin: 0; color: #888; font-size: 0.7rem;">Baseado no modelo LSTM</p>
-                        </div>
-                        <div style="background: rgba(70,130,180,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
-                            <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Impacto Sentimento</strong></p>
-                            <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4682B4;">{realistic_analysis['sentiment_impact']:+.1%}</p>
-                            <p style="margin: 0; color: #888; font-size: 0.7rem;">Análise de notícias</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 1rem; padding: 1rem; background: rgba(255,215,0,0.1); border-radius: 6px;">
-                    <p style="margin: 0; color: #8B4513; font-size: 0.9rem; text-align: center;">
-                        <strong>💡 Estratégia Especializada:</strong> 
-                        Esta análise integra parâmetros realísticos de {horizon.lower()} com seu perfil {risk_level_used.lower()}. 
-                        Os níveis são baseados em estatísticas reais de traders profissionais desta estratégia temporal.
-                    </p>
-                </div>
             </div>
             """, unsafe_allow_html=True)
+            
+            # Métricas principais
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.metric(
+                    "⚠️ DRAWDOWN MÁXIMO",
+                    f"{max_adverse_level:.5f}",
+                    f"-{drawdown_pips} pips ({drawdown_prob:.0%} prob.)"
+                )
+                
+            with col2:
+                st.metric(
+                    "🎯 EXTENSÃO MÁXIMA", 
+                    f"{extension_level:.5f}",
+                    f"{'+'if direction=='ALTA' else '-'}{extension_pips} pips ({extension_prob:.0%} prob.)"
+                )
+            
+            # Detalhes adicionais
+            st.info(f"""
+            **Direção Prevista:** {direction}  
+            **Alvo Base {horizon}:** {base_target} pips  
+            **Alvo Ajustado:** {adjusted_target} pips  
+            **Ajuste de Confiança:** {confidence_boost:+.1%}  
+            **Impacto Sentimento:** {sentiment_boost:+.1%}  
+            **Perfil de Risco:** {risk_level_used}
+            """)
         else:
             st.markdown(f"""
             <div style="
