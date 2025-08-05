@@ -187,7 +187,7 @@ def check_password():
             
         st.markdown("""
         <div style="text-align: center; margin-top: 2rem; color: #888; font-size: 0.9em;">
-            <p>🔐 Sua senha é armazenada localmente de forma segura</p>
+            <p>🔐 Suas credenciais são armazenadas localmente e criptografadas</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -1534,11 +1534,6 @@ def main():
             "⚡ Análise Rápida",
             use_container_width=True,
             help="Análise rápida com dados em cache (se disponível)"
-        )
-        
-        quick_analysis = st.button(
-            "⚡ Verificação Rápida",
-            help=get_help_content("quick_check")
         )
         
         st.markdown("---")
