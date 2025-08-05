@@ -1680,7 +1680,7 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
             
             # Executar análises baseadas no modo selecionado - argumentos corretos
             if analysis_mode == 'unified':
-                results.update(run_unified_analysis(current_price, pair, sentiment_score, df_with_indicators))
+                results.update(run_unified_analysis(current_price, pair, sentiment_score, df_with_indicators, st.session_state.get('trading_style', 'swing')))
             elif analysis_mode == 'technical':
                 results.update(run_technical_analysis(current_price, df_with_indicators))
             elif analysis_mode == 'sentiment':
@@ -1730,11 +1730,46 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
         st.error(f"❌ Erro durante a análise: {str(e)}")
         print(f"Analysis error: {e}")
 
-def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicators):
-    """🧠 ANÁLISE UNIFICADA INTELIGENTE AVANÇADA - Confluência Real do Mercado"""
+def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicators, trading_style='swing'):
+    """🧠 ANÁLISE UNIFICADA INTELIGENTE - Especializada por Estratégia de Trading"""
     import numpy as np
     
-    # 🎯 CONFLUÊNCIA MULTI-DIMENSIONAL - PADRÕES REAIS DE MERCADO
+    # 🎯 CONFIGURAÇÕES POR ESTRATÉGIA DE TRADING
+    trading_configs = {
+        'swing': {
+            'name': 'Swing Trading',
+            'timeframe': '4H-1D', 
+            'hold_period': '3-7 dias',
+            'stop_multiplier': 1.5,  # 1.5% stop loss
+            'take_multiplier': 3.0,  # 3.0% take profit (1:2 R/R)
+            'min_confidence': 70,
+            'volatility_factor': 1.2,
+            'components_weight': [0.20, 0.20, 0.15, 0.15, 0.15, 0.15]  # Tech, Trend, Volume, Sentiment, AI, Risk
+        },
+        'intraday': {
+            'name': 'Day Trading',
+            'timeframe': '5M-1H',
+            'hold_period': '1-8 horas', 
+            'stop_multiplier': 0.8,   # 0.8% stop loss
+            'take_multiplier': 1.6,   # 1.6% take profit (1:2 R/R)
+            'min_confidence': 75,
+            'volatility_factor': 1.0,
+            'components_weight': [0.25, 0.15, 0.20, 0.10, 0.20, 0.10]  # Mais peso em Técnica e AI
+        },
+        'position': {
+            'name': 'Position Trading',
+            'timeframe': '1D-1W',
+            'hold_period': '1-4 semanas',
+            'stop_multiplier': 2.5,   # 2.5% stop loss
+            'take_multiplier': 7.5,   # 7.5% take profit (1:3 R/R)
+            'min_confidence': 65,
+            'volatility_factor': 1.5,
+            'components_weight': [0.15, 0.25, 0.10, 0.20, 0.15, 0.15]  # Mais peso em Tendência e Sentimento
+        }
+    }
+    
+    config = trading_configs.get(trading_style, trading_configs['swing'])
+    weights = config['components_weight']
     
     # === 1. ANÁLISE TÉCNICA ROBUSTA ===
     latest = df_with_indicators.iloc[-1]
@@ -1934,24 +1969,24 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     lstm_norm = lstm_signal  # USAR VALOR BRUTO SEM NORMALIZAÇÃO - IDENTICAL TO INDIVIDUAL
     risk_norm = normalize_component(risk_score)
     
-    # Sinal confluente final balanceado com 6 componentes
+    # Sinal confluente ajustado por estratégia de trading
     unified_signal = (
-        technical_norm * technical_weight +
-        trend_norm * trend_weight +
-        volume_norm * volume_weight +
-        sentiment_norm * sentiment_weight +
-        lstm_norm * lstm_weight +
-        risk_norm * risk_weight
+        technical_norm * weights[0] +  # Técnica
+        trend_norm * weights[1] +      # Tendência
+        volume_norm * weights[2] +     # Volume
+        sentiment_norm * weights[3] +  # Sentimento
+        lstm_norm * weights[4] +       # AI/LSTM
+        risk_norm * weights[5]         # Risco
     )
     
-    # Análise de componentes individuais para debug - 6 componentes
+    # Análise de componentes ajustada por estratégia
     components_analysis = {
-        'technical': {'value': technical_norm, 'weighted': technical_norm * technical_weight},
-        'trend': {'value': trend_norm, 'weighted': trend_norm * trend_weight},
-        'volume': {'value': volume_norm, 'weighted': volume_norm * volume_weight},
-        'sentiment': {'value': sentiment_norm, 'weighted': sentiment_norm * sentiment_weight},
-        'ai_lstm': {'value': lstm_norm, 'weighted': lstm_norm * lstm_weight},
-        'risk': {'value': risk_norm, 'weighted': risk_norm * risk_weight}
+        'technical': {'value': technical_norm, 'weighted': technical_norm * weights[0], 'importance': f"{weights[0]*100:.0f}%"},
+        'trend': {'value': trend_norm, 'weighted': trend_norm * weights[1], 'importance': f"{weights[1]*100:.0f}%"},
+        'volume': {'value': volume_norm, 'weighted': volume_norm * weights[2], 'importance': f"{weights[2]*100:.0f}%"},
+        'sentiment': {'value': sentiment_norm, 'weighted': sentiment_norm * weights[3], 'importance': f"{weights[3]*100:.0f}%"},
+        'ai_lstm': {'value': lstm_norm, 'weighted': lstm_norm * weights[4], 'importance': f"{weights[4]*100:.0f}%"},
+        'risk': {'value': risk_norm, 'weighted': risk_norm * weights[5], 'importance': f"{weights[5]*100:.0f}%"}
     }
     
     # Contar sinais positivos vs negativos para transparência - 6 componentes
@@ -2071,53 +2106,60 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
             'consensus_override': consensus_override,
             'decision_logic': decision_logic
         },
+        'operation_setup': operation_details,
         'components': {
             'technical': {
                 'signal': technical_norm, 
                 'original_signal': technical_strength,
-                'weight': technical_weight, 
+                'weight': weights[0], 
+                'importance': f"{weights[0]*100:.0f}%",
                 'details': technical_components,
-                'contribution': technical_norm * technical_weight,
+                'contribution': technical_norm * weights[0],
                 'direction': 'COMPRA' if technical_strength > 0.001 else 'VENDA' if technical_strength < -0.001 else 'NEUTRO'
-            },
-            'sentiment': {
-                'signal': sentiment_norm,
-                'original_signal': sentiment_impact, 
-                'weight': sentiment_weight, 
-                'details': f"Sentimento {float(sentiment_score):.3f}",
-                'contribution': sentiment_norm * sentiment_weight,
-                'direction': 'COMPRA' if sentiment_impact > 0.001 else 'VENDA' if sentiment_impact < -0.001 else 'NEUTRO'
             },
             'trend': {
                 'signal': trend_norm,
-                'original_signal': trend_alignment, 
-                'weight': trend_weight, 
-                'details': f"Tendência Multi-TF: {float(trend_5)*100:.2f}%/5p {float(trend_10)*100:.2f}%/10p {float(trend_20)*100:.2f}%/20p",
-                'contribution': trend_norm * trend_weight,
+                'original_signal': trend_alignment,
+                'weight': weights[1],
+                'importance': f"{weights[1]*100:.0f}%",
+                'details': f"Tendência Multi-TF: {trend_alignment:.4f}",
+                'contribution': trend_norm * weights[1],
                 'direction': 'COMPRA' if trend_alignment > 0.001 else 'VENDA' if trend_alignment < -0.001 else 'NEUTRO'
             },
             'volume': {
                 'signal': volume_norm,
-                'original_signal': volume_confirmation, 
-                'weight': volume_weight, 
-                'details': f"Volume/Volatilidade: {float(volume_volatility):.4f} (limite: {volatility_threshold:.3f})",
-                'contribution': volume_norm * volume_weight,
+                'original_signal': volume_confirmation,
+                'weight': weights[2],
+                'importance': f"{weights[2]*100:.0f}%",
+                'details': f"Volume/Volatilidade: {volume_confirmation:.4f}",
+                'contribution': volume_norm * weights[2],
                 'direction': 'COMPRA' if volume_confirmation > 0.001 else 'VENDA' if volume_confirmation < -0.001 else 'NEUTRO'
+            },
+            'sentiment': {
+                'signal': sentiment_norm,
+                'original_signal': sentiment_impact, 
+                'weight': weights[3],
+                'importance': f"{weights[3]*100:.0f}%",
+                'details': f"Sentimento {float(sentiment_score):.3f}",
+                'contribution': sentiment_norm * weights[3],
+                'direction': 'COMPRA' if sentiment_impact > 0.001 else 'VENDA' if sentiment_impact < -0.001 else 'NEUTRO'
             },
             'ai_lstm': {
                 'signal': lstm_norm,
-                'original_signal': lstm_signal, 
-                'weight': lstm_weight, 
-                'details': f"LSTM: Long trend={long_trend:.4f}, Volatility={volatility_ai:.4f}, Learning={learning_factor:.3f}" if len(prices) >= lookback_period else "LSTM: Dados insuficientes",
-                'contribution': lstm_norm * lstm_weight,
-                'direction': 'COMPRA' if lstm_signal > 0.001 else 'VENDA' if lstm_signal < -0.001 else 'NEUTRO'  # USAR MESMO THRESHOLD DA INDIVIDUAL
+                'original_signal': lstm_signal,
+                'weight': weights[4],
+                'importance': f"{weights[4]*100:.0f}%",
+                'details': f"IA/LSTM: {lstm_signal:.4f}",
+                'contribution': lstm_norm * weights[4],
+                'direction': 'COMPRA' if lstm_signal > 0.001 else 'VENDA' if lstm_signal < -0.001 else 'NEUTRO'
             },
             'risk': {
                 'signal': risk_norm,
-                'original_signal': risk_score, 
-                'weight': risk_weight, 
-                'details': f"Risco: Volatilidade={volatility:.4f}, Score={risk_score:.3f}",
-                'contribution': risk_norm * risk_weight,
+                'original_signal': risk_score,
+                'weight': weights[5],
+                'importance': f"{weights[5]*100:.0f}%",
+                'details': f"Análise de Risco: {risk_score:.4f}",
+                'contribution': risk_norm * weights[5],
                 'direction': 'COMPRA' if risk_score > 0.001 else 'VENDA' if risk_score < -0.001 else 'NEUTRO'
             }
         },
@@ -2627,7 +2669,7 @@ def display_main_summary(results, analysis_mode):
     col1, col2, col3 = st.columns([0.1, 10, 0.1])
     
     with col2:
-        # Enhanced display for unified analysis
+        # Enhanced display for unified analysis with operation setup
         if analysis_mode == 'unified' and 'market_direction' in results:
             direction = results['market_direction']
             probability = results.get('success_probability', results['model_confidence'] * 100)
@@ -2650,6 +2692,9 @@ def display_main_summary(results, analysis_mode):
                 direction_color = "#FF9800"
                 direction_icon = "⚪"
             
+            # Obter detalhes da operação
+            operation_setup = results.get('operation_setup', {})
+            
             st.markdown(f"""
             <div style="
                 text-align: center; 
@@ -2662,12 +2707,56 @@ def display_main_summary(results, analysis_mode):
                 margin-left: auto;
                 margin-right: auto;
             ">
-                <h3 style="color: #666; margin: 0 0 0.3rem 0; font-size: 1rem;">🧠 Análise Unificada Inteligente</h3>
-                <p style="color: #888; margin: 0 0 0.5rem 0; font-size: 0.85rem;">{results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
+                <h3 style="color: #666; margin: 0 0 0.3rem 0; font-size: 1rem;">🧠 {operation_setup.get('strategy', 'Análise Unificada')}</h3>
+                <p style="color: #888; margin: 0 0 0.5rem 0; font-size: 0.85rem;">{results['pair']} • {operation_setup.get('timeframe', 'N/A')} • {operation_setup.get('hold_period', 'N/A')}</p>
                 <h1 style="color: {direction_color}; margin: 0 0 0.5rem 0; font-size: 2.2em;">{direction_icon} {direction}</h1>
-                <h2 style="color: {direction_color}; margin: 0; font-size: 1.4em;">Probabilidade: {probability:.0f}%</h2>
+                <h2 style="color: {direction_color}; margin: 0 0 0.5rem 0; font-size: 1.4em;">Probabilidade: {probability:.0f}%</h2>
             </div>
             """, unsafe_allow_html=True)
+            
+            # Adicionar informações operacionais
+            if operation_setup:
+                viable_color = "#4CAF50" if operation_setup.get('operation_viable', False) else "#FF3547"
+                viable_text = "OPERAÇÃO VIÁVEL" if operation_setup.get('operation_viable', False) else "BAIXA CONFIANÇA"
+                
+                st.markdown(f"""
+                <div style="
+                    display: grid; 
+                    grid-template-columns: 1fr 1fr 1fr; 
+                    gap: 1rem; 
+                    margin: 1rem 0; 
+                    text-align: center;
+                ">
+                    <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px;">
+                        <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Entry</strong></p>
+                        <p style="margin: 0; font-size: 1.1rem; font-weight: bold;">{operation_setup.get('entry_price', 0):.5f}</p>
+                    </div>
+                    <div style="background: rgba(255,0,0,0.2); padding: 1rem; border-radius: 8px;">
+                        <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Stop Loss</strong></p>
+                        <p style="margin: 0; font-size: 1.1rem; font-weight: bold;">{operation_setup.get('stop_loss', 0):.5f}</p>
+                        <p style="margin: 0; color: #666; font-size: 0.8rem;">(-{operation_setup.get('stop_percentage', 0):.1f}%)</p>
+                    </div>
+                    <div style="background: rgba(0,255,0,0.2); padding: 1rem; border-radius: 8px;">
+                        <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Take Profit</strong></p>
+                        <p style="margin: 0; font-size: 1.1rem; font-weight: bold;">{operation_setup.get('take_profit', 0):.5f}</p>
+                        <p style="margin: 0; color: #666; font-size: 0.8rem;">(+{operation_setup.get('take_percentage', 0):.1f}%)</p>
+                    </div>
+                </div>
+                
+                <div style="
+                    text-align: center; 
+                    margin: 1rem 0; 
+                    padding: 0.8rem; 
+                    background: rgba(255,255,255,0.05); 
+                    border-radius: 8px;
+                ">
+                    <p style="margin: 0; color: {viable_color}; font-weight: bold; font-size: 1rem;">{viable_text}</p>
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;">
+                        R/R Ratio: 1:{operation_setup.get('risk_reward_ratio', 0):.1f} | 
+                        Confiança mínima: {operation_setup.get('confidence_required', 0):.0f}%
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
             <div style="
