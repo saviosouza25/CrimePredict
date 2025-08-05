@@ -1684,7 +1684,7 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
             elif analysis_mode == 'sentiment':
                 results.update(run_sentiment_analysis(current_price, pair, sentiment_score))
             elif analysis_mode == 'risk':
-                results.update(run_risk_analysis(current_price))
+                results.update(run_risk_analysis(current_price, df_with_indicators))
             elif analysis_mode == 'ai_lstm':
                 results.update(run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators))
             elif analysis_mode == 'volume':
@@ -1845,27 +1845,39 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     else:  # Sentimento neutro
         sentiment_impact = sentiment_score * 0.2
     
-    # === 5. ANÁLISE IA/LSTM ===
-    # Simulação de análise LSTM baseada nos dados históricos
+    # === 5. ANÁLISE IA/LSTM (PADRONIZADA COM ANÁLISE INDIVIDUAL) ===
+    # USAR A MESMA LÓGICA DA run_ai_analysis
+    lookback_period = 20
+    epochs = 50  # Valor padrão
+    
     lstm_signal = 0
-    if len(prices) >= 20:
-        # Calcular tendência de longo prazo para simular LSTM
-        long_trend = (prices[-1] - prices[-20]) / prices[-20]
+    if len(prices) >= lookback_period:
+        # Usar exatamente os mesmos cálculos da análise individual
+        recent_prices = prices[-lookback_period:]
         
-        # Detectar padrões de reversão
-        recent_volatility = np.std(prices[-5:]) / prices[-1] if len(prices) >= 5 else 0
+        # Parâmetros idênticos à análise individual
+        risk_config = {'volatility_tolerance': 1.0, 'signal_damping': 1.0, 'min_confidence': 0.65}
         
-        # Sinal LSTM baseado em padrões e volatilidade
-        if long_trend > 0.005 and recent_volatility < 0.01:  # Tendência forte com baixa volatilidade
-            lstm_signal = 0.6
-        elif long_trend > 0.002:  # Tendência moderada
-            lstm_signal = 0.3
-        elif long_trend < -0.005 and recent_volatility < 0.01:  # Tendência forte descendente
-            lstm_signal = -0.6
-        elif long_trend < -0.002:  # Tendência moderada descendente
-            lstm_signal = -0.3
-        else:
-            lstm_signal = long_trend * 50  # Sinal proporcional
+        # Calcular múltiplas métricas (IDÊNTICO À INDIVIDUAL)
+        short_trend = (recent_prices[-1] - recent_prices[-5]) / recent_prices[-5] if len(recent_prices) >= 5 else 0
+        long_trend = (recent_prices[-1] - recent_prices[0]) / recent_prices[0]
+        volatility_ai = np.std(recent_prices) / np.mean(recent_prices)
+        
+        # Simular aprendizado (IDÊNTICO À INDIVIDUAL)
+        base_learning_factor = min(1.0, epochs / 100)
+        learning_factor = base_learning_factor * risk_config['volatility_tolerance']
+        
+        # Combinação de sinais (IDÊNTICO À INDIVIDUAL)
+        trend_signal = np.tanh(long_trend * 10) * 0.020 * risk_config['signal_damping']
+        momentum_signal = np.tanh(short_trend * 15) * 0.015 * risk_config['signal_damping']
+        volatility_signal = (0.02 - volatility_ai) * 0.010
+        
+        # Ajuste para alta volatilidade (IDÊNTICO À INDIVIDUAL)
+        if volatility_ai > 0.015:
+            volatility_signal *= 0.8
+        
+        # Sinal final (IDÊNTICO À INDIVIDUAL)
+        lstm_signal = (trend_signal * 0.5 + momentum_signal * 0.3 + volatility_signal * 0.2) * learning_factor
     
     # === 6. ANÁLISE DE RISCO ===
     # Calcular score de risco baseado em volatilidade e momentum
@@ -2080,7 +2092,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
                 'signal': lstm_norm,
                 'original_signal': lstm_signal, 
                 'weight': lstm_weight, 
-                'details': f"LSTM: Long trend={long_trend:.4f}, Recent vol={recent_volatility:.4f}" if len(prices) >= 20 else "LSTM: Dados insuficientes",
+                'details': f"LSTM: Long trend={long_trend:.4f}, Volatility={volatility_ai:.4f}, Learning={learning_factor:.3f}" if len(prices) >= lookback_period else "LSTM: Dados insuficientes",
                 'contribution': lstm_norm * lstm_weight,
                 'direction': 'COMPRA' if lstm_norm > 0.1 else 'VENDA' if lstm_norm < -0.1 else 'NEUTRO'
             },
@@ -2088,7 +2100,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
                 'signal': risk_norm,
                 'original_signal': risk_score, 
                 'weight': risk_weight, 
-                'details': f"Risco: Volatilidade={volatility:.4f}, Trend strength={abs(trend_alignment):.2f}",
+                'details': f"Risco: Volatilidade={volatility:.4f}, Score={risk_score:.3f}",
                 'contribution': risk_norm * risk_weight,
                 'direction': 'COMPRA' if risk_norm > 0.1 else 'VENDA' if risk_norm < -0.1 else 'NEUTRO'
             }
@@ -2267,24 +2279,35 @@ def run_sentiment_analysis(current_price, pair, sentiment_score):
         'sentiment_intensity': intensity_factor
     }
 
-def run_risk_analysis(current_price):
-    """Análise de risco especializada com cálculos avançados"""
+def run_risk_analysis(current_price, df_with_indicators=None):
+    """Análise de risco especializada com cálculos determinísticos (PADRONIZADA)"""
     import numpy as np
     
-    # Fatores de risco baseados no nível selecionado
-    risk_factors = {
-        'Conservative': {'volatility': 0.005, 'confidence': 0.85, 'signal_range': 0.008},
-        'Moderate': {'volatility': 0.012, 'confidence': 0.75, 'signal_range': 0.015},
-        'Aggressive': {'volatility': 0.025, 'confidence': 0.65, 'signal_range': 0.025}
-    }
+    # USAR A MESMA LÓGICA DA ANÁLISE UNIFICADA
+    if df_with_indicators is not None and len(df_with_indicators) >= 20:
+        prices = df_with_indicators['close'].values
+        price_changes = np.diff(prices[-20:]) / prices[-20:-1] if len(prices) >= 20 else np.array([0])
+        volatility = np.std(price_changes) if len(price_changes) > 0 else 0
+        
+        # Calcular score de risco baseado em volatilidade e momentum (IDÊNTICO À UNIFICADA)
+        risk_score = 0
+        if volatility > 0:
+            # Risco alto = sinal negativo, risco baixo = sinal positivo
+            if volatility > 0.02:  # Alta volatilidade
+                risk_score = -0.4
+            elif volatility > 0.01:  # Volatilidade moderada
+                risk_score = -0.2
+            elif volatility < 0.005:  # Baixa volatilidade
+                risk_score = 0.3
+            else:
+                risk_score = 0.1
+    else:
+        # Fallback para dados insuficientes
+        volatility = 0.012
+        risk_score = 0.1
     
-    # Usar configuração padrão (moderada)
-    factor = risk_factors['Moderate']
-    
-    # Sinal baseado no perfil de risco
-    signal = np.random.uniform(-factor['signal_range'], factor['signal_range'])
-    
-    # Aplicar ajuste padrão do sinal
+    # Usar o mesmo sinal da análise unificada
+    signal = risk_score
     
     predicted_price = current_price * (1 + signal)
     price_change = predicted_price - current_price
@@ -2293,9 +2316,10 @@ def run_risk_analysis(current_price):
         'predicted_price': predicted_price,
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
-        'model_confidence': factor['confidence'],
-        'analysis_focus': f'Análise de Risco Especializada - Volatilidade: {factor["volatility"]:.3f}',
-        'estimated_volatility': factor['volatility']
+        'model_confidence': 0.75,
+        'analysis_focus': f'Análise de Risco Padronizada - Volatilidade: {volatility:.4f}, Score: {risk_score:.3f}',
+        'estimated_volatility': volatility,
+        'risk_score': risk_score
     }
 
 def run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators):
