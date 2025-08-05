@@ -917,6 +917,10 @@ def main():
         # Teste de Sentimento
         test_sentiment = st.button("🔍 Testar Sentimento", help="Testa apenas a análise de sentimento")
         
+        # Debug toggle
+        st.session_state.show_debug = st.checkbox("🔧 Mostrar Debug", value=st.session_state.get('show_debug', False), 
+                                                  help="Exibe informações detalhadas sobre como as decisões são tomadas")
+        
         if test_sentiment:
             st.markdown("### 🔍 Teste da Análise de Sentimento")
             
@@ -1896,31 +1900,46 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     # Converter para float padrão para evitar problemas com numpy.float32
     unified_signal = float(unified_signal)
     
-    # Verificar se há maioria clara nos sinais
-    if positive_signals >= 3:  # 3 ou 4 sinais positivos = tendência clara de compra
-        if unified_signal > 0.3:
-            direction = "COMPRA FORTE"
-            probability = min(85, 70 + (positive_signals * 5))
-        else:
-            direction = "COMPRA"
-            probability = min(75, 60 + (positive_signals * 5))
-    elif negative_signals >= 3:  # 3 ou 4 sinais negativos = tendência clara de venda
-        if unified_signal < -0.3:
-            direction = "VENDA FORTE"
-            probability = min(85, 70 + (negative_signals * 5))
-        else:
-            direction = "VENDA"
-            probability = min(75, 60 + (negative_signals * 5))
-    else:  # Sinais mistos ou neutros
-        if unified_signal > 0.2:
+    # === LÓGICA DE CONSENSO MELHORADA ===
+    # Priorizar consenso claro sobre sinal ponderado
+    consensus_override = False
+    
+    # Caso 1: Consenso absoluto (4/4 componentes)
+    if positive_signals == 4:  # Todos positivos
+        direction = "COMPRA FORTE" if unified_signal > 0.2 else "COMPRA"
+        probability = min(85, 75 + (positive_signals * 3))
+        consensus_override = True
+    elif negative_signals == 4:  # Todos negativos
+        direction = "VENDA FORTE" if unified_signal < -0.2 else "VENDA"
+        probability = min(85, 75 + (negative_signals * 3))
+        consensus_override = True
+    
+    # Caso 2: Consenso forte (3/4 componentes)
+    elif positive_signals >= 3 and negative_signals <= 1:
+        direction = "COMPRA FORTE" if unified_signal > 0.3 else "COMPRA"
+        probability = min(80, 70 + (positive_signals * 3))
+        consensus_override = True
+    elif negative_signals >= 3 and positive_signals <= 1:
+        direction = "VENDA FORTE" if unified_signal < -0.3 else "VENDA"
+        probability = min(80, 70 + (negative_signals * 3))
+        consensus_override = True
+    
+    # Caso 3: Sinais mistos - usar sinal ponderado
+    else:
+        if unified_signal > 0.25:
             direction = "COMPRA MODERADA"
-            probability = 60
-        elif unified_signal < -0.2:
+            probability = 65
+        elif unified_signal < -0.25:
             direction = "VENDA MODERADA"
-            probability = 60
+            probability = 65
         else:
             direction = "LATERAL/NEUTRO"
             probability = 50
+    
+    # Debug para transparência
+    decision_logic = f"Consenso: {positive_signals} POS, {negative_signals} NEG | "
+    decision_logic += f"Override: {'SIM' if consensus_override else 'NÃO'} | "
+    decision_logic += f"Sinal: {unified_signal:.3f}"
     
     # === 8. PREVISÃO DE PREÇO BASEADA EM VOLATILIDADE ===
     # Garantir que current_price é float antes de operações matemáticas
@@ -1964,7 +1983,9 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
             'negative_signals': negative_signals,
             'neutral_signals': neutral_signals,
             'signal_breakdown': f"{positive_signals} COMPRA, {negative_signals} VENDA, {neutral_signals} NEUTRO",
-            'final_weighted_signal': unified_signal
+            'final_weighted_signal': unified_signal,
+            'consensus_override': consensus_override,
+            'decision_logic': decision_logic
         },
         'components': {
             'technical': {
@@ -3950,6 +3971,56 @@ def display_analysis_results():
             convergence_text = "Alta" if convergence > 0.8 else "Média" if convergence > 0.6 else "Baixa"
             st.markdown(f"**Convergência:** {convergence_text} ({convergence:.0%})")
             st.markdown("Maior convergência = maior confiança na previsão")
+    
+    # Seção de Debug Transparente
+    if analysis_mode == 'unified' and 'consensus_analysis' in results and st.session_state.get('show_debug', False):
+        with st.expander("🔧 Debug da Análise Unificada", expanded=False):
+            consensus = results['consensus_analysis']
+            components = results.get('components', {})
+            
+            st.markdown("### 📊 Transparência da Decisão")
+            
+            # Mostrar componentes individuais
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                tech_dir = components.get('technical', {}).get('direction', 'N/A')
+                tech_signal = components.get('technical', {}).get('signal', 0)
+                st.metric("🔧 Técnica", tech_dir, f"{tech_signal:.3f}")
+            
+            with col2:
+                trend_dir = components.get('trend', {}).get('direction', 'N/A')
+                trend_signal = components.get('trend', {}).get('signal', 0)
+                st.metric("📈 Tendência", trend_dir, f"{trend_signal:.3f}")
+            
+            with col3:
+                vol_dir = components.get('volume', {}).get('direction', 'N/A')
+                vol_signal = components.get('volume', {}).get('signal', 0)
+                st.metric("📊 Volume", vol_dir, f"{vol_signal:.3f}")
+            
+            with col4:
+                sent_dir = components.get('sentiment', {}).get('direction', 'N/A')
+                sent_signal = components.get('sentiment', {}).get('signal', 0)
+                st.metric("💭 Sentimento", sent_dir, f"{sent_signal:.3f}")
+            
+            # Lógica de decisão
+            st.markdown("### 🧠 Lógica de Decisão")
+            st.info(f"**Contagem:** {consensus.get('signal_breakdown', 'N/A')}")
+            st.info(f"**Sinal Ponderado:** {consensus.get('final_weighted_signal', 0):.3f}")
+            st.info(f"**Override Consenso:** {consensus.get('consensus_override', False)}")
+            st.info(f"**Lógica:** {consensus.get('decision_logic', 'N/A')}")
+            
+            # Verificar inconsistência
+            pos_signals = consensus.get('positive_signals', 0)
+            neg_signals = consensus.get('negative_signals', 0)
+            final_signal = consensus.get('final_weighted_signal', 0)
+            
+            if pos_signals > neg_signals and final_signal < 0:
+                st.error("⚠️ INCONSISTÊNCIA DETECTADA: Mais sinais positivos mas resultado negativo!")
+            elif neg_signals > pos_signals and final_signal > 0:
+                st.error("⚠️ INCONSISTÊNCIA DETECTADA: Mais sinais negativos mas resultado positivo!")
+            else:
+                st.success("✅ Lógica consistente entre componentes e resultado final")
     
     # Additional metrics
     col1, col2, col3 = st.columns(3)
