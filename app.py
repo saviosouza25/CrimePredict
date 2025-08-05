@@ -1838,12 +1838,12 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     # Limitar o sinal para evitar dominância
     volume_confirmation = max(-0.3, min(0.3, volume_confirmation))
     
-    # === 4. SENTIMENTO AMPLIFICADO ===
+    # === 4. SENTIMENTO AMPLIFICADO (IDÊNTICO À INDIVIDUAL) ===
     sentiment_impact = 0
-    if abs(sentiment_score) > 0.1:  # Sentimento forte
+    if sentiment_score > 0.05:  # Sentimento positivo forte
         sentiment_impact = sentiment_score * 0.8
-    elif abs(sentiment_score) > 0.05:  # Sentimento moderado
-        sentiment_impact = sentiment_score * 0.5
+    elif sentiment_score < -0.05:  # Sentimento negativo forte
+        sentiment_impact = sentiment_score * 0.6
     else:  # Sentimento neutro
         sentiment_impact = sentiment_score * 0.2
     
@@ -2202,18 +2202,18 @@ def run_technical_analysis(current_price, df_with_indicators):
     macd = df_with_indicators['macd'].iloc[-1] if 'macd' in df_with_indicators.columns else 0
     sma_20 = df_with_indicators['sma_20'].iloc[-1] if 'sma_20' in df_with_indicators.columns else current_price
     
-    # Sinais dos indicadores ajustados pelo perfil de risco
-    base_rsi_signal = (50 - rsi) / 50 * 0.015
-    base_macd_signal = np.tanh(macd * 1000) * 0.012
-    base_sma_signal = (current_price - sma_20) / sma_20 * 0.018
+    # USAR EXATAMENTE O MESMO CÁLCULO DA ANÁLISE UNIFICADA
+    bb_position = (current_price - df_with_indicators['bb_lower'].iloc[-1]) / (df_with_indicators['bb_upper'].iloc[-1] - df_with_indicators['bb_lower'].iloc[-1])
     
-    # Aplicar fator de risco
-    rsi_signal = base_rsi_signal * risk_params['signal_factor']
-    macd_signal = base_macd_signal * risk_params['signal_factor']
-    sma_signal = base_sma_signal * risk_params['signal_factor']
+    # Forças dos sinais técnicos (IDÊNTICO À UNIFICADA)
+    rsi_signal = 0.5 - (rsi / 100)  # RSI invertido (alta = negativo)
+    macd_signal = macd * 50  # MACD amplificado
+    bb_signal = (bb_position - 0.5) * 0.4  # Bollinger normalizado
     
-    # Combinação ponderada
-    combined_signal = (rsi_signal * 0.4 + macd_signal * 0.35 + sma_signal * 0.25)
+    # Combinar sinais técnicos (IDÊNTICO À UNIFICADA)
+    technical_strength = (rsi_signal * 0.4 + macd_signal * 0.4 + bb_signal * 0.2)
+    
+    combined_signal = technical_strength
     
     # Calcular confiança baseada na convergência e perfil de risco
     signals = [rsi_signal, macd_signal, sma_signal]
@@ -2229,11 +2229,12 @@ def run_technical_analysis(current_price, df_with_indicators):
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': confidence,
-        'analysis_focus': f'Análise Técnica - RSI: {rsi:.1f}, MACD: {macd:.5f}, SMA20: {sma_20:.5f}',
+        'analysis_focus': f"RSI: {float(rsi):.1f}, MACD: {float(macd):.5f}, Bollinger: {bb_position:.2f}",
+        'technical_strength': technical_strength,
         'technical_indicators': {
             'rsi': rsi,
             'macd': macd,
-            'sma_20': sma_20
+            'bb_position': bb_position
         }
     }
 
@@ -2250,19 +2251,15 @@ def run_sentiment_analysis(current_price, pair, sentiment_score):
     # Usar configuração padrão (moderada)
     risk_params = risk_adjustments['Moderate']
     
-    # Usar dados reais de sentimento com ajustes de volatilidade e perfil de risco
-    base_signal = sentiment_score * 0.015 * risk_params['signal_factor']
+    # USAR EXATAMENTE O MESMO CÁLCULO DA ANÁLISE UNIFICADA
+    if sentiment_score > 0.05:  # Sentimento positivo forte
+        sentiment_impact = sentiment_score * 0.8
+    elif sentiment_score < -0.05:  # Sentimento negativo forte
+        sentiment_impact = sentiment_score * 0.6
+    else:  # Sentimento neutro
+        sentiment_impact = sentiment_score * 0.2
     
-    # Fator de ajuste baseado na intensidade do sentimento
-    intensity_factor = abs(sentiment_score)
-    
-    # Limitar impacto de sentimentos extremos
-    if intensity_factor > risk_params['volatility_threshold']:
-        intensity_factor = risk_params['volatility_threshold']
-    
-    adjusted_signal = base_signal * (1 + intensity_factor)
-    
-    predicted_price = current_price * (1 + adjusted_signal)
+    predicted_price = current_price * (1 + sentiment_impact)
     price_change = predicted_price - current_price
     
     # Classificação de sentimento mais detalhada com ajuste de confiança por risco
@@ -2291,8 +2288,8 @@ def run_sentiment_analysis(current_price, pair, sentiment_score):
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': confidence,
         'sentiment_score': sentiment_score,
-        'analysis_focus': f'Sentimento de Mercado: {sentiment_label} (Score: {sentiment_score:.3f}, Intensidade: {intensity_factor:.3f})',
-        'sentiment_intensity': intensity_factor
+        'sentiment_impact': sentiment_impact,  # RETORNAR O MESMO VALOR DA UNIFICADA
+        'analysis_focus': f'Sentimento de Mercado: {sentiment_label} (Score: {sentiment_score:.3f}, Impacto: {sentiment_impact:.3f})'
     }
 
 def run_risk_analysis(current_price, df_with_indicators=None):
@@ -2425,16 +2422,23 @@ def run_volume_analysis(current_price, df_with_indicators):
     # Usar configuração padrão (moderada)
     config = risk_configs['Moderate']
     
-    # Usar volatilidade como proxy para volume
-    volatility = df_with_indicators['close'].tail(20).std() / current_price
+    # USAR EXATAMENTE O MESMO CÁLCULO DA ANÁLISE UNIFICADA
+    prices = df_with_indicators['close'].values
+    volatility_threshold = 0.020
+    volume_volatility = np.std(prices[-10:]) / np.mean(prices[-10:]) if len(prices) >= 10 else 0.015
     
-    # Ajustar sinal baseado no perfil de risco
-    base_signal = (config['volatility_threshold'] - volatility) * 0.015
-    signal = base_signal * config['signal_factor']
+    # Usar o mesmo cálculo da unificada
+    base_volume_signal = (volatility_threshold - volume_volatility) * 0.015
+    volume_confirmation = base_volume_signal * 1.0  # signal_factor = 1.0
     
-    # Ajuste padrão para alta volatilidade
-    if volatility > config['volatility_threshold']:
-        signal *= 0.8
+    # Ajuste para alta volatilidade (mesma lógica da análise individual)
+    if volume_volatility > volatility_threshold:
+        volume_confirmation *= 0.8
+    
+    # Limitar o sinal para evitar dominância
+    volume_confirmation = max(-0.3, min(0.3, volume_confirmation))
+    
+    signal = volume_confirmation
     
     predicted_price = current_price * (1 + signal)
     price_change = predicted_price - current_price
@@ -2444,7 +2448,8 @@ def run_volume_analysis(current_price, df_with_indicators):
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': config['confidence'],
-        'analysis_focus': f'Volume/Liquidez - Volatilidade: {volatility:.4f}, Limite: {config["volatility_threshold"]:.3f}',
+        'analysis_focus': f'Volume/Volatilidade: {volume_volatility:.4f} (limite: {volatility_threshold:.3f})',
+        'volume_confirmation': volume_confirmation,
     }
 
 def run_trend_analysis(current_price, df_with_indicators):
@@ -2461,21 +2466,15 @@ def run_trend_analysis(current_price, df_with_indicators):
     # Usar configuração padrão (moderada)
     settings = risk_settings['Moderate']
     
-    # Análise de tendência baseada em médias móveis
-    sma_20 = df_with_indicators['sma_20'].iloc[-1] if 'sma_20' in df_with_indicators.columns else current_price
-    sma_50 = df_with_indicators['sma_50'].iloc[-1] if 'sma_50' in df_with_indicators.columns else current_price
+    # USAR EXATAMENTE O MESMO CÁLCULO DA ANÁLISE UNIFICADA
+    prices = df_with_indicators['close'].values
+    trend_5 = (prices[-1] - prices[-6]) / prices[-6] if len(prices) >= 6 else 0
+    trend_10 = (prices[-1] - prices[-11]) / prices[-11] if len(prices) >= 11 else 0
+    trend_20 = (prices[-1] - prices[-21]) / prices[-21] if len(prices) >= 21 else 0
     
-    # Sinal baseado na posição do preço em relação às médias
-    price_vs_sma20 = (current_price - sma_20) / sma_20
-    sma_cross = (sma_20 - sma_50) / sma_50 if sma_50 != 0 else 0
-    
-    # Aplicar multiplicador de risco e limites
-    base_signal = (price_vs_sma20 + sma_cross) / 2 * 0.018
-    signal = base_signal * settings['signal_multiplier']
-    
-    # Limitar sinais fortes para estabilidade
-    if abs(signal) > settings['trend_threshold']:
-        signal = np.sign(signal) * settings['trend_threshold']
+    # Combinar tendências com pesos (IDÊNTICO À UNIFICADA)
+    trend_alignment = (trend_5 * 0.5 + trend_10 * 0.3 + trend_20 * 0.2)
+    signal = trend_alignment
     
     predicted_price = current_price * (1 + signal)
     price_change = predicted_price - current_price
@@ -2485,7 +2484,8 @@ def run_trend_analysis(current_price, df_with_indicators):
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': settings['confidence'],
-        'analysis_focus': f'Tendência - SMA20: {sma_20:.5f}, SMA50: {sma_50:.5f}, Força: {abs(signal):.4f}',
+        'analysis_focus': f'Tendência Multi-TF: {float(trend_5)*100:.2f}%/5p {float(trend_10)*100:.2f}%/10p {float(trend_20)*100:.2f}%/20p',
+        'trend_alignment': trend_alignment,
     }
 
 def run_basic_analysis(current_price, is_quick, sentiment_score, interval="1hour", horizon="1 dia"):
