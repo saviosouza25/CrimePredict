@@ -1815,6 +1815,16 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
         technical_strength -= 0.3
         technical_components.append(f"MACD Negativo: VENDA")
     
+    # SMA Signal (médias móveis)
+    sma_signal = (current_price - sma_20) / sma_20 if sma_20 > 0 else 0
+    if abs(sma_signal) > 0.005:  # Movimento significativo acima/abaixo da SMA
+        if sma_signal > 0:
+            technical_strength += 0.3
+            technical_components.append(f"SMA20 Rompimento Alta: COMPRA")
+        else:
+            technical_strength -= 0.3
+            technical_components.append(f"SMA20 Rompimento Baixa: VENDA")
+    
     # Bollinger Bands: Posição e squeeze
     bb_width = (bb_upper - bb_lower) / current_price
     bb_position = (current_price - bb_lower) / (bb_upper - bb_lower) if bb_upper != bb_lower else 0.5
@@ -2286,6 +2296,9 @@ def run_technical_analysis(current_price, df_with_indicators):
     
     # USAR EXATAMENTE O MESMO CÁLCULO DA ANÁLISE UNIFICADA
     bb_position = (current_price - df_with_indicators['bb_lower'].iloc[-1]) / (df_with_indicators['bb_upper'].iloc[-1] - df_with_indicators['bb_lower'].iloc[-1])
+    
+    # SMA Signal (definindo a variável que estava faltando)
+    sma_signal = (current_price - sma_20) / sma_20 if sma_20 > 0 else 0
     
     # Forças dos sinais técnicos (IDÊNTICO À UNIFICADA)
     rsi_signal = 0.5 - (rsi / 100)  # RSI invertido (alta = negativo)
