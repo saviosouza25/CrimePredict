@@ -770,9 +770,21 @@ def main():
         interval = selected_preset["interval"]
         horizon = selected_preset["horizon"]
         
-        # Mostrar configuração atual
+        # Mapear preset_choice para trading_style
+        trading_style_mapping = {
+            "Intraday (15-30 min)": "intraday",
+            "Swing (1-4 horas)": "swing", 
+            "Position (Diário)": "position"
+        }
+        
+        # Definir trading_style baseado na seleção
+        trading_style = trading_style_mapping.get(preset_choice, "swing")
+        st.session_state['trading_style'] = trading_style
+        
+        # Mostrar configuração atual com estratégia
         st.info(f"📊 **{preset_choice}** | Intervalo: {interval} | Horizonte: {horizon}")
         st.caption(f"💡 {selected_preset['description']}")
+        st.success(f"🎯 **Estratégia Ativa:** {trading_style.upper()}")
         
         # Opção avançada para configuração manual (colapsável)
         with st.expander("⚙️ Configuração Manual Avançada"):
@@ -793,6 +805,13 @@ def main():
             if st.checkbox("Usar Configuração Manual"):
                 interval = manual_interval
                 horizon = manual_horizon
+                # Tentar manter o trading_style consistente mesmo no modo manual
+                if "15min" in interval or "30min" in interval:
+                    st.session_state['trading_style'] = "intraday"
+                elif "60min" in interval or "1hour" in interval:
+                    st.session_state['trading_style'] = "swing"
+                elif "daily" in interval:
+                    st.session_state['trading_style'] = "position"
                 st.error("🔧 Modo manual ativo - Verifique se intervalo e horizonte estão compatíveis!")
         
         # Usar configuração de risco padrão (moderado)
@@ -1641,7 +1660,10 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
             
             # Executar análises baseadas no modo selecionado - argumentos corretos
             if analysis_mode == 'unified':
-                results.update(run_unified_analysis(current_price, pair, sentiment_score, df_with_indicators, st.session_state.get('trading_style', 'swing')))
+                current_trading_style = st.session_state.get('trading_style', 'swing')
+                # Debug: verificar estratégia
+                status_text.text(f"🎯 Executando análise {current_trading_style.upper()}...")
+                results.update(run_unified_analysis(current_price, pair, sentiment_score, df_with_indicators, current_trading_style))
             elif analysis_mode == 'technical':
                 results.update(run_technical_analysis(current_price, df_with_indicators))
             elif analysis_mode == 'sentiment':
