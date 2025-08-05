@@ -1810,7 +1810,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
         'analysis_timestamp': current_time.strftime('%d/%m/%Y %H:%M UTC')
     }
     
-    # === 1. ANÁLISE TÉCNICA ROBUSTA ===
+    # === 1. ANÁLISE TÉCNICA ESPECÍFICA POR ESTRATÉGIA ===
     latest = df_with_indicators.iloc[-1]
     rsi = latest.get('rsi', 50)
     macd = latest.get('macd', 0)
@@ -1819,40 +1819,103 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     bb_upper = latest.get('bb_upper', current_price * 1.02)
     bb_lower = latest.get('bb_lower', current_price * 0.98)
     
-    # Força técnica baseada em múltiplos timeframes
+    # Força técnica baseada na estratégia selecionada
     technical_strength = 0
     technical_components = []
     
-    # RSI: Momentum detalhado
-    if rsi < 25:  # Extremamente oversold
-        technical_strength += 0.8
-        technical_components.append(f"RSI Extremo Oversold({rsi:.1f}): FORTE COMPRA")
-    elif rsi < 35:  # Oversold moderado
-        technical_strength += 0.4
-        technical_components.append(f"RSI Oversold({rsi:.1f}): COMPRA")
-    elif rsi > 75:  # Extremamente overbought
-        technical_strength -= 0.8
-        technical_components.append(f"RSI Extremo Overbought({rsi:.1f}): FORTE VENDA")
-    elif rsi > 65:  # Overbought moderado
-        technical_strength -= 0.4
-        technical_components.append(f"RSI Overbought({rsi:.1f}): VENDA")
-    else:
-        technical_components.append(f"RSI Neutro({rsi:.1f}): NEUTRO")
+    # RSI: Configurações específicas por estratégia
+    if trading_style == 'intraday':  # Day Trading - RSI mais sensível
+        if rsi < 30:  # Oversold para day trading
+            technical_strength += 0.9
+            technical_components.append(f"RSI Day Trade Oversold({rsi:.1f}): COMPRA FORTE")
+        elif rsi < 40:
+            technical_strength += 0.5
+            technical_components.append(f"RSI Day Trade Favorável({rsi:.1f}): COMPRA")
+        elif rsi > 70:  # Overbought para day trading
+            technical_strength -= 0.9
+            technical_components.append(f"RSI Day Trade Overbought({rsi:.1f}): VENDA FORTE")
+        elif rsi > 60:
+            technical_strength -= 0.5
+            technical_components.append(f"RSI Day Trade Desfavorável({rsi:.1f}): VENDA")
+        else:
+            technical_components.append(f"RSI Day Trade Neutro({rsi:.1f}): NEUTRO")
     
-    # MACD: Cruzamentos e divergências
+    elif trading_style == 'swing':  # Swing Trading - RSI moderado
+        if rsi < 25:
+            technical_strength += 0.7
+            technical_components.append(f"RSI Swing Extremo Oversold({rsi:.1f}): COMPRA FORTE")
+        elif rsi < 35:
+            technical_strength += 0.4
+            technical_components.append(f"RSI Swing Oversold({rsi:.1f}): COMPRA")
+        elif rsi > 75:
+            technical_strength -= 0.7
+            technical_components.append(f"RSI Swing Extremo Overbought({rsi:.1f}): VENDA FORTE")
+        elif rsi > 65:
+            technical_strength -= 0.4
+            technical_components.append(f"RSI Swing Overbought({rsi:.1f}): VENDA")
+        else:
+            technical_components.append(f"RSI Swing Neutro({rsi:.1f}): NEUTRO")
+    
+    else:  # Position Trading - RSI menos sensível, foco em extremos
+        if rsi < 20:  # Extremos mais raros para position
+            technical_strength += 0.6
+            technical_components.append(f"RSI Position Extremo Oversold({rsi:.1f}): COMPRA")
+        elif rsi > 80:
+            technical_strength -= 0.6
+            technical_components.append(f"RSI Position Extremo Overbought({rsi:.1f}): VENDA")
+        elif rsi < 30:
+            technical_strength += 0.3
+            technical_components.append(f"RSI Position Oversold({rsi:.1f}): COMPRA MODERADA")
+        elif rsi > 70:
+            technical_strength -= 0.3
+            technical_components.append(f"RSI Position Overbought({rsi:.1f}): VENDA MODERADA")
+        else:
+            technical_components.append(f"RSI Position Neutro({rsi:.1f}): NEUTRO")
+    
+    # MACD: Configurações específicas por estratégia
     macd_signal = macd if abs(macd) > 0.0001 else 0
-    if macd_signal > 0.0005:
-        technical_strength += 0.6
-        technical_components.append(f"MACD Forte Positivo: COMPRA FORTE")
-    elif macd_signal > 0:
-        technical_strength += 0.3
-        technical_components.append(f"MACD Positivo: COMPRA")
-    elif macd_signal < -0.0005:
-        technical_strength -= 0.6
-        technical_components.append(f"MACD Forte Negativo: VENDA FORTE")
-    elif macd_signal < 0:
-        technical_strength -= 0.3
-        technical_components.append(f"MACD Negativo: VENDA")
+    
+    if trading_style == 'intraday':  # Day Trading - MACD mais responsivo
+        if macd_signal > 0.0003:  # Threshold menor para day trading
+            technical_strength += 0.8
+            technical_components.append(f"MACD Day Trade Forte Positivo: COMPRA FORTE")
+        elif macd_signal > 0:
+            technical_strength += 0.4
+            technical_components.append(f"MACD Day Trade Positivo: COMPRA")
+        elif macd_signal < -0.0003:
+            technical_strength -= 0.8
+            technical_components.append(f"MACD Day Trade Forte Negativo: VENDA FORTE")
+        elif macd_signal < 0:
+            technical_strength -= 0.4
+            technical_components.append(f"MACD Day Trade Negativo: VENDA")
+    
+    elif trading_style == 'swing':  # Swing Trading - MACD moderado
+        if macd_signal > 0.0005:
+            technical_strength += 0.6
+            technical_components.append(f"MACD Swing Forte Positivo: COMPRA FORTE")
+        elif macd_signal > 0:
+            technical_strength += 0.3
+            technical_components.append(f"MACD Swing Positivo: COMPRA")
+        elif macd_signal < -0.0005:
+            technical_strength -= 0.6
+            technical_components.append(f"MACD Swing Forte Negativo: VENDA FORTE")
+        elif macd_signal < 0:
+            technical_strength -= 0.3
+            technical_components.append(f"MACD Swing Negativo: VENDA")
+    
+    else:  # Position Trading - MACD menos sensível
+        if macd_signal > 0.0008:  # Threshold maior para position
+            technical_strength += 0.5
+            technical_components.append(f"MACD Position Forte Positivo: COMPRA")
+        elif macd_signal > 0.0002:
+            technical_strength += 0.2
+            technical_components.append(f"MACD Position Positivo: COMPRA LEVE")
+        elif macd_signal < -0.0008:
+            technical_strength -= 0.5
+            technical_components.append(f"MACD Position Forte Negativo: VENDA")
+        elif macd_signal < -0.0002:
+            technical_strength -= 0.2
+            technical_components.append(f"MACD Position Negativo: VENDA LEVE")
     
     # SMA Signal (médias móveis)
     sma_signal = (current_price - sma_20) / sma_20 if sma_20 > 0 else 0
@@ -1875,28 +1938,72 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
         technical_strength -= 0.5
         technical_components.append(f"BB Extremo Superior: VENDA FORTE")
     
-    # === 2. MOMENTUM E TENDÊNCIA MULTI-TIMEFRAME ===
+    # === 2. MOMENTUM E TENDÊNCIA ESPECÍFICA POR ESTRATÉGIA ===
     prices = df_with_indicators['close'].values
     
-    # Tendências em múltiplos períodos
-    trend_5 = (prices[-1] - prices[-6]) / prices[-6] if len(prices) >= 6 else 0
-    trend_10 = (prices[-1] - prices[-11]) / prices[-11] if len(prices) >= 11 else 0
-    trend_20 = (prices[-1] - prices[-21]) / prices[-21] if len(prices) >= 21 else 0
+    # Análise de tendência específica por estratégia
+    if trading_style == 'intraday':  # Day Trading - Tendências curtas e rápidas
+        trend_3 = (prices[-1] - prices[-4]) / prices[-4] if len(prices) >= 4 else 0
+        trend_5 = (prices[-1] - prices[-6]) / prices[-6] if len(prices) >= 6 else 0
+        trend_10 = (prices[-1] - prices[-11]) / prices[-11] if len(prices) >= 11 else 0
+        
+        # Day Trading foca em movimentos rápidos
+        if trend_3 > 0.002 and trend_5 > 0.001:  # Movimento forte curto prazo
+            trend_alignment = 0.9
+        elif trend_3 > 0.001 and trend_5 > 0.0005:
+            trend_alignment = 0.6
+        elif trend_3 > 0 and trend_5 > 0:
+            trend_alignment = 0.3
+        elif trend_3 < -0.002 and trend_5 < -0.001:
+            trend_alignment = -0.9
+        elif trend_3 < -0.001 and trend_5 < -0.0005:
+            trend_alignment = -0.6
+        elif trend_3 < 0 and trend_5 < 0:
+            trend_alignment = -0.3
+        else:
+            trend_alignment = 0
     
-    # Força da tendência confluente
-    trend_alignment = 0
-    if trend_5 > 0.001 and trend_10 > 0.001 and trend_20 > 0.001:
-        trend_alignment = 0.9  # Tendência alta muito forte
-    elif trend_5 > 0.0005 and trend_10 > 0.0005:
-        trend_alignment = 0.6  # Tendência alta forte
-    elif trend_5 > 0 and trend_10 > 0:
-        trend_alignment = 0.3  # Tendência alta
-    elif trend_5 < -0.001 and trend_10 < -0.001 and trend_20 < -0.001:
-        trend_alignment = -0.9  # Tendência baixa muito forte
-    elif trend_5 < -0.0005 and trend_10 < -0.0005:
-        trend_alignment = -0.6  # Tendência baixa forte
-    elif trend_5 < 0 and trend_10 < 0:
-        trend_alignment = -0.3  # Tendência baixa
+    elif trading_style == 'swing':  # Swing Trading - Tendências médias
+        trend_5 = (prices[-1] - prices[-6]) / prices[-6] if len(prices) >= 6 else 0
+        trend_10 = (prices[-1] - prices[-11]) / prices[-11] if len(prices) >= 11 else 0
+        trend_20 = (prices[-1] - prices[-21]) / prices[-21] if len(prices) >= 21 else 0
+        
+        # Swing Trading - confluência de timeframes médios
+        if trend_5 > 0.001 and trend_10 > 0.001 and trend_20 > 0.001:
+            trend_alignment = 0.9
+        elif trend_5 > 0.0005 and trend_10 > 0.0005:
+            trend_alignment = 0.6
+        elif trend_5 > 0 and trend_10 > 0:
+            trend_alignment = 0.3
+        elif trend_5 < -0.001 and trend_10 < -0.001 and trend_20 < -0.001:
+            trend_alignment = -0.9
+        elif trend_5 < -0.0005 and trend_10 < -0.0005:
+            trend_alignment = -0.6
+        elif trend_5 < 0 and trend_10 < 0:
+            trend_alignment = -0.3
+        else:
+            trend_alignment = 0
+    
+    else:  # Position Trading - Tendências longas e consistentes
+        trend_10 = (prices[-1] - prices[-11]) / prices[-11] if len(prices) >= 11 else 0
+        trend_20 = (prices[-1] - prices[-21]) / prices[-21] if len(prices) >= 21 else 0
+        trend_50 = (prices[-1] - prices[-51]) / prices[-51] if len(prices) >= 51 else 0
+        
+        # Position Trading - foca em tendências longas e sustentadas
+        if trend_10 > 0.002 and trend_20 > 0.003 and trend_50 > 0.005:  # Tendência longa consistente
+            trend_alignment = 0.8
+        elif trend_10 > 0.001 and trend_20 > 0.002:
+            trend_alignment = 0.5
+        elif trend_10 > 0 and trend_20 > 0:
+            trend_alignment = 0.2
+        elif trend_10 < -0.002 and trend_20 < -0.003 and trend_50 < -0.005:
+            trend_alignment = -0.8
+        elif trend_10 < -0.001 and trend_20 < -0.002:
+            trend_alignment = -0.5
+        elif trend_10 < 0 and trend_20 < 0:
+            trend_alignment = -0.2
+        else:
+            trend_alignment = 0
     
     # === 3. ANÁLISE DE VOLATILIDADE E VOLUME (PADRONIZADA) ===
     price_changes = np.diff(prices[-20:]) / prices[-20:-1] if len(prices) >= 20 else np.array([0])
@@ -1922,14 +2029,30 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     # Limitar o sinal para evitar dominância
     volume_confirmation = max(-0.3, min(0.3, volume_confirmation))
     
-    # === 4. SENTIMENTO AMPLIFICADO (IDÊNTICO À INDIVIDUAL) ===
-    sentiment_impact = 0
-    if sentiment_score > 0.05:  # Sentimento positivo forte
-        sentiment_impact = sentiment_score * 0.8
-    elif sentiment_score < -0.05:  # Sentimento negativo forte
-        sentiment_impact = sentiment_score * 0.6
-    else:  # Sentimento neutro
-        sentiment_impact = sentiment_score * 0.2
+    # === 4. SENTIMENTO ESPECÍFICO POR ESTRATÉGIA ===
+    if trading_style == 'intraday':  # Day Trading - Sentimento menos relevante
+        if sentiment_score > 0.1:  # Threshold maior para day trading
+            sentiment_impact = sentiment_score * 0.4  # Peso menor
+        elif sentiment_score < -0.1:
+            sentiment_impact = sentiment_score * 0.3
+        else:
+            sentiment_impact = sentiment_score * 0.1
+    
+    elif trading_style == 'swing':  # Swing Trading - Sentimento moderado
+        if sentiment_score > 0.05:
+            sentiment_impact = sentiment_score * 0.6
+        elif sentiment_score < -0.05:
+            sentiment_impact = sentiment_score * 0.5
+        else:
+            sentiment_impact = sentiment_score * 0.2
+    
+    else:  # Position Trading - Sentimento muito relevante
+        if sentiment_score > 0.02:  # Threshold menor, mais sensível
+            sentiment_impact = sentiment_score * 1.0  # Peso maior
+        elif sentiment_score < -0.02:
+            sentiment_impact = sentiment_score * 0.8
+        else:
+            sentiment_impact = sentiment_score * 0.4
     
     # === 5. ANÁLISE IA/LSTM (PADRONIZADA COM ANÁLISE INDIVIDUAL) ===
     # USAR A MESMA LÓGICA DA run_ai_analysis
