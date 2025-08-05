@@ -4283,22 +4283,7 @@ def display_metrics_tab(results):
         st.write(f"**Tipo:** {mode_names.get(analysis_mode, 'Padrão')}")
     
     # Show component breakdown for unified analysis
-    if results.get('analysis_mode') == 'unified' and 'components' in results:
-        st.markdown("---")
-        st.markdown("**Breakdown dos Componentes (Análise Unificada):**")
-        
-        components_data = []
-        for component, data in results['components'].items():
-            components_data.append({
-                'Componente': component.title(),
-                'Sinal (%)': f"{data['signal']*100:+.3f}%",
-                'Peso (%)': f"{data['weight']*100:.0f}%",
-                'Contribuição': f"{data['signal']*data['weight']*100:+.3f}%"
-            })
-        
-        import pandas as pd
-        df_components = pd.DataFrame(components_data)
-        st.dataframe(df_components, use_container_width=True)
+
 
 def run_basic_analysis(current_price, is_quick, sentiment_score=0):
     """Análise básica/rápida"""
@@ -4315,7 +4300,7 @@ def run_basic_analysis(current_price, is_quick, sentiment_score=0):
     }
 
 def display_analysis_results():
-    """Display enhanced analysis results"""
+    """Display enhanced analysis results - COMPONENTES REMOVIDOS"""
     if not st.session_state.get('analysis_results'):
         return
     
@@ -4425,91 +4410,6 @@ def display_analysis_results():
         </div>
         """, unsafe_allow_html=True)
     
-    # Mostrar componentes da análise unificada
-    if analysis_mode == 'unified' and 'components' in results:
-        st.markdown("### 🔍 Componentes da Análise Unificada")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**Sinais por Componente:**")
-            for component, data in results['components'].items():
-                signal_pct = data['signal'] * 100
-                weight_pct = data['weight'] * 100
-                color = "🟢" if data['signal'] > 0 else "🔴" if data['signal'] < 0 else "🟡"
-                st.markdown(f"{color} **{component.title()}:** {signal_pct:+.2f}% (peso: {weight_pct:.0f}%)")
-        
-        with col2:
-            st.markdown("**Convergência dos Sinais:**")
-            import numpy as np
-            signals = [data['signal'] for data in results['components'].values()]
-            convergence = 1 - (np.var(signals) * 100) if signals else 0
-            convergence_text = "Alta" if convergence > 0.8 else "Média" if convergence > 0.6 else "Baixa"
-            st.markdown(f"**Convergência:** {convergence_text} ({convergence:.0%})")
-            st.markdown("Maior convergência = maior confiança na previsão")
-    
-    # Seção de Debug Transparente
-    if analysis_mode == 'unified' and 'consensus_analysis' in results and st.session_state.get('show_debug', False):
-        with st.expander("🔧 Debug da Análise Unificada", expanded=False):
-            consensus = results['consensus_analysis']
-            components = results.get('components', {})
-            
-            st.markdown("### 📊 Transparência da Decisão")
-            
-            # Mostrar componentes individuais
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                tech_dir = components.get('technical', {}).get('direction', 'N/A')
-                tech_signal = components.get('technical', {}).get('signal', 0)
-                st.metric("🔧 Técnica", tech_dir, f"{tech_signal:.3f}")
-            
-            with col2:
-                trend_dir = components.get('trend', {}).get('direction', 'N/A')
-                trend_signal = components.get('trend', {}).get('signal', 0)
-                st.metric("📈 Tendência", trend_dir, f"{trend_signal:.3f}")
-            
-            with col3:
-                vol_dir = components.get('volume', {}).get('direction', 'N/A')
-                vol_signal = components.get('volume', {}).get('signal', 0)
-                st.metric("📊 Volume", vol_dir, f"{vol_signal:.3f}")
-            
-            with col4:
-                sent_dir = components.get('sentiment', {}).get('direction', 'N/A')
-                sent_signal = components.get('sentiment', {}).get('signal', 0)
-                st.metric("💭 Sentimento", sent_dir, f"{sent_signal:.3f}")
-            
-            # Segunda linha com AI/LSTM e Risk
-            col5, col6 = st.columns(2)
-            
-            with col5:
-                ai_dir = components.get('ai_lstm', {}).get('direction', 'N/A')
-                ai_signal = components.get('ai_lstm', {}).get('signal', 0)
-                st.metric("🤖 IA/LSTM", ai_dir, f"{ai_signal:.3f}")
-            
-            with col6:
-                risk_dir = components.get('risk', {}).get('direction', 'N/A')
-                risk_signal = components.get('risk', {}).get('signal', 0)
-                st.metric("⚖️ Risco", risk_dir, f"{risk_signal:.3f}")
-            
-            # Lógica de decisão
-            st.markdown("### 🧠 Lógica de Decisão")
-            st.info(f"**Contagem:** {consensus.get('signal_breakdown', 'N/A')}")
-            st.info(f"**Sinal Ponderado:** {consensus.get('final_weighted_signal', 0):.3f}")
-            st.info(f"**Override Consenso:** {consensus.get('consensus_override', False)}")
-            st.info(f"**Lógica:** {consensus.get('decision_logic', 'N/A')}")
-            
-            # Verificar inconsistência
-            pos_signals = consensus.get('positive_signals', 0)
-            neg_signals = consensus.get('negative_signals', 0)
-            final_signal = consensus.get('final_weighted_signal', 0)
-            
-            if pos_signals > neg_signals and final_signal < 0:
-                st.error("⚠️ INCONSISTÊNCIA DETECTADA: Mais sinais positivos mas resultado negativo!")
-            elif neg_signals > pos_signals and final_signal > 0:
-                st.error("⚠️ INCONSISTÊNCIA DETECTADA: Mais sinais negativos mas resultado positivo!")
-            else:
-                st.success("✅ Lógica consistente entre componentes e resultado final")
     
     # Additional metrics
     col1, col2, col3 = st.columns(3)
@@ -4534,6 +4434,24 @@ def display_analysis_results():
             results['timestamp'].strftime('%H:%M:%S'),
             f"Par: {results['pair']}"
         )
+
+def display_metrics_tab(results):
+    """Display metrics tab content"""
+    st.markdown("### 📊 Métricas Detalhadas")
+    
+    mode_names = {
+        'unified': '🧠 Análise Unificada Inteligente',
+        'technical': '📊 Análise Técnica', 
+        'sentiment': '📰 Análise de Sentimento',
+        'risk': '⚖️ Análise de Risco',
+        'ai_lstm': '🤖 Análise IA/LSTM',
+        'volume': '📈 Análise de Volume',
+        'trend': '📉 Análise de Tendência'
+    }
+    
+    analysis_mode = results.get('analysis_mode', 'unified')
+    if analysis_mode in mode_names:
+        st.write(f"**Tipo:** {mode_names.get(analysis_mode, 'Padrão')}")
 
 if __name__ == "__main__":
     main()
