@@ -66,6 +66,12 @@ Preferred communication style: Simple, everyday language.
 - **Temporal Strategy**: Market-realistic parameters for each timeframe (5min to 1 month) based on actual trading statistics
 - **Environment**: Environment variable support for sensitive data
 
+## Recent Bug Fixes (August 2025)
+- **Volume Analysis Consistency**: Fixed critical inconsistency where individual volume analysis showed "COMPRA" but unified analysis showed "VENDA" for same data
+- **Root Cause**: Different calculation methods between analyses (volatility-based vs range-based)
+- **Solution**: Standardized both to use identical volatility-based calculation with threshold 0.020
+- **Prevention**: Added debug_volume_consistency.py tool for future validation
+
 # External Dependencies
 
 ## APIs and Web Services

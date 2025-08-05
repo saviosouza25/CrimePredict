@@ -1812,21 +1812,29 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     elif trend_5 < 0 and trend_10 < 0:
         trend_alignment = -0.3  # Tendência baixa
     
-    # === 3. ANÁLISE DE VOLATILIDADE E VOLUME ===
+    # === 3. ANÁLISE DE VOLATILIDADE E VOLUME (PADRONIZADA) ===
     price_changes = np.diff(prices[-20:]) / prices[-20:-1] if len(prices) >= 20 else np.array([0])
     volatility = np.std(price_changes) if len(price_changes) > 0 else 0
     
-    # Volume proxy baseado em range
-    volume_proxy = df_with_indicators['high'] - df_with_indicators['low']
-    avg_volume = volume_proxy.tail(10).mean()
-    recent_volume = volume_proxy.iloc[-1]
-    volume_ratio = recent_volume / avg_volume if avg_volume > 0 else 1
+    # USAR A MESMA LÓGICA DA ANÁLISE INDIVIDUAL DE VOLUME
+    # Calcular volatilidade padronizada como proxy para volume
+    volume_volatility = df_with_indicators['close'].tail(20).std() / current_price if len(df_with_indicators) >= 20 else 0
     
-    volume_confirmation = 0
-    if volume_ratio > 1.5:  # Volume alto
-        volume_confirmation = 0.3 if trend_alignment > 0 else -0.3 if trend_alignment < 0 else 0
-    elif volume_ratio < 0.7:  # Volume baixo
-        volume_confirmation = -0.2  # Sinal fraco
+    # Configuração padronizada (mesma da análise individual)
+    volatility_threshold = 0.020  # Threshold moderado
+    signal_factor = 1.0  # Fator moderado
+    
+    # LÓGICA PADRONIZADA: Baixa volatilidade = Volume saudável = COMPRA
+    # Alta volatilidade = Volume especulativo = VENDA ou neutro
+    base_volume_signal = (volatility_threshold - volume_volatility) * 0.015
+    volume_confirmation = base_volume_signal * signal_factor
+    
+    # Ajuste para alta volatilidade (mesma lógica da análise individual)
+    if volume_volatility > volatility_threshold:
+        volume_confirmation *= 0.8
+    
+    # Limitar o sinal para evitar dominância
+    volume_confirmation = max(-0.3, min(0.3, volume_confirmation))
     
     # === 4. SENTIMENTO AMPLIFICADO ===
     sentiment_impact = 0
@@ -2064,7 +2072,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
                 'signal': volume_norm,
                 'original_signal': volume_confirmation, 
                 'weight': volume_weight, 
-                'details': f"Volume Ratio: {float(volume_ratio):.2f}x",
+                'details': f"Volume/Volatilidade: {float(volume_volatility):.4f} (limite: {volatility_threshold:.3f})",
                 'contribution': volume_norm * volume_weight,
                 'direction': 'COMPRA' if volume_norm > 0.1 else 'VENDA' if volume_norm < -0.1 else 'NEUTRO'
             },
