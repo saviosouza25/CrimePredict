@@ -1833,58 +1833,94 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     else:  # Sentimento neutro
         sentiment_impact = sentiment_score * 0.2
     
-    # === 5. CÁLCULO DA CONFLUÊNCIA FINAL ===
-    # Pesos otimizados para máxima precisão
-    technical_weight = 0.35    # 35% - Indicadores técnicos
-    trend_weight = 0.30        # 30% - Análise de tendência multi-timeframe
-    volume_weight = 0.15       # 15% - Confirmação de volume
-    sentiment_weight = 0.20    # 20% - Sentimento do mercado
+    # === 5. CÁLCULO DA CONFLUÊNCIA FINAL BALANCEADO ===
+    # Pesos rebalanceados para evitar dominância excessiva
+    technical_weight = 0.25    # 25% - Indicadores técnicos
+    trend_weight = 0.25        # 25% - Análise de tendência multi-timeframe
+    volume_weight = 0.25       # 25% - Confirmação de volume
+    sentiment_weight = 0.25    # 25% - Sentimento do mercado
     
-    # Sinal confluente final
+    # Normalizar componentes para evitar dominância extrema
+    def normalize_component(value, max_val=1.0):
+        """Normalizar componentes para evitar valores extremos"""
+        return max(-max_val, min(max_val, value))
+    
+    technical_norm = normalize_component(technical_strength)
+    trend_norm = normalize_component(trend_alignment)
+    volume_norm = normalize_component(volume_confirmation)
+    sentiment_norm = normalize_component(sentiment_impact)
+    
+    # Sinal confluente final balanceado
     unified_signal = (
-        technical_strength * technical_weight +
-        trend_alignment * trend_weight +
-        volume_confirmation * volume_weight +
-        sentiment_impact * sentiment_weight
+        technical_norm * technical_weight +
+        trend_norm * trend_weight +
+        volume_norm * volume_weight +
+        sentiment_norm * sentiment_weight
     )
     
-    # === 6. CONFIANÇA BASEADA EM CONFLUÊNCIA ===
-    # Contar quantos componentes concordam
-    components = [technical_strength, trend_alignment, volume_confirmation, sentiment_impact]
+    # Análise de componentes individuais para debug
+    components_analysis = {
+        'technical': {'value': technical_norm, 'weighted': technical_norm * technical_weight},
+        'trend': {'value': trend_norm, 'weighted': trend_norm * trend_weight},
+        'volume': {'value': volume_norm, 'weighted': volume_norm * volume_weight},
+        'sentiment': {'value': sentiment_norm, 'weighted': sentiment_norm * sentiment_weight}
+    }
+    
+    # Contar sinais positivos vs negativos para transparência
+    positive_signals = sum(1 for comp in [technical_norm, trend_norm, volume_norm, sentiment_norm] if comp > 0.1)
+    negative_signals = sum(1 for comp in [technical_norm, trend_norm, volume_norm, sentiment_norm] if comp < -0.1)
+    neutral_signals = 4 - positive_signals - negative_signals
+    
+    # === 6. CONFIANÇA BASEADA EM CONFLUÊNCIA TRANSPARENTE ===
+    # Usar componentes normalizados para confiança
+    components = [technical_norm, trend_norm, volume_norm, sentiment_norm]
     
     strong_bull_count = sum(1 for c in components if c > 0.3)
     strong_bear_count = sum(1 for c in components if c < -0.3)
     moderate_bull_count = sum(1 for c in components if 0.1 < c <= 0.3)
     moderate_bear_count = sum(1 for c in components if -0.3 <= c < -0.1)
     
-    # Confluência determina confiança
+    # Confluência determina confiança - baseada em concordância
     max_agreement = max(strong_bull_count + moderate_bull_count, strong_bear_count + moderate_bear_count)
     confluence_strength = strong_bull_count + strong_bear_count  # Sinais fortes
     
-    # Confiança baseada em confluência real
+    # Penalty por sinais contraditórios
+    contradiction_penalty = min(positive_signals, negative_signals) * 0.1
+    
+    # Confiança baseada em confluência real e transparência
     base_confidence = 0.45 + (max_agreement * 0.15) + (confluence_strength * 0.1)
     volatility_penalty = min(0.15, volatility * 10)  # Penalizar alta volatilidade
-    confidence = max(0.55, min(0.95, base_confidence - volatility_penalty))
+    confidence = max(0.55, min(0.95, base_confidence - volatility_penalty - contradiction_penalty))
     
-    # === 7. DIREÇÃO CLARA E PROBABILIDADES ===
+    # === 7. DIREÇÃO CLARA E PROBABILIDADES BASEADAS EM CONSENSO ===
     # Converter para float padrão para evitar problemas com numpy.float32
     unified_signal = float(unified_signal)
     
-    if unified_signal > 0.4:
-        direction = "COMPRA FORTE"
-        probability = min(85, 65 + (unified_signal * 25))
-    elif unified_signal > 0.15:
-        direction = "COMPRA"
-        probability = min(75, 55 + (unified_signal * 35))
-    elif unified_signal < -0.4:
-        direction = "VENDA FORTE"
-        probability = min(85, 65 + (abs(unified_signal) * 25))
-    elif unified_signal < -0.15:
-        direction = "VENDA"
-        probability = min(75, 55 + (abs(unified_signal) * 35))
-    else:
-        direction = "LATERAL/NEUTRO"
-        probability = 50
+    # Verificar se há maioria clara nos sinais
+    if positive_signals >= 3:  # 3 ou 4 sinais positivos = tendência clara de compra
+        if unified_signal > 0.3:
+            direction = "COMPRA FORTE"
+            probability = min(85, 70 + (positive_signals * 5))
+        else:
+            direction = "COMPRA"
+            probability = min(75, 60 + (positive_signals * 5))
+    elif negative_signals >= 3:  # 3 ou 4 sinais negativos = tendência clara de venda
+        if unified_signal < -0.3:
+            direction = "VENDA FORTE"
+            probability = min(85, 70 + (negative_signals * 5))
+        else:
+            direction = "VENDA"
+            probability = min(75, 60 + (negative_signals * 5))
+    else:  # Sinais mistos ou neutros
+        if unified_signal > 0.2:
+            direction = "COMPRA MODERADA"
+            probability = 60
+        elif unified_signal < -0.2:
+            direction = "VENDA MODERADA"
+            probability = 60
+        else:
+            direction = "LATERAL/NEUTRO"
+            probability = 50
     
     # === 8. PREVISÃO DE PREÇO BASEADA EM VOLATILIDADE ===
     # Garantir que current_price é float antes de operações matemáticas
@@ -1923,30 +1959,45 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
         'extension_pips': drawdown_extension_data['extension_pips'],
         'drawdown_probability': drawdown_extension_data['drawdown_probability'],
         'extension_probability': drawdown_extension_data['extension_probability'],
+        'consensus_analysis': {
+            'positive_signals': positive_signals,
+            'negative_signals': negative_signals,
+            'neutral_signals': neutral_signals,
+            'signal_breakdown': f"{positive_signals} COMPRA, {negative_signals} VENDA, {neutral_signals} NEUTRO",
+            'final_weighted_signal': unified_signal
+        },
         'components': {
             'technical': {
-                'signal': technical_strength, 
+                'signal': technical_norm, 
+                'original_signal': technical_strength,
                 'weight': technical_weight, 
                 'details': technical_components,
-                'contribution': technical_strength * technical_weight
+                'contribution': technical_norm * technical_weight,
+                'direction': 'COMPRA' if technical_norm > 0.1 else 'VENDA' if technical_norm < -0.1 else 'NEUTRO'
             },
             'sentiment': {
-                'signal': sentiment_impact, 
+                'signal': sentiment_norm,
+                'original_signal': sentiment_impact, 
                 'weight': sentiment_weight, 
-                'details': f"Sentimento {float(sentiment_score):.3f}: {str(direction)}",
-                'contribution': sentiment_impact * sentiment_weight
+                'details': f"Sentimento {float(sentiment_score):.3f}",
+                'contribution': sentiment_norm * sentiment_weight,
+                'direction': 'COMPRA' if sentiment_norm > 0.1 else 'VENDA' if sentiment_norm < -0.1 else 'NEUTRO'
             },
             'trend': {
-                'signal': trend_alignment, 
+                'signal': trend_norm,
+                'original_signal': trend_alignment, 
                 'weight': trend_weight, 
                 'details': f"Tendência Multi-TF: {float(trend_5)*100:.2f}%/5p {float(trend_10)*100:.2f}%/10p {float(trend_20)*100:.2f}%/20p",
-                'contribution': trend_alignment * trend_weight
+                'contribution': trend_norm * trend_weight,
+                'direction': 'COMPRA' if trend_norm > 0.1 else 'VENDA' if trend_norm < -0.1 else 'NEUTRO'
             },
             'volume': {
-                'signal': volume_confirmation, 
+                'signal': volume_norm,
+                'original_signal': volume_confirmation, 
                 'weight': volume_weight, 
                 'details': f"Volume Ratio: {float(volume_ratio):.2f}x",
-                'contribution': volume_confirmation * volume_weight
+                'contribution': volume_norm * volume_weight,
+                'direction': 'COMPRA' if volume_norm > 0.1 else 'VENDA' if volume_norm < -0.1 else 'NEUTRO'
             }
         },
         'analysis_focus': f'ANÁLISE UNIFICADA AVANÇADA - Confluência: {int(max_agreement)}/4 componentes | Força: {int(confluence_strength)} sinais fortes',

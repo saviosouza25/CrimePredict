@@ -36,8 +36,10 @@ Preferred communication style: Simple, everyday language.
 - **Features**: Multi-feature input including OHLC prices and technical indicators
 - **Training**: Configurable batch size, learning rate, and epoch parameters
 - **Prediction**: Realistic short-term forecasting (maximum 7 days) with confluent confidence system
-- **Confidence System**: Combined LSTM (40%), AI (30%), sentiment (20%), and consistency (10%) weights
-- **Unified Analysis**: Position, Swing, and Intraday trading use same realistic probability calculations
+- **Confidence System**: Balanced 25% weights for each component (Technical, Trend, Volume, Sentiment)
+- **Unified Analysis**: Consensus-based decision making with transparent component breakdown
+- **Normalized Components**: All signals normalized to prevent single-component dominance
+- **Consensus Logic**: Decision based on majority of components (3+ for strong signals)
 - **Simplified Money Management**: Manual bank value and lot selection with dollar-based drawdown and extension calculations
 
 ### Technical Analysis Engine
