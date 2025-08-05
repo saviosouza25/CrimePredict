@@ -25,7 +25,9 @@ import hashlib
 import base64
 
 # Authentication configuration
-VALID_PASSWORD = "artec2025"
+VALID_CREDENTIALS = {
+    "artec": "e10adc3949ba59abbe56e057f20f883e"  # MD5 hash of "123456"
+}
 
 def get_logo_base64():
     """Get the company logo as base64 encoded string."""
@@ -41,29 +43,34 @@ def check_password():
     
     def password_entered():
         """Checks whether a password entered by the user is correct."""
+        username = st.session_state.get("username", "")
         password = st.session_state.get("password", "")
         remember_me = st.session_state.get("remember_me", False)
         
-        if password == VALID_PASSWORD:
+        if username and password and username in VALID_CREDENTIALS and VALID_CREDENTIALS[username] == hashlib.md5(password.encode()).hexdigest():
             st.session_state["password_correct"] = True
             
             # Save credentials if remember me is checked
             if remember_me:
+                st.session_state["saved_username"] = username
                 st.session_state["saved_password"] = password
                 st.session_state["credentials_saved"] = True
             
-            # Clear the input field but keep login state
+            # Clear the input fields but keep login state
             if "password" in st.session_state:
                 del st.session_state["password"]
+            if "username" in st.session_state:
+                del st.session_state["username"]
         else:
             st.session_state["password_correct"] = False
 
     def direct_login():
         """Direct login using saved credentials."""
         if st.session_state.get("credentials_saved", False):
+            saved_username = st.session_state.get("saved_username", "")
             saved_password = st.session_state.get("saved_password", "")
             
-            if saved_password == VALID_PASSWORD:
+            if saved_username in VALID_CREDENTIALS and VALID_CREDENTIALS[saved_username] == hashlib.md5(saved_password.encode()).hexdigest():
                 st.session_state["password_correct"] = True
                 return True
         return False
@@ -95,8 +102,8 @@ def check_password():
             <div style="margin-bottom: 1.5rem;">
                 <img src="data:image/png;base64,{logo_base64}" style="max-width: 120px; height: auto;" />
             </div>
-            <h2 style="color: #333; margin-bottom: 2rem;">🔐 Acesso à Plataforma Forex</h2>
-            <p style="color: #666; margin-bottom: 2rem;">Digite a senha de acesso para continuar</p>
+            <h2 style="color: #333; margin-bottom: 2rem;">{get_text("login_title")}</h2>
+            <p style="color: #666; margin-bottom: 2rem;">{get_text("login_subtitle")}</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -107,21 +114,22 @@ def check_password():
         has_saved_credentials = st.session_state.get("credentials_saved", False)
         
         if has_saved_credentials:
-            st.success("🔑 Senha salva encontrada!")
+            st.success("🔑 Credenciais salvas encontradas!")
             
             col_direct, col_manual = st.columns(2)
             
             with col_direct:
                 if st.button("🚀 Entrar Automaticamente", type="primary", use_container_width=True, key="auto_login_btn"):
-                    # Direct login with saved password
+                    # Direct login with saved credentials
+                    saved_username = st.session_state.get("saved_username", "")
                     saved_password = st.session_state.get("saved_password", "")
                     
-                    if saved_password == VALID_PASSWORD:
+                    if saved_username in VALID_CREDENTIALS and VALID_CREDENTIALS[saved_username] == hashlib.md5(saved_password.encode()).hexdigest():
                         st.session_state["password_correct"] = True
                         st.rerun()  # Immediate redirect
                     else:
                         st.session_state["credentials_saved"] = False
-                        st.error("❌ Senha salva inválida!")
+                        st.error("❌ Credenciais salvas inválidas!")
                         st.rerun()
             
             with col_manual:
@@ -131,43 +139,50 @@ def check_password():
             
             st.markdown("---")
         
-        # Manual login form - only password field
-        st.text_input("🔑 Senha de Acesso", type="password", key="password", placeholder="Digite a senha...")
+        # Manual login form
+        st.text_input(get_text("username_placeholder"), key="username", placeholder=get_text("username_placeholder"))
+        st.text_input(get_text("password_placeholder"), type="password", key="password", placeholder=get_text("password_placeholder"))
         
         # Remember me checkbox
-        st.checkbox("🔒 Lembrar senha", key="remember_me", help="Salva a senha para login automático futuro")
+        st.checkbox("🔒 Lembrar credenciais", key="remember_me", help="Salva suas credenciais para login automático futuro")
         
         # Login button with immediate response
         if st.button("🔓 Fazer Login", type="primary", use_container_width=True, key="login_submit"):
+            username = st.session_state.get("username", "")
             password = st.session_state.get("password", "")
             remember_me = st.session_state.get("remember_me", False)
             
-            if password == VALID_PASSWORD:
+            if username and password and username in VALID_CREDENTIALS and VALID_CREDENTIALS[username] == hashlib.md5(password.encode()).hexdigest():
                 st.session_state["password_correct"] = True
                 
-                # Save password if remember me is checked
+                # Save credentials if remember me is checked
                 if remember_me:
+                    st.session_state["saved_username"] = username
                     st.session_state["saved_password"] = password
                     st.session_state["credentials_saved"] = True
                 
-                # Clear the input field
+                # Clear the input fields
                 if "password" in st.session_state:
                     del st.session_state["password"]
+                if "username" in st.session_state:
+                    del st.session_state["username"]
                 
                 st.rerun()  # Immediate redirect
             else:
                 st.session_state["password_correct"] = False
-                st.error("❌ Senha incorreta!")
+                st.error("❌ Usuário ou senha incorretos!")
         
         # Remove the general error message since we handle it inline now
             
         # Clear saved credentials option
         if has_saved_credentials:
-            if st.button("🗑️ Limpar Senha Salva", help="Remove a senha salva deste dispositivo", key="clear_creds_btn"):
+            if st.button("🗑️ Limpar Credenciais Salvas", help="Remove as credenciais salvas deste dispositivo", key="clear_creds_btn"):
                 st.session_state["credentials_saved"] = False
+                if "saved_username" in st.session_state:
+                    del st.session_state["saved_username"]
                 if "saved_password" in st.session_state:
                     del st.session_state["saved_password"]
-                st.success("Senha removida com sucesso!")
+                st.success("Credenciais removidas com sucesso!")
                 st.rerun()
             
         st.markdown("""
