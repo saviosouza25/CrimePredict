@@ -920,6 +920,8 @@ def main():
         # Debug toggle
         st.session_state.show_debug = st.checkbox("🔧 Mostrar Debug", value=st.session_state.get('show_debug', False), 
                                                   help="Exibe informações detalhadas sobre como as decisões são tomadas")
+        st.session_state.debug_ai_values = st.checkbox("🤖 Debug AI/LSTM Exato", value=st.session_state.get('debug_ai_values', False),
+                                                       help="Mostra valores exatos dos cálculos AI/LSTM")
         
         if test_sentiment:
             st.markdown("### 🔍 Teste da Análise de Sentimento")
@@ -1878,6 +1880,19 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
         
         # Sinal final (IDÊNTICO À INDIVIDUAL)
         lstm_signal = (trend_signal * 0.5 + momentum_signal * 0.3 + volatility_signal * 0.2) * learning_factor
+        
+        # DEBUG: Mostrar valores exatos
+        if st.session_state.get('debug_ai_values', False):
+            st.write(f"🔍 **DEBUG AI/LSTM UNIFICADA:**")
+            st.write(f"Long trend: {long_trend:.10f}")
+            st.write(f"Short trend: {short_trend:.10f}")
+            st.write(f"Volatility: {volatility_ai:.10f}")
+            st.write(f"Learning factor: {learning_factor:.10f}")
+            st.write(f"Trend signal: {trend_signal:.10f}")
+            st.write(f"Momentum signal: {momentum_signal:.10f}")
+            st.write(f"Volatility signal: {volatility_signal:.10f}")
+            st.write(f"**LSTM Signal Final: {lstm_signal:.10f}**")
+            st.write(f"**Direção: {'COMPRA' if lstm_signal > 0.001 else 'VENDA' if lstm_signal < -0.001 else 'NEUTRO'}**")
     
     # === 6. ANÁLISE DE RISCO ===
     # Calcular score de risco baseado em volatilidade e momentum
@@ -2359,6 +2374,19 @@ def run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators):
     
     # Sinal final ponderado pelo fator de aprendizado e perfil de risco
     combined_signal = (trend_signal * 0.5 + momentum_signal * 0.3 + volatility_signal * 0.2) * learning_factor
+    
+    # DEBUG: Mostrar valores exatos para comparação
+    if st.session_state.get('debug_ai_values', False):
+        st.write(f"🔍 **DEBUG AI/LSTM INDIVIDUAL:**")
+        st.write(f"Long trend: {long_trend:.10f}")
+        st.write(f"Short trend: {short_trend:.10f}")
+        st.write(f"Volatility: {volatility:.10f}")
+        st.write(f"Learning factor: {learning_factor:.10f}")
+        st.write(f"Trend signal: {trend_signal:.10f}")
+        st.write(f"Momentum signal: {momentum_signal:.10f}")
+        st.write(f"Volatility signal: {volatility_signal:.10f}")
+        st.write(f"**Combined Signal Final: {combined_signal:.10f}**")
+        st.write(f"**Direção: {'COMPRA' if combined_signal > 0.001 else 'VENDA' if combined_signal < -0.001 else 'NEUTRO'}**")
     
     predicted_price = current_price * (1 + combined_signal)
     price_change = predicted_price - current_price
