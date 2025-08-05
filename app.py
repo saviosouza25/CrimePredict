@@ -1892,6 +1892,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
             st.write(f"Momentum signal: {momentum_signal:.10f}")
             st.write(f"Volatility signal: {volatility_signal:.10f}")
             st.write(f"**LSTM Signal Final: {lstm_signal:.10f}**")
+            st.write(f"**LSTM Norm (NO NORMALIZATION): {lstm_signal:.10f}**")
             st.write(f"**Direção: {'COMPRA' if lstm_signal > 0.001 else 'VENDA' if lstm_signal < -0.001 else 'NEUTRO'}**")
     
     # === 6. ANÁLISE DE RISCO ===
@@ -1930,7 +1931,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     trend_norm = normalize_component(trend_alignment)
     volume_norm = normalize_component(volume_confirmation)
     sentiment_norm = normalize_component(sentiment_impact)
-    lstm_norm = normalize_component(lstm_signal)
+    lstm_norm = lstm_signal  # USAR VALOR BRUTO SEM NORMALIZAÇÃO - IDENTICAL TO INDIVIDUAL
     risk_norm = normalize_component(risk_score)
     
     # Sinal confluente final balanceado com 6 componentes
