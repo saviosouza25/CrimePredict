@@ -2075,6 +2075,46 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     confluence_strength = int(confluence_strength)
     direction = str(direction)
     
+    # === 9. CÁLCULO DE STOP LOSS E TAKE PROFIT POR ESTRATÉGIA ===
+    volatility_adjusted = volatility * config['volatility_factor']
+    
+    # Stop Loss baseado na estratégia e volatilidade
+    stop_percentage = config['stop_multiplier'] * (1 + volatility_adjusted)
+    take_percentage = config['take_multiplier'] * (1 + volatility_adjusted * 0.5)
+    
+    # Direção da operação afeta cálculos
+    is_buy_signal = unified_signal > 0
+    
+    if is_buy_signal:
+        stop_loss_price = current_price * (1 - stop_percentage / 100)
+        take_profit_price = current_price * (1 + take_percentage / 100)
+        entry_strategy = "COMPRA"
+    else:
+        stop_loss_price = current_price * (1 + stop_percentage / 100)
+        take_profit_price = current_price * (1 - take_percentage / 100)
+        entry_strategy = "VENDA"
+    
+    # Cálculo de risco/recompensa
+    stop_distance = abs(current_price - stop_loss_price)
+    take_distance = abs(take_profit_price - current_price)
+    risk_reward_ratio = take_distance / stop_distance if stop_distance > 0 else 0
+    
+    # Informações operacionais
+    operation_details = {
+        'strategy': config['name'],
+        'timeframe': config['timeframe'],
+        'hold_period': config['hold_period'],
+        'entry_price': current_price,
+        'stop_loss': stop_loss_price,
+        'take_profit': take_profit_price,
+        'stop_percentage': stop_percentage,
+        'take_percentage': take_percentage,
+        'risk_reward_ratio': risk_reward_ratio,
+        'entry_direction': entry_strategy,
+        'confidence_required': config['min_confidence'],
+        'operation_viable': probability >= config['min_confidence']
+    }
+    
     # Calcular drawdown e extensão baseados na nova análise
     drawdown_extension_data = calculate_realistic_drawdown_and_extensions(
         current_price, str(pair), "1 Hora", "Moderate", sentiment_score, confidence
