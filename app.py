@@ -914,46 +914,7 @@ def main():
         unified_analysis = st.button("🧠 Análise Unificada Inteligente", type="primary", use_container_width=True, 
                                    help="Combina todas as análises para a melhor previsão do mercado")
         
-        # Teste de Sentimento
-        test_sentiment = st.button("🔍 Testar Sentimento", help="Testa apenas a análise de sentimento")
-        
-        # Debug toggle
-        st.session_state.show_debug = st.checkbox("🔧 Mostrar Debug", value=st.session_state.get('show_debug', False), 
-                                                  help="Exibe informações detalhadas sobre como as decisões são tomadas")
-        st.session_state.debug_ai_values = st.checkbox("🤖 Debug AI/LSTM Exato", value=st.session_state.get('debug_ai_values', False),
-                                                       help="Mostra valores exatos dos cálculos AI/LSTM")
-        
-        if test_sentiment:
-            st.markdown("### 🔍 Teste da Análise de Sentimento")
-            
-            with st.spinner("Testando análise de sentimento..."):
-                try:
-                    sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
-                    
-                    st.success(f"✅ **Sentimento capturado com sucesso!**")
-                    st.info(f"**Valor:** {sentiment_score:.4f}")
-                    
-                    if sentiment_score > 0.1:
-                        st.success(f"📈 **Sentimento POSITIVO** ({sentiment_score:.3f}) - Favorável para COMPRA")
-                    elif sentiment_score < -0.1:
-                        st.error(f"📉 **Sentimento NEGATIVO** ({sentiment_score:.3f}) - Favorável para VENDA")
-                    else:
-                        st.warning(f"⚪ **Sentimento NEUTRO** ({sentiment_score:.3f}) - Sem direção clara")
-                    
-                    # Explicação do valor
-                    st.markdown("#### 📊 Interpretação:")
-                    st.write(f"• Valor entre -1.0 e +1.0")
-                    st.write(f"• Atual: {sentiment_score:.4f}")
-                    st.write(f"• Força: {services['sentiment_service'].get_sentiment_strength(sentiment_score)}")
-                    st.write(f"• Direção: {services['sentiment_service'].get_sentiment_signal(sentiment_score)}")
-                    
-                except Exception as e:
-                    st.error(f"❌ **Erro na análise de sentimento:** {str(e)}")
-                    st.write("**Possíveis causas:**")
-                    st.write("• Problema na API Alpha Vantage")
-                    st.write("• Limite de requisições atingido")
-                    st.write("• Problema de conectividade")
-                    st.write("• Par de moedas não suportado para notícias")
+
         
         st.markdown("**Análises Individuais:**")
         
