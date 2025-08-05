@@ -2062,7 +2062,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
                 'weight': technical_weight, 
                 'details': technical_components,
                 'contribution': technical_norm * technical_weight,
-                'direction': 'COMPRA' if technical_norm > 0.1 else 'VENDA' if technical_norm < -0.1 else 'NEUTRO'
+                'direction': 'COMPRA' if technical_strength > 0.001 else 'VENDA' if technical_strength < -0.001 else 'NEUTRO'
             },
             'sentiment': {
                 'signal': sentiment_norm,
@@ -2070,7 +2070,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
                 'weight': sentiment_weight, 
                 'details': f"Sentimento {float(sentiment_score):.3f}",
                 'contribution': sentiment_norm * sentiment_weight,
-                'direction': 'COMPRA' if sentiment_norm > 0.1 else 'VENDA' if sentiment_norm < -0.1 else 'NEUTRO'
+                'direction': 'COMPRA' if sentiment_impact > 0.001 else 'VENDA' if sentiment_impact < -0.001 else 'NEUTRO'
             },
             'trend': {
                 'signal': trend_norm,
@@ -2078,7 +2078,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
                 'weight': trend_weight, 
                 'details': f"Tendência Multi-TF: {float(trend_5)*100:.2f}%/5p {float(trend_10)*100:.2f}%/10p {float(trend_20)*100:.2f}%/20p",
                 'contribution': trend_norm * trend_weight,
-                'direction': 'COMPRA' if trend_norm > 0.1 else 'VENDA' if trend_norm < -0.1 else 'NEUTRO'
+                'direction': 'COMPRA' if trend_alignment > 0.001 else 'VENDA' if trend_alignment < -0.001 else 'NEUTRO'
             },
             'volume': {
                 'signal': volume_norm,
@@ -2086,7 +2086,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
                 'weight': volume_weight, 
                 'details': f"Volume/Volatilidade: {float(volume_volatility):.4f} (limite: {volatility_threshold:.3f})",
                 'contribution': volume_norm * volume_weight,
-                'direction': 'COMPRA' if volume_norm > 0.1 else 'VENDA' if volume_norm < -0.1 else 'NEUTRO'
+                'direction': 'COMPRA' if volume_confirmation > 0.001 else 'VENDA' if volume_confirmation < -0.001 else 'NEUTRO'
             },
             'ai_lstm': {
                 'signal': lstm_norm,
@@ -2094,7 +2094,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
                 'weight': lstm_weight, 
                 'details': f"LSTM: Long trend={long_trend:.4f}, Volatility={volatility_ai:.4f}, Learning={learning_factor:.3f}" if len(prices) >= lookback_period else "LSTM: Dados insuficientes",
                 'contribution': lstm_norm * lstm_weight,
-                'direction': 'COMPRA' if lstm_norm > 0.1 else 'VENDA' if lstm_norm < -0.1 else 'NEUTRO'
+                'direction': 'COMPRA' if lstm_signal > 0.001 else 'VENDA' if lstm_signal < -0.001 else 'NEUTRO'  # USAR MESMO THRESHOLD DA INDIVIDUAL
             },
             'risk': {
                 'signal': risk_norm,
@@ -2102,7 +2102,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
                 'weight': risk_weight, 
                 'details': f"Risco: Volatilidade={volatility:.4f}, Score={risk_score:.3f}",
                 'contribution': risk_norm * risk_weight,
-                'direction': 'COMPRA' if risk_norm > 0.1 else 'VENDA' if risk_norm < -0.1 else 'NEUTRO'
+                'direction': 'COMPRA' if risk_score > 0.001 else 'VENDA' if risk_score < -0.001 else 'NEUTRO'
             }
         },
         'analysis_focus': f'ANÁLISE UNIFICADA AVANÇADA - Confluência: {int(max_agreement)}/6 componentes | Força: {int(confluence_strength)} sinais fortes',
