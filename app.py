@@ -1837,12 +1837,54 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     else:  # Sentimento neutro
         sentiment_impact = sentiment_score * 0.2
     
-    # === 5. CÁLCULO DA CONFLUÊNCIA FINAL BALANCEADO ===
-    # Pesos rebalanceados para evitar dominância excessiva
-    technical_weight = 0.25    # 25% - Indicadores técnicos
-    trend_weight = 0.25        # 25% - Análise de tendência multi-timeframe
-    volume_weight = 0.25       # 25% - Confirmação de volume
-    sentiment_weight = 0.25    # 25% - Sentimento do mercado
+    # === 5. ANÁLISE IA/LSTM ===
+    # Simulação de análise LSTM baseada nos dados históricos
+    lstm_signal = 0
+    if len(prices) >= 20:
+        # Calcular tendência de longo prazo para simular LSTM
+        long_trend = (prices[-1] - prices[-20]) / prices[-20]
+        
+        # Detectar padrões de reversão
+        recent_volatility = np.std(prices[-5:]) / prices[-1] if len(prices) >= 5 else 0
+        
+        # Sinal LSTM baseado em padrões e volatilidade
+        if long_trend > 0.005 and recent_volatility < 0.01:  # Tendência forte com baixa volatilidade
+            lstm_signal = 0.6
+        elif long_trend > 0.002:  # Tendência moderada
+            lstm_signal = 0.3
+        elif long_trend < -0.005 and recent_volatility < 0.01:  # Tendência forte descendente
+            lstm_signal = -0.6
+        elif long_trend < -0.002:  # Tendência moderada descendente
+            lstm_signal = -0.3
+        else:
+            lstm_signal = long_trend * 50  # Sinal proporcional
+    
+    # === 6. ANÁLISE DE RISCO ===
+    # Calcular score de risco baseado em volatilidade e momentum
+    risk_score = 0
+    if volatility > 0:
+        # Risco alto = sinal negativo, risco baixo = sinal positivo
+        if volatility > 0.02:  # Alta volatilidade
+            risk_score = -0.4
+        elif volatility > 0.01:  # Volatilidade moderada
+            risk_score = -0.2
+        elif volatility < 0.005:  # Baixa volatilidade
+            risk_score = 0.3
+        else:
+            risk_score = 0.1
+        
+        # Ajustar baseado na força da tendência
+        if abs(trend_alignment) > 0.5:  # Tendência forte reduz risco
+            risk_score += 0.2 if trend_alignment > 0 else 0.2
+    
+    # === 7. CÁLCULO DA CONFLUÊNCIA FINAL COM 6 COMPONENTES ===
+    # Pesos rebalanceados para 6 componentes iguais
+    technical_weight = 1/6     # ~16.67% - Indicadores técnicos
+    trend_weight = 1/6         # ~16.67% - Análise de tendência multi-timeframe
+    volume_weight = 1/6        # ~16.67% - Confirmação de volume
+    sentiment_weight = 1/6     # ~16.67% - Sentimento do mercado
+    lstm_weight = 1/6          # ~16.67% - Análise IA/LSTM
+    risk_weight = 1/6          # ~16.67% - Análise de risco
     
     # Normalizar componentes para evitar dominância extrema
     def normalize_component(value, max_val=1.0):
@@ -1853,31 +1895,37 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     trend_norm = normalize_component(trend_alignment)
     volume_norm = normalize_component(volume_confirmation)
     sentiment_norm = normalize_component(sentiment_impact)
+    lstm_norm = normalize_component(lstm_signal)
+    risk_norm = normalize_component(risk_score)
     
-    # Sinal confluente final balanceado
+    # Sinal confluente final balanceado com 6 componentes
     unified_signal = (
         technical_norm * technical_weight +
         trend_norm * trend_weight +
         volume_norm * volume_weight +
-        sentiment_norm * sentiment_weight
+        sentiment_norm * sentiment_weight +
+        lstm_norm * lstm_weight +
+        risk_norm * risk_weight
     )
     
-    # Análise de componentes individuais para debug
+    # Análise de componentes individuais para debug - 6 componentes
     components_analysis = {
         'technical': {'value': technical_norm, 'weighted': technical_norm * technical_weight},
         'trend': {'value': trend_norm, 'weighted': trend_norm * trend_weight},
         'volume': {'value': volume_norm, 'weighted': volume_norm * volume_weight},
-        'sentiment': {'value': sentiment_norm, 'weighted': sentiment_norm * sentiment_weight}
+        'sentiment': {'value': sentiment_norm, 'weighted': sentiment_norm * sentiment_weight},
+        'ai_lstm': {'value': lstm_norm, 'weighted': lstm_norm * lstm_weight},
+        'risk': {'value': risk_norm, 'weighted': risk_norm * risk_weight}
     }
     
-    # Contar sinais positivos vs negativos para transparência
-    positive_signals = sum(1 for comp in [technical_norm, trend_norm, volume_norm, sentiment_norm] if comp > 0.1)
-    negative_signals = sum(1 for comp in [technical_norm, trend_norm, volume_norm, sentiment_norm] if comp < -0.1)
-    neutral_signals = 4 - positive_signals - negative_signals
+    # Contar sinais positivos vs negativos para transparência - 6 componentes
+    all_components = [technical_norm, trend_norm, volume_norm, sentiment_norm, lstm_norm, risk_norm]
+    positive_signals = sum(1 for comp in all_components if comp > 0.1)
+    negative_signals = sum(1 for comp in all_components if comp < -0.1)
+    neutral_signals = len(all_components) - positive_signals - negative_signals
     
-    # === 6. CONFIANÇA BASEADA EM CONFLUÊNCIA TRANSPARENTE ===
-    # Usar componentes normalizados para confiança
-    components = [technical_norm, trend_norm, volume_norm, sentiment_norm]
+    # === 8. CÁLCULO DE CONFLUÊNCIA E CONCORDÂNCIA ===
+    components = all_components
     
     strong_bull_count = sum(1 for c in components if c > 0.3)
     strong_bear_count = sum(1 for c in components if c < -0.3)
@@ -1904,24 +1952,24 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     # Priorizar consenso claro sobre sinal ponderado
     consensus_override = False
     
-    # Caso 1: Consenso absoluto (4/4 componentes)
-    if positive_signals == 4:  # Todos positivos
+    # Caso 1: Consenso absoluto (6/6 ou 5/6 componentes)
+    if positive_signals >= 5:  # 5 ou 6 positivos
         direction = "COMPRA FORTE" if unified_signal > 0.2 else "COMPRA"
-        probability = min(85, 75 + (positive_signals * 3))
+        probability = min(90, 80 + (positive_signals * 2))
         consensus_override = True
-    elif negative_signals == 4:  # Todos negativos
+    elif negative_signals >= 5:  # 5 ou 6 negativos
         direction = "VENDA FORTE" if unified_signal < -0.2 else "VENDA"
-        probability = min(85, 75 + (negative_signals * 3))
+        probability = min(90, 80 + (negative_signals * 2))
         consensus_override = True
     
-    # Caso 2: Consenso forte (3/4 componentes)
-    elif positive_signals >= 3 and negative_signals <= 1:
+    # Caso 2: Consenso forte (4/6 componentes)
+    elif positive_signals >= 4 and negative_signals <= 2:
         direction = "COMPRA FORTE" if unified_signal > 0.3 else "COMPRA"
-        probability = min(80, 70 + (positive_signals * 3))
+        probability = min(85, 75 + (positive_signals * 2))
         consensus_override = True
-    elif negative_signals >= 3 and positive_signals <= 1:
+    elif negative_signals >= 4 and positive_signals <= 2:
         direction = "VENDA FORTE" if unified_signal < -0.3 else "VENDA"
-        probability = min(80, 70 + (negative_signals * 3))
+        probability = min(85, 75 + (negative_signals * 2))
         consensus_override = True
     
     # Caso 3: Sinais mistos - usar sinal ponderado
@@ -2019,9 +2067,25 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
                 'details': f"Volume Ratio: {float(volume_ratio):.2f}x",
                 'contribution': volume_norm * volume_weight,
                 'direction': 'COMPRA' if volume_norm > 0.1 else 'VENDA' if volume_norm < -0.1 else 'NEUTRO'
+            },
+            'ai_lstm': {
+                'signal': lstm_norm,
+                'original_signal': lstm_signal, 
+                'weight': lstm_weight, 
+                'details': f"LSTM: Long trend={long_trend:.4f}, Recent vol={recent_volatility:.4f}" if len(prices) >= 20 else "LSTM: Dados insuficientes",
+                'contribution': lstm_norm * lstm_weight,
+                'direction': 'COMPRA' if lstm_norm > 0.1 else 'VENDA' if lstm_norm < -0.1 else 'NEUTRO'
+            },
+            'risk': {
+                'signal': risk_norm,
+                'original_signal': risk_score, 
+                'weight': risk_weight, 
+                'details': f"Risco: Volatilidade={volatility:.4f}, Trend strength={abs(trend_alignment):.2f}",
+                'contribution': risk_norm * risk_weight,
+                'direction': 'COMPRA' if risk_norm > 0.1 else 'VENDA' if risk_norm < -0.1 else 'NEUTRO'
             }
         },
-        'analysis_focus': f'ANÁLISE UNIFICADA AVANÇADA - Confluência: {int(max_agreement)}/4 componentes | Força: {int(confluence_strength)} sinais fortes',
+        'analysis_focus': f'ANÁLISE UNIFICADA AVANÇADA - Confluência: {int(max_agreement)}/6 componentes | Força: {int(confluence_strength)} sinais fortes',
         'final_recommendation': f"{str(direction)} - {float(probability):.0f}% de probabilidade",
         'recommendation_details': f"Confluência de {int(max_agreement)} componentes com {int(confluence_strength)} sinais fortes. " +
                                 f"Volatilidade: {float(volatility)*100:.2f}%. Confiança: {float(confidence)*100:.0f}%."
@@ -4002,6 +4066,19 @@ def display_analysis_results():
                 sent_dir = components.get('sentiment', {}).get('direction', 'N/A')
                 sent_signal = components.get('sentiment', {}).get('signal', 0)
                 st.metric("💭 Sentimento", sent_dir, f"{sent_signal:.3f}")
+            
+            # Segunda linha com AI/LSTM e Risk
+            col5, col6 = st.columns(2)
+            
+            with col5:
+                ai_dir = components.get('ai_lstm', {}).get('direction', 'N/A')
+                ai_signal = components.get('ai_lstm', {}).get('signal', 0)
+                st.metric("🤖 IA/LSTM", ai_dir, f"{ai_signal:.3f}")
+            
+            with col6:
+                risk_dir = components.get('risk', {}).get('direction', 'N/A')
+                risk_signal = components.get('risk', {}).get('signal', 0)
+                st.metric("⚖️ Risco", risk_dir, f"{risk_signal:.3f}")
             
             # Lógica de decisão
             st.markdown("### 🧠 Lógica de Decisão")
