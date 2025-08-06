@@ -19,8 +19,8 @@ class DataService:
             return cached_data
         
         try:
-            # Special handling for gold (XAU/USD) which has limited support
-            if pair in ['XAU/USD', 'XAUUSD']:
+            # Special handling for gold which has limited support
+            if pair in ['GOLD']:
                 df = DataService._fetch_gold_data_internal(pair, interval, outputsize)
             elif market_type == 'crypto':
                 df = DataService._fetch_crypto_data_internal(pair, interval, outputsize)
@@ -113,7 +113,7 @@ class DataService:
         """Get the latest price for a currency pair or crypto"""
         try:
             # Special handling for gold - use real-time exchange rate
-            if pair in ['XAU/USD', 'XAUUSD']:
+            if pair in ['GOLD']:
                 params = {
                     'function': 'CURRENCY_EXCHANGE_RATE',
                     'from_currency': 'XAU',
@@ -252,6 +252,6 @@ class DataService:
             
             # Gold only provides real-time exchange rate, not historical OHLC data
             # Alpha Vantage limitation - no historical data available for gold
-            raise ValueError(f"❌ ANÁLISE BLOQUEADA: Gold (XAU/USD) não possui dados históricos OHLC na API Alpha Vantage. Apenas taxa de câmbio em tempo real disponível: ${current_price:.2f}. Use apenas para preço atual, não para análise técnica.")
+            raise ValueError(f"❌ ANÁLISE BLOQUEADA: Gold não possui dados históricos OHLC na API Alpha Vantage. Apenas taxa de câmbio em tempo real disponível: ${current_price:.2f}. Use apenas para preço atual, não para análise técnica.")
         else:
             raise ValueError("No gold exchange rate data found in API response")

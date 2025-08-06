@@ -11,11 +11,11 @@ PAIRS: List[str] = [
     'EUR/AUD', 'EUR/CAD', 'EUR/CHF', 'EUR/GBP', 'EUR/JPY', 'EUR/NZD', 'EUR/USD',
     'GBP/AUD', 'GBP/CAD', 'GBP/CHF', 'GBP/JPY', 'GBP/USD',
     'NZD/USD', 'USD/CAD', 'USD/CHF', 'USD/JPY',
-    'XAU/USD'  # Gold - limited support
+    'GOLD'  # Gold - limited support
 ]
 
 # Special handling pairs with limited API support
-LIMITED_SUPPORT_PAIRS = ['XAU/USD']  # Gold has limited support in Alpha Vantage
+LIMITED_SUPPORT_PAIRS = ['GOLD']  # Gold has limited support in Alpha Vantage
 
 # Cryptocurrency Pairs - Alpha Vantage Compatible
 CRYPTO_PAIRS: List[str] = [
@@ -274,7 +274,7 @@ TEMPORAL_AI_PARAMETERS = {
 MARKET_TYPES = {
     'forex': PAIRS,
     'crypto': CRYPTO_PAIRS,
-    # 'commodities': []  # XAUUSD not supported by Alpha Vantage
+    # 'commodities': []  # Limited support for Gold via exchange rate API
 }
 
 # Parâmetros específicos para pares da Alpha Vantage por volatilidade
