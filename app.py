@@ -488,32 +488,41 @@ def apply_theme_css():
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
-        /* Global AI Theme */
+        /* Modern Trading Platform Theme */
         .stApp {
-            background: linear-gradient(135deg, #0a0a23 0%, #1a1a3e 50%, #2d2d5f 100%) !important;
+            background: linear-gradient(145deg, #0d1421 0%, #1a252f 30%, #161b22 70%, #0d1117 100%) !important;
             min-height: 100vh;
-            font-family: 'Inter', sans-serif !important;
+            font-family: 'Inter', 'SF Pro Display', -apple-system, sans-serif !important;
         }
         
         .main .block-container {
-            background: transparent !important;
-            color: rgba(255,255,255,0.9) !important;
+            background: linear-gradient(145deg, rgba(13,20,33,0.7), rgba(22,27,34,0.8)) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(58,175,169,0.2) !important;
+            border-radius: 16px !important;
+            box-shadow: 
+                0 25px 50px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(58,175,169,0.1) !important;
+            color: rgba(255,255,255,0.95) !important;
             max-width: 1200px;
-            padding-top: 2rem;
+            padding: 2.5rem;
+            margin-top: 1rem;
         }
         
-        /* Futuristic Cards */
+        /* Modern Trading Cards */
         .metric-card {
-            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)) !important;
-            backdrop-filter: blur(15px) !important;
-            border: 1px solid rgba(0,245,255,0.3) !important;
+            background: linear-gradient(145deg, rgba(22,27,34,0.9), rgba(13,20,33,0.8)) !important;
+            backdrop-filter: blur(25px) !important;
+            border: 1px solid rgba(58,175,169,0.4) !important;
             padding: 2rem !important;
-            border-radius: 16px !important;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 20px rgba(0,245,255,0.1) !important;
+            border-radius: 12px !important;
+            box-shadow: 
+                0 10px 30px rgba(0,0,0,0.4),
+                0 1px 0 rgba(58,175,169,0.2) !important;
             margin: 1.5rem 0 !important;
             position: relative !important;
             overflow: hidden !important;
-            color: white !important;
+            color: rgba(255,255,255,0.95) !important;
         }
         
         .metric-card::before {
@@ -523,56 +532,59 @@ def apply_theme_css():
             left: 0;
             right: 0;
             height: 2px;
-            background: linear-gradient(90deg, #00f5ff, #ff00f5, #f5ff00);
-            animation: glow 3s ease-in-out infinite alternate;
+            background: linear-gradient(90deg, #3afa9, #21d397, #06d6a0);
+            animation: trading-glow 2s ease-in-out infinite alternate;
         }
         
-        @keyframes glow {
-            from { box-shadow: 0 0 5px rgba(0,245,255,0.5); }
-            to { box-shadow: 0 0 25px rgba(255,0,245,0.8); }
+        @keyframes trading-glow {
+            from { box-shadow: 0 0 8px rgba(58,175,169,0.3); }
+            to { box-shadow: 0 0 20px rgba(6,214,160,0.6); }
         }
         
-        /* AI Headers */
+        /* Professional Trading Headers */
         h1, h2, h3, h4, h5, h6 {
-            color: #00f5ff !important;
-            text-shadow: 0 0 15px rgba(0,245,255,0.6) !important;
-            font-family: 'Inter', sans-serif !important;
-            font-weight: 600 !important;
+            color: #3afa9 !important;
+            text-shadow: 0 0 12px rgba(58,175,169,0.4) !important;
+            font-family: 'Inter', 'SF Pro Display', sans-serif !important;
+            font-weight: 700 !important;
+            letter-spacing: -0.02em !important;
         }
         
         h1 {
-            background: linear-gradient(135deg, #00f5ff, #ff00f5) !important;
+            background: linear-gradient(135deg, #3afa9, #21d397, #06d6a0) !important;
             -webkit-background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
             background-clip: text !important;
-            font-size: 3rem !important;
+            font-size: 2.8rem !important;
             text-align: center !important;
             margin-bottom: 2rem !important;
-            animation: pulse 4s ease-in-out infinite alternate;
+            font-weight: 800 !important;
+            letter-spacing: -0.03em !important;
         }
         
-        @keyframes pulse {
-            from { text-shadow: 0 0 15px rgba(0,245,255,0.6); }
-            to { text-shadow: 0 0 25px rgba(255,0,245,0.8); }
+        /* Trading Platform Animations */
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
-        /* Enhanced Futuristic Buttons */
+        /* Modern Trading Platform Buttons */
         .stButton > button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-            color: #ffffff !important;
-            border: 2px solid rgba(0,245,255,0.4) !important;
-            border-radius: 12px !important;
-            padding: 1rem 2rem !important;
-            font-weight: 700 !important;
-            font-family: 'Inter', sans-serif !important;
-            text-transform: uppercase !important;
-            letter-spacing: 1.5px !important;
+            background: linear-gradient(135deg, #21d397 0%, #3afa9 100%) !important;
+            color: #0d1117 !important;
+            border: 1px solid rgba(58,175,169,0.3) !important;
+            border-radius: 8px !important;
+            padding: 0.75rem 1.5rem !important;
+            font-weight: 600 !important;
+            font-family: 'Inter', 'SF Pro Display', sans-serif !important;
+            text-transform: none !important;
+            letter-spacing: 0 !important;
             font-size: 0.9rem !important;
             position: relative !important;
             overflow: hidden !important;
-            transition: all 0.4s ease !important;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4), 0 0 20px rgba(0,245,255,0.2) !important;
-            text-shadow: 0 0 10px rgba(255,255,255,0.8) !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 2px 8px rgba(58,175,169,0.2) !important;
+            text-shadow: none !important;
         }
         
         .stButton > button::before {
@@ -591,10 +603,10 @@ def apply_theme_css():
         }
         
         .stButton > button:hover {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
-            transform: translateY(-3px) !important;
-            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.5) !important;
-            border: 1px solid rgba(0,245,255,0.4) !important;
+            background: linear-gradient(135deg, #06d6a0 0%, #21d397 100%) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(58,175,169,0.4) !important;
+            border: 1px solid rgba(58,175,169,0.5) !important;
         }
         
         /* Enhanced Sidebar AI Design */
