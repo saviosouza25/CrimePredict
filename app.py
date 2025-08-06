@@ -772,22 +772,21 @@ def main():
         
         st.markdown("---")
         
-        # Análise multi-pares com seleção de tipo
-        st.markdown("**🌍 Análise Multi-Pares Especializada**")
-        
-        # Seleção do tipo de análise baseado no perfil
-        multi_analysis_type = st.selectbox(
-            "Tipo de Análise Multi-Pares:",
-            options=[
-                "Scalping (Técnica + Volume + Micro Tendência)",
-                "Intraday (Análise Unificada Completa)", 
-                "Swing (Todas com Pesos Equilibrados)",
-                "Position (Sentiment + Tendência + LSTM)"
-            ],
-            key="multi_analysis_type"
-        )
-        
-        multi_pair_analysis = st.button("🌍 Executar Análise Multi-Pares", use_container_width=True, key="multi_pair_btn")
+        # Análise multi-pares com seleção de tipo em expander colapsável
+        with st.expander("🌍 Análise Multi-Pares Especializada", expanded=False):
+            # Seleção do tipo de análise baseado no perfil
+            multi_analysis_type = st.selectbox(
+                "Tipo de Análise Multi-Pares:",
+                options=[
+                    "Scalping (Técnica + Volume + Micro Tendência)",
+                    "Intraday (Análise Unificada Completa)", 
+                    "Swing (Todas com Pesos Equilibrados)",
+                    "Position (Sentiment + Tendência + LSTM)"
+                ],
+                key="multi_analysis_type"
+            )
+            
+            multi_pair_analysis = st.button("🌍 Executar Análise Multi-Pares", use_container_width=True, key="multi_pair_btn")
         
         st.markdown("---")
         
