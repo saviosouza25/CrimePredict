@@ -1892,7 +1892,9 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         'probability_optimized': True,
         'stop_pct': round(prob_params['stop_distance_pct'] * 100, 2),
         'tp_pct': round(prob_params['tp_distance_pct'] * 100, 2),
-        'optimization_method': 'Probabilidade de Sucesso >75%'
+        'optimization_method': 'Probabilidade de Sucesso >75%',
+        'profile_characteristics': get_profile_characteristics(profile),
+        'actual_risk_pct': round(prob_params['banca_risk'], 2)
     }
 
 def display_multi_pair_results():
@@ -2111,7 +2113,7 @@ def display_execution_positions(results):
                 st.write(f"• **Stop Loss:** {execution.get('stop_pct', 0):.2f}% ({execution['stop_distance_pips']:.1f} pips)")
                 st.write(f"• **Take Profit:** {execution.get('tp_pct', 0):.2f}% ({execution['tp_distance_pips']:.1f} pips)")
                 st.write(f"• **R/R Real:** 1:{execution['risk_reward_ratio']:.2f}")
-                st.write(f"• **Lucro/Perda:** ${execution['potential_profit']:.2f} / ${execution['potential_loss']:.2f}")
+                st.write(f"• **Risco da Banca:** {execution.get('actual_risk_pct', 0):.2f}%")
             
             # Profile-specific information
             st.markdown("**🎯 Configuração do Perfil:**")
@@ -2127,12 +2129,26 @@ def display_execution_positions(results):
                 sentiment_color = "🟢" if execution['sentiment_bias'] == 'Positivo' else "🔴" if execution['sentiment_bias'] == 'Negativo' else "🟡"
                 st.info(f"**Sentimento:** {sentiment_color} {execution['sentiment_bias']}")
             
-            # Probability optimization details
-            if 'profile_description' in execution:
-                st.markdown(f"**📋 Estratégia:** {execution['profile_description']}")
+            # Profile-specific characteristics
+            if 'profile_characteristics' in execution:
+                characteristics = execution['profile_characteristics']
+                st.markdown("**🔧 Características do Perfil:**")
+                
+                char_col1, char_col2 = st.columns(2)
+                with char_col1:
+                    st.write(f"• **Stops:** {characteristics['stop_behavior']}")
+                    st.write(f"• **Takes:** {characteristics['take_behavior']}")
+                    st.write(f"• **Risco:** {characteristics['risk_approach']}")
+                
+                with char_col2:
+                    st.write(f"• **Timing:** {characteristics['timing']}")
+                    st.write(f"• **Foco:** {characteristics['focus']}")
+                    
             if 'optimization_method' in execution:
-                st.success(f"**🎯 Otimização:** {execution['optimization_method']}")
-                st.info(f"**Parâmetros calculados para maximizar probabilidade de sucesso ao invés de R/R tradicional**")
+                st.success(f"**🎯 {execution['optimization_method']}**")
+                
+            if 'profile_description' in execution:
+                st.info(f"**📋 {execution['profile_description']}**")
 
 def display_detailed_summary(results):
     """Exibir resumo detalhado da análise"""
@@ -5371,59 +5387,79 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         upside_range = 0.02
         downside_range = 0.02
     
-    # Base success probability adjustments by profile
+    # Profile-specific probability configurations with distinct stop/take characteristics
     profile_base_configs = {
         'scalping': {
-            'base_success_rate': 0.80,    # Scalping needs very high success rate
-            'volatility_factor': 0.3,     # Low volatility tolerance
-            'time_decay_factor': 0.9,     # High time pressure
-            'description': 'Scalping - Otimizado para >80% sucesso'
+            'base_success_rate': 0.82,    # Very high success rate for scalping
+            'volatility_factor': 0.25,    # Very tight volatility tolerance
+            'time_decay_factor': 0.95,    # Immediate execution pressure
+            'stop_tightness': 0.8,        # Extra tight stops (20% tighter)
+            'take_conservative': 1.2,     # More conservative takes (20% closer)
+            'risk_multiplier': 0.7,       # Lower risk per trade
+            'description': 'Scalping - Ultra preciso >82% sucesso, stops muito apertados'
         },
         'intraday': {
-            'base_success_rate': 0.75,    # Target 75%+ success
-            'volatility_factor': 0.5,     # Moderate volatility tolerance
-            'time_decay_factor': 0.7,     # Moderate time pressure
-            'description': 'Intraday - Otimizado para >75% sucesso'
+            'base_success_rate': 0.76,    # Good success rate
+            'volatility_factor': 0.45,    # Moderate volatility tolerance
+            'time_decay_factor': 0.75,    # Balanced time pressure
+            'stop_tightness': 1.0,        # Standard stops
+            'take_conservative': 1.0,     # Standard takes
+            'risk_multiplier': 1.0,       # Standard risk
+            'description': 'Intraday - Balanceado >76% sucesso, parâmetros padrão'
         },
         'swing': {
-            'base_success_rate': 0.78,    # Higher success target for swing
-            'volatility_factor': 0.7,     # Higher volatility tolerance
-            'time_decay_factor': 0.5,     # Lower time pressure
-            'description': 'Swing - Otimizado para >78% sucesso com paciência'
+            'base_success_rate': 0.78,    # High success for patience
+            'volatility_factor': 0.8,     # Higher volatility tolerance
+            'time_decay_factor': 0.4,     # Low time pressure
+            'stop_tightness': 1.4,        # Wider stops (40% more room)
+            'take_conservative': 0.7,     # More aggressive takes (30% further)
+            'risk_multiplier': 1.3,       # Higher risk for better R/R
+            'description': 'Swing - Paciente >78% sucesso, stops amplos para volatilidade'
         },
         'position': {
-            'base_success_rate': 0.82,    # Highest success target for position
-            'volatility_factor': 1.0,     # Full volatility tolerance
-            'time_decay_factor': 0.3,     # Very low time pressure
-            'description': 'Position - Otimizado para >82% sucesso de longo prazo'
+            'base_success_rate': 0.85,    # Highest success for long-term
+            'volatility_factor': 1.2,     # Very high volatility tolerance
+            'time_decay_factor': 0.2,     # Very low time pressure
+            'stop_tightness': 2.0,        # Much wider stops (100% more room)
+            'take_conservative': 0.5,     # Very aggressive takes (50% further)
+            'risk_multiplier': 1.5,       # Higher risk for long-term trends
+            'description': 'Position - Estratégico >85% sucesso, máxima tolerância'
         }
     }
     
     config = profile_base_configs.get(profile, profile_base_configs['intraday'])
     
-    # Calculate probability-adjusted stop and target levels
-    # Stop Loss: Tight enough to maintain high success rate
+    # Calculate profile-differentiated stop and target levels
+    # Stop Loss: Adjusted by profile-specific tightness
     base_stop_range = daily_vol * config['volatility_factor']
     
+    # Profile-specific stop adjustments
+    profile_stop_adjustment = config['stop_tightness']
+    
     # Adjust based on confidence and signal strength
-    confidence_multiplier = 0.5 + (confidence * 0.5)  # 0.5 to 1.0
-    signal_multiplier = 0.7 + (abs(signal_strength) * 0.3)  # 0.7 to 1.0
+    confidence_multiplier = 0.4 + (confidence * 0.6)  # 0.4 to 1.0
+    signal_multiplier = 0.6 + (abs(signal_strength) * 0.4)  # 0.6 to 1.0
     
-    # Final stop calculation (tighter stops for higher success rate)
-    stop_distance = base_stop_range * confidence_multiplier * signal_multiplier
+    # Final stop calculation with profile differentiation
+    stop_distance = (base_stop_range * confidence_multiplier * signal_multiplier * profile_stop_adjustment)
     
-    # Take Profit: Based on probable movement zones, not fixed R/R
+    # Take Profit: Profile-specific conservative/aggressive approach
     if signal_strength > 0:  # Buy signal
-        probable_move = upside_range * 0.6  # Target 60% of upside range for high probability
+        probable_move = upside_range * 0.65  # Slightly higher base target
     else:  # Sell signal
-        probable_move = downside_range * 0.6  # Target 60% of downside range
+        probable_move = downside_range * 0.65
     
-    # Adjust TP based on time decay (shorter timeframes need quicker targets)
-    tp_distance = probable_move * config['time_decay_factor']
+    # Apply profile-specific take profit adjustments
+    profile_take_adjustment = config['take_conservative']
+    time_adjustment = config['time_decay_factor']
     
-    # Risk management based on success rate optimization
-    success_rate = config['base_success_rate'] + (confidence - 0.5) * 0.2
-    risk_percentage = max(0.5, min(3.0, (1.0 - success_rate) * 8))  # Lower risk for higher success rates
+    # Final TP calculation with profile differentiation
+    tp_distance = probable_move * time_adjustment * profile_take_adjustment
+    
+    # Risk management with profile-specific multipliers
+    success_rate = config['base_success_rate'] + (confidence - 0.5) * 0.15
+    base_risk = max(0.5, min(3.0, (1.0 - success_rate) * 6))
+    risk_percentage = base_risk * config['risk_multiplier']
     
     return {
         'stop_distance_pct': max(0.002, min(0.015, stop_distance)),  # 0.2% to 1.5%
@@ -5433,6 +5469,40 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         'description': config['description'],
         'risk_reward_actual': tp_distance / stop_distance if stop_distance > 0 else 1.5
     }
+
+def get_profile_characteristics(profile):
+    """Retorna características específicas do perfil para exibição"""
+    characteristics = {
+        'scalping': {
+            'stop_behavior': 'Stops Ultra Apertados (-20%)',
+            'take_behavior': 'Takes Conservadores (+20% mais próximos)',
+            'risk_approach': 'Risco Reduzido (-30%)',
+            'timing': 'Execução Imediata',
+            'focus': 'Alta Precisão'
+        },
+        'intraday': {
+            'stop_behavior': 'Stops Padrão',
+            'take_behavior': 'Takes Balanceados',
+            'risk_approach': 'Risco Moderado',
+            'timing': 'Execução Equilibrada',
+            'focus': 'Balanço R/R'
+        },
+        'swing': {
+            'stop_behavior': 'Stops Amplos (+40% mais espaço)',
+            'take_behavior': 'Takes Agressivos (-30% mais distantes)',
+            'risk_approach': 'Risco Elevado (+30%)',
+            'timing': 'Paciência Estratégica',
+            'focus': 'Tolerância à Volatilidade'
+        },
+        'position': {
+            'stop_behavior': 'Stops Muito Amplos (+100% máximo espaço)',
+            'take_behavior': 'Takes Muito Agressivos (-50% mais distantes)', 
+            'risk_approach': 'Risco Máximo (+50%)',
+            'timing': 'Visão de Longo Prazo',
+            'focus': 'Seguir Tendências Principais'
+        }
+    }
+    return characteristics.get(profile, characteristics['intraday'])
 
 def get_profile_risk_parameters(profile):
     """Retorna parâmetros de risco básicos por perfil (fallback)"""
