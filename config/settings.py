@@ -4,57 +4,18 @@ from typing import Dict, List
 # API Configuration
 API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
 
-# Trading Pairs
+# Trading Pairs - User specified list only
 PAIRS: List[str] = [
-    # Major Currency Pairs (100% Alpha Vantage Compatible)
-    'EUR/USD',  # Euro/US Dollar - Most liquid pair
-    'USD/JPY',  # US Dollar/Japanese Yen - Second most liquid
-    'GBP/USD',  # British Pound/US Dollar - Cable
-    'AUD/USD',  # Australian Dollar/US Dollar - Aussie
-    'USD/CAD',  # US Dollar/Canadian Dollar - Loonie
-    'USD/CHF',  # US Dollar/Swiss Franc - Swissy
-    'NZD/USD',  # New Zealand Dollar/US Dollar - Kiwi
-    
-    # Minor Cross Currency Pairs (Alpha Vantage Compatible)
-    'EUR/GBP',  # Euro/British Pound
-    'EUR/JPY',  # Euro/Japanese Yen
-    'EUR/CHF',  # Euro/Swiss Franc
-    'EUR/AUD',  # Euro/Australian Dollar
-    'EUR/CAD',  # Euro/Canadian Dollar
-    'EUR/NZD',  # Euro/New Zealand Dollar
-    'GBP/JPY',  # British Pound/Japanese Yen
-    'GBP/CHF',  # British Pound/Swiss Franc
-    'GBP/AUD',  # British Pound/Australian Dollar
-    'GBP/CAD',  # British Pound/Canadian Dollar
-    'GBP/NZD',  # British Pound/New Zealand Dollar
-    'CHF/JPY',  # Swiss Franc/Japanese Yen
-    'AUD/JPY',  # Australian Dollar/Japanese Yen
-    'AUD/CHF',  # Australian Dollar/Swiss Franc
-    'AUD/CAD',  # Australian Dollar/Canadian Dollar
-    'AUD/NZD',  # Australian Dollar/New Zealand Dollar
-    'CAD/JPY',  # Canadian Dollar/Japanese Yen
-    'CAD/CHF',  # Canadian Dollar/Swiss Franc
-    'NZD/JPY',  # New Zealand Dollar/Japanese Yen
-    'NZD/CHF',  # New Zealand Dollar/Swiss Franc
-    'NZD/CAD',  # New Zealand Dollar/Canadian Dollar
-    
-    # Select Exotic Pairs (Alpha Vantage Supported)
-    'USD/SEK',  # US Dollar/Swedish Krona
-    'USD/NOK',  # US Dollar/Norwegian Krone
-    'USD/DKK',  # US Dollar/Danish Krone  
-    'USD/PLN',  # US Dollar/Polish Zloty
-    'USD/TRY',  # US Dollar/Turkish Lira
-    'USD/ZAR',  # US Dollar/South African Rand
-    'USD/MXN',  # US Dollar/Mexican Peso
-    'EUR/SEK',  # Euro/Swedish Krona
-    'EUR/NOK',  # Euro/Norwegian Krone
-    'EUR/DKK',  # Euro/Danish Krone
-    'EUR/PLN',  # Euro/Polish Zloty
-    'EUR/TRY',  # Euro/Turkish Lira
-    'GBP/SEK',  # British Pound/Swedish Krona
-    'GBP/NOK',  # British Pound/Norwegian Krone
-    'GBP/PLN',  # British Pound/Polish Zloty
+    'AUD/CAD', 'AUD/CHF', 'AUD/JPY', 'AUD/NZD', 'AUD/USD',
+    'CAD/CHF', 'CAD/JPY', 'CHF/JPY',
+    'EUR/AUD', 'EUR/CAD', 'EUR/CHF', 'EUR/GBP', 'EUR/JPY', 'EUR/NZD', 'EUR/USD',
+    'GBP/AUD', 'GBP/CAD', 'GBP/CHF', 'GBP/JPY', 'GBP/USD',
+    'NZD/USD', 'USD/CAD', 'USD/CHF', 'USD/JPY',
+    'XAU/USD'  # Gold - limited support
 ]
+
+# Special handling pairs with limited API support
+LIMITED_SUPPORT_PAIRS = ['XAU/USD']  # Gold has limited support in Alpha Vantage
 
 # Cryptocurrency Pairs - Alpha Vantage Compatible
 CRYPTO_PAIRS: List[str] = [
