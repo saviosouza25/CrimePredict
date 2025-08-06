@@ -477,686 +477,114 @@ class CacheManager:
     @staticmethod
     def clear_cache():
         for key in list(st.session_state.keys()):
-            if isinstance(key, str) and key.startswith(('cache_', 'analysis_', 'unified_', 'ai_result_')):
+            if key.startswith(('cache_', 'analysis_', 'unified_', 'ai_result_')):
                 if key != 'analysis_results':  # Preservar resultado final
                     del st.session_state[key]
 
 def apply_theme_css():
-    """Apply futuristic AI-themed CSS styling"""
-    # Futuristic AI CSS with cyberpunk aesthetics
-    futuristic_css = """
+    """Apply theme-specific CSS based on current theme"""
+    current_theme = st.session_state.get('theme', 'light')
+    
+    # CSS para ocultar elementos de carregamento do Streamlit
+    hide_loading_css = """
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        /* Modern Trading Platform Theme */
-        .stApp {
-            background: linear-gradient(145deg, #0d1421 0%, #1a252f 30%, #161b22 70%, #0d1117 100%) !important;
-            min-height: 100vh;
-            font-family: 'Inter', 'SF Pro Display', -apple-system, sans-serif !important;
-        }
-        
-        .main .block-container {
-            background: linear-gradient(145deg, rgba(13,20,33,0.7), rgba(22,27,34,0.8)) !important;
-            backdrop-filter: blur(20px) !important;
-            border: 1px solid rgba(58,175,169,0.2) !important;
-            border-radius: 16px !important;
-            box-shadow: 
-                0 25px 50px rgba(0,0,0,0.5),
-                inset 0 1px 0 rgba(58,175,169,0.1) !important;
-            color: rgba(255,255,255,0.95) !important;
-            max-width: 1200px;
-            padding: 2.5rem;
-            margin-top: 1rem;
-        }
-        
-        /* Modern Trading Cards */
-        .metric-card {
-            background: linear-gradient(145deg, rgba(22,27,34,0.9), rgba(13,20,33,0.8)) !important;
-            backdrop-filter: blur(25px) !important;
-            border: 1px solid rgba(58,175,169,0.4) !important;
-            padding: 2rem !important;
-            border-radius: 12px !important;
-            box-shadow: 
-                0 10px 30px rgba(0,0,0,0.4),
-                0 1px 0 rgba(58,175,169,0.2) !important;
-            margin: 1.5rem 0 !important;
-            position: relative !important;
-            overflow: hidden !important;
-            color: rgba(255,255,255,0.95) !important;
-        }
-        
-        .metric-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, #3afa9, #21d397, #06d6a0);
-            animation: trading-glow 2s ease-in-out infinite alternate;
-        }
-        
-        @keyframes trading-glow {
-            from { box-shadow: 0 0 8px rgba(58,175,169,0.3); }
-            to { box-shadow: 0 0 20px rgba(6,214,160,0.6); }
-        }
-        
-        /* Professional Trading Headers */
-        h1, h2, h3, h4, h5, h6 {
-            color: #3afa9 !important;
-            text-shadow: 0 0 12px rgba(58,175,169,0.4) !important;
-            font-family: 'Inter', 'SF Pro Display', sans-serif !important;
-            font-weight: 700 !important;
-            letter-spacing: -0.02em !important;
-        }
-        
-        h1 {
-            background: linear-gradient(135deg, #3afa9, #21d397, #06d6a0) !important;
-            -webkit-background-clip: text !important;
-            -webkit-text-fill-color: transparent !important;
-            background-clip: text !important;
-            font-size: 2.8rem !important;
-            text-align: center !important;
-            margin-bottom: 2rem !important;
-            font-weight: 800 !important;
-            letter-spacing: -0.03em !important;
-        }
-        
-        /* Trading Platform Animations */
-        @keyframes fade-in {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        /* Modern Trading Platform Buttons */
-        .stButton > button {
-            background: linear-gradient(135deg, #21d397 0%, #3afa9 100%) !important;
-            color: #0d1117 !important;
-            border: 1px solid rgba(58,175,169,0.3) !important;
-            border-radius: 8px !important;
-            padding: 0.75rem 1.5rem !important;
-            font-weight: 600 !important;
-            font-family: 'Inter', 'SF Pro Display', sans-serif !important;
-            text-transform: none !important;
-            letter-spacing: 0 !important;
-            font-size: 0.9rem !important;
-            position: relative !important;
-            overflow: hidden !important;
-            transition: all 0.2s ease !important;
-            box-shadow: 0 2px 8px rgba(58,175,169,0.2) !important;
-            text-shadow: none !important;
-        }
-        
-        .stButton > button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.6s;
-        }
-        
-        .stButton > button:hover::before {
-            left: 100%;
-        }
-        
-        .stButton > button:hover {
-            background: linear-gradient(135deg, #06d6a0 0%, #21d397 100%) !important;
-            transform: translateY(-2px) !important;
-            box-shadow: 0 6px 20px rgba(58,175,169,0.4) !important;
-            border: 1px solid rgba(58,175,169,0.5) !important;
-        }
-        
-        /* Enhanced Sidebar AI Design */
-        .css-1d391kg, .st-emotion-cache-1d391kg, section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #1a1a3e 0%, #0a0a23 100%) !important;
-            border-right: 2px solid rgba(0,245,255,0.4) !important;
-        }
-        
-        /* Sidebar content visibility */
-        .css-1d391kg .stMarkdown, 
-        .css-1d391kg label, 
-        .css-1d391kg .stSelectbox label,
-        .css-1d391kg .stNumberInput label,
-        .css-1d391kg .stSlider label,
-        .css-1d391kg p,
-        .css-1d391kg span,
-        section[data-testid="stSidebar"] .stMarkdown,
-        section[data-testid="stSidebar"] label,
-        section[data-testid="stSidebar"] p,
-        section[data-testid="stSidebar"] span {
-            color: rgba(255,255,255,0.95) !important;
-            font-weight: 500 !important;
-            text-shadow: 0 0 8px rgba(0,245,255,0.3) !important;
-        }
-        
-        /* Sidebar selectbox styling - main field */
-        section[data-testid="stSidebar"] .stSelectbox > div > div,
-        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] {
-            background: rgba(255,255,255,0.95) !important;
-            color: #000000 !important;
-            border: 2px solid rgba(0,245,255,0.6) !important;
-            border-radius: 8px !important;
-            font-size: 0.9rem !important;
-            font-weight: 600 !important;
-        }
-        
-        /* Sidebar selectbox text visibility - comprehensive override */
-        section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] > div,
-        section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] span,
-        section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] div,
-        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] *,
-        section[data-testid="stSidebar"] .stSelectbox [role="button"] *,
-        section[data-testid="stSidebar"] .stSelectbox [role="combobox"] * {
-            color: #000000 !important;
-            background: rgba(255,255,255,0.95) !important;
-            font-weight: 600 !important;
-            font-size: 0.9rem !important;
-        }
-        
-        /* Ensure dropdown arrows and icons are visible */
-        section[data-testid="stSidebar"] .stSelectbox svg {
-            color: #000000 !important;
-            fill: #000000 !important;
-        }
-        
-        /* Sidebar number input and slider styling */
-        section[data-testid="stSidebar"] .stNumberInput input,
-        section[data-testid="stSidebar"] .stSlider [role="slider"] {
-            background: rgba(255,255,255,0.95) !important;
-            color: #000000 !important;
-            border: 2px solid rgba(0,245,255,0.6) !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-        }
-        
-        /* Selectbox dropdown options - force visibility */
-        .stSelectbox [data-baseweb="popover"] ul,
-        .stSelectbox [data-baseweb="popover"] li,
-        .stSelectbox [data-baseweb="popover"] [role="option"] {
-            background: rgba(255,255,255,0.98) !important;
-            color: #000000 !important;
-            border: 1px solid rgba(0,245,255,0.4) !important;
-            font-size: 0.9rem !important;
-            font-weight: 600 !important;
-        }
-        
-        /* Force all dropdown content to be visible - comprehensive */
-        .stSelectbox [data-baseweb="popover"] *,
-        .stSelectbox [data-baseweb="popover"] li *,
-        .stSelectbox [data-baseweb="popover"] div *,
-        .stSelectbox [data-baseweb="popover"] span *,
-        .stSelectbox [data-baseweb="popover"] [role="option"] *,
-        .stSelectbox [data-baseweb="popover"] [data-baseweb="menu-item"] *,
-        .stSelectbox [data-baseweb="popover"] [data-baseweb="list-item"] * {
-            color: #000000 !important;
-            background: transparent !important;
-            font-weight: 600 !important;
-            font-size: 0.9rem !important;
-        }
-        
-        /* Specific targeting for menu items */
-        [data-baseweb="menu"] li,
-        [data-baseweb="menu"] [role="option"],
-        [data-baseweb="list"] li,
-        [data-baseweb="list"] [role="option"] {
-            background: rgba(255,255,255,0.98) !important;
-            color: #000000 !important;
-            font-weight: 600 !important;
-            padding: 8px 12px !important;
-            border-bottom: 1px solid rgba(0,245,255,0.2) !important;
-        }
-        
-        /* Selectbox option hover */
-        .stSelectbox [data-baseweb="popover"] li:hover {
-            background: rgba(0,245,255,0.8) !important;
-            color: #ffffff !important;
-            font-weight: 700 !important;
-        }
-        
-        /* Additional selectbox styling for better visibility */
-        .stSelectbox [data-baseweb="popover"],
-        .stSelectbox [data-baseweb="popover-content"] {
-            background: rgba(255,255,255,0.98) !important;
-            backdrop-filter: blur(20px) !important;
-            border: 2px solid rgba(0,245,255,0.4) !important;
-            border-radius: 10px !important;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
-        }
-        
-        /* Ensure all popover elements have proper styling */
-        .stSelectbox [data-baseweb="popover"] > div,
-        .stSelectbox [data-baseweb="popover-content"] > div,
-        .stSelectbox [data-baseweb="popover"] ul,
-        .stSelectbox [data-baseweb="popover"] ol,
-        .stSelectbox [data-baseweb="menu"],
-        .stSelectbox [data-baseweb="list"] {
-            background: rgba(255,255,255,0.98) !important;
-            color: #000000 !important;
-        }
-        
-        /* Universal selectbox option override */
-        .stSelectbox option,
-        .stSelectbox [role="option"],
-        .stSelectbox [data-baseweb="menu-item"],
-        .stSelectbox [data-baseweb="list-item"] {
-            background: rgba(255,255,255,0.98) !important;
-            color: #000000 !important;
-            font-weight: 600 !important;
-            font-size: 0.9rem !important;
-        }
-        
-        /* Hover states for options */
-        .stSelectbox [role="option"]:hover,
-        .stSelectbox [data-baseweb="menu-item"]:hover,
-        .stSelectbox [data-baseweb="list-item"]:hover {
-            background: rgba(0,245,255,0.8) !important;
-            color: #ffffff !important;
-        }
-        
-        /* Selectbox option text visibility */
-        .stSelectbox [data-baseweb="popover"] div,
-        .stSelectbox [data-baseweb="popover"] span {
-            color: #000000 !important;
-            font-weight: 600 !important;
-            font-size: 0.9rem !important;
-            text-shadow: none !important;
-        }
-        
-        /* Selectbox selected option */
-        .stSelectbox [data-baseweb="popover"] [aria-selected="true"] {
-            background: rgba(0,245,255,0.8) !important;
-            color: #ffffff !important;
-            font-weight: 700 !important;
-        }
-        
-        /* Sidebar headers */
-        .css-1d391kg h1, 
-        .css-1d391kg h2, 
-        .css-1d391kg h3,
-        section[data-testid="stSidebar"] h1,
-        section[data-testid="stSidebar"] h2,
-        section[data-testid="stSidebar"] h3 {
-            color: #00f5ff !important;
-            text-shadow: 0 0 15px rgba(0,245,255,0.7) !important;
-            font-weight: 700 !important;
-            margin-bottom: 1rem !important;
-        }
-        
-        /* Enhanced Input Fields with High Visibility */
-        .stSelectbox > div > div, 
-        .stNumberInput > div > div > input, 
-        .stTextInput > div > div > input,
-        .stSlider > div > div > div > div {
-            background: rgba(255,255,255,0.15) !important;
-            border: 2px solid rgba(0,245,255,0.6) !important;
-            border-radius: 10px !important;
-            color: #ffffff !important;
-            backdrop-filter: blur(15px) !important;
-            transition: all 0.3s ease !important;
-            font-weight: 600 !important;
-            text-shadow: 0 0 5px rgba(255,255,255,0.8) !important;
-        }
-        
-        .stSelectbox > div > div:focus, 
-        .stNumberInput > div > div > input:focus,
-        .stTextInput > div > div > input:focus {
-            border: 2px solid #00f5ff !important;
-            box-shadow: 0 0 25px rgba(0,245,255,0.5) !important;
-            background: rgba(255,255,255,0.25) !important;
-        }
-        
-        /* Select dropdown options - enhanced */
-        .stSelectbox > div > div > div {
-            background: rgba(255,255,255,0.98) !important;
-            color: #000000 !important;
-            backdrop-filter: blur(15px) !important;
-            border: 1px solid rgba(0,245,255,0.4) !important;
-            border-radius: 8px !important;
-            font-size: 0.9rem !important;
-            font-weight: 600 !important;
-        }
-        
-        /* Selectbox input text */
-        .stSelectbox > div > div input {
-            color: #000000 !important;
-            font-size: 0.9rem !important;
-            font-weight: 600 !important;
-            background: rgba(255,255,255,0.95) !important;
-        }
-        
-        /* Password input field - dark background with white text */
-        .stTextInput input[type="password"] {
-            background: rgba(0,0,0,0.8) !important;
-            color: #ffffff !important;
-            border: 2px solid rgba(0,245,255,0.6) !important;
-            border-radius: 8px !important;
-            font-size: 1rem !important;
-            font-weight: 600 !important;
-            padding: 0.8rem !important;
-            text-shadow: none !important;
-        }
-        
-        /* Password input focus state */
-        .stTextInput input[type="password"]:focus {
-            background: rgba(0,0,0,0.9) !important;
-            color: #ffffff !important;
-            border: 2px solid #00f5ff !important;
-            box-shadow: 0 0 15px rgba(0,245,255,0.5) !important;
-        }
-        
-        /* General text input styling for better visibility */
-        .stTextInput input {
-            background: rgba(0,0,0,0.7) !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(0,245,255,0.4) !important;
-            border-radius: 8px !important;
-            font-size: 0.95rem !important;
-            font-weight: 500 !important;
-        }
-        
-        /* Number input styling */
-        .stNumberInput input {
-            font-size: 1rem !important;
-            font-weight: 600 !important;
-        }
-        
-        /* Futuristic Tabs */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 6px !important;
-            background: rgba(255,255,255,0.05) !important;
-            padding: 12px !important;
-            border-radius: 15px !important;
-            backdrop-filter: blur(15px) !important;
-            border: 1px solid rgba(0,245,255,0.2) !important;
-        }
-        
-        .stTabs [data-baseweb="tab"] {
-            background: rgba(255,255,255,0.1) !important;
-            border: 1px solid rgba(255,255,255,0.2) !important;
-            border-radius: 10px !important;
-            padding: 15px 30px !important;
-            color: #00f5ff !important;
-            font-weight: 500 !important;
-            transition: all 0.4s ease !important;
-            font-family: 'Inter', sans-serif !important;
-        }
-        
-        .stTabs [aria-selected="true"] {
-            background: linear-gradient(135deg, #667eea, #764ba2) !important;
-            color: white !important;
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5) !important;
-            transform: translateY(-3px) !important;
-            border: 1px solid rgba(0,245,255,0.4) !important;
-        }
-        
-        /* Enhanced Metrics */
-        [data-testid="metric-container"] {
-            background: linear-gradient(145deg, rgba(0,245,255,0.15), rgba(255,0,245,0.15)) !important;
-            border: 1px solid rgba(0,245,255,0.4) !important;
-            border-radius: 12px !important;
-            padding: 1.5rem !important;
-            backdrop-filter: blur(15px) !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
-            transition: all 0.3s ease !important;
-        }
-        
-        [data-testid="metric-container"]:hover {
-            transform: translateY(-2px) !important;
-            box-shadow: 0 8px 25px rgba(0,245,255,0.3) !important;
-        }
-        
-        [data-testid="metric-container"] > div > div {
-            color: #00f5ff !important;
-            font-family: 'Inter', sans-serif !important;
-        }
-        
-        /* Status Messages with Glow */
-        .stSuccess {
-            background: linear-gradient(135deg, rgba(0,255,127,0.2), rgba(0,255,127,0.1)) !important;
-            border: 1px solid rgba(0,255,127,0.5) !important;
-            color: #00ff7f !important;
-            border-radius: 10px !important;
-            backdrop-filter: blur(10px) !important;
-        }
-        
-        .stError {
-            background: linear-gradient(135deg, rgba(255,0,127,0.2), rgba(255,0,127,0.1)) !important;
-            border: 1px solid rgba(255,0,127,0.5) !important;
-            color: #ff007f !important;
-            border-radius: 10px !important;
-            backdrop-filter: blur(10px) !important;
-        }
-        
-        .stWarning {
-            background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.1)) !important;
-            border: 1px solid rgba(255,215,0,0.5) !important;
-            color: #ffd700 !important;
-            border-radius: 10px !important;
-            backdrop-filter: blur(10px) !important;
-        }
-        
-        .stInfo {
-            background: linear-gradient(135deg, rgba(0,245,255,0.2), rgba(0,245,255,0.1)) !important;
-            border: 1px solid rgba(0,245,255,0.5) !important;
-            color: #00f5ff !important;
-            border-radius: 10px !important;
-            backdrop-filter: blur(10px) !important;
-        }
-        
-        /* Enhanced Text and Content Visibility */
-        .stMarkdown, p, span, div, label {
-            color: rgba(255,255,255,0.95) !important;
-            font-family: 'Inter', sans-serif !important;
-            font-weight: 500 !important;
-            text-shadow: 0 0 5px rgba(255,255,255,0.2) !important;
-        }
-        
-        /* Strong emphasis for labels and important text */
-        label, .stMarkdown strong, .stMarkdown b {
-            color: #ffffff !important;
-            font-weight: 700 !important;
-            text-shadow: 0 0 10px rgba(0,245,255,0.4) !important;
-        }
-        
-        /* Caption and help text */
-        .stMarkdown .caption, .help {
-            color: rgba(255,255,255,0.8) !important;
-            font-size: 0.9rem !important;
-        }
-        
-        /* Enhanced Expanders */
-        .streamlit-expanderHeader {
-            background: rgba(255,255,255,0.15) !important;
-            border: 2px solid rgba(0,245,255,0.6) !important;
-            border-radius: 12px !important;
-            color: #ffffff !important;
-            backdrop-filter: blur(15px) !important;
-            font-weight: 600 !important;
-            text-shadow: 0 0 10px rgba(0,245,255,0.5) !important;
-            padding: 1rem !important;
-        }
-        
-        .streamlit-expanderHeader:hover {
-            background: rgba(255,255,255,0.2) !important;
-            border: 2px solid #00f5ff !important;
-            box-shadow: 0 0 20px rgba(0,245,255,0.3) !important;
-        }
-        
-        /* Expander content */
-        .streamlit-expanderContent {
-            background: rgba(255,255,255,0.05) !important;
-            border: 1px solid rgba(0,245,255,0.3) !important;
-            border-radius: 0 0 12px 12px !important;
-            padding: 1rem !important;
-        }
-        
-        /* Charts with AI glow */
-        .js-plotly-plot {
-            background: rgba(255,255,255,0.05) !important;
-            border-radius: 15px !important;
-            border: 2px solid rgba(0,245,255,0.3) !important;
-            box-shadow: 0 0 30px rgba(0,245,255,0.2) !important;
-        }
-        
-        /* Futuristic Scrollbar */
-        ::-webkit-scrollbar {
-            width: 10px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: rgba(255,255,255,0.1);
-            border-radius: 5px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, #00f5ff, #ff00f5);
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,245,255,0.5);
-        }
-        
-        /* Loading Animations */
-        @keyframes matrix {
-            0% { opacity: 0.3; }
-            50% { opacity: 1; }
-            100% { opacity: 0.3; }
-        }
-        
-        .loading {
-            animation: matrix 2s infinite;
-        }
-        
-        /* Hide default spinners */
-        .stSpinner > div, div[data-testid="stSpinner"], .stStatus {
+        /* Ocultar spinner de carregamento no canto superior direito */
+        .stSpinner > div {
             display: none !important;
         }
         
-        /* Fix sidebar collapse/expand button to show arrows instead of text */
-        button[title="Close sidebar"], button[title="Open sidebar"] {
-            font-size: 0 !important;
+        /* Ocultar indicador de running no header */
+        .stApp > header [data-testid="stHeader"] .stSpinner {
+            display: none !important;
         }
         
-        button[title="Close sidebar"]::before {
-            content: "◀" !important;
-            font-size: 1.2rem !important;
-            color: #00f5ff !important;
-            text-shadow: 0 0 10px rgba(0,245,255,0.6) !important;
+        /* Ocultar status de "Running" */
+        .stStatus {
+            display: none !important;
         }
         
-        button[title="Open sidebar"]::before {
-            content: "▶" !important;
-            font-size: 1.2rem !important;
-            color: #00f5ff !important;
-            text-shadow: 0 0 10px rgba(0,245,255,0.6) !important;
+        /* Ocultar todos os spinners do sistema */
+        div[data-testid="stSpinner"] {
+            display: none !important;
         }
         
-        /* Streamlit toolbar hide/show button fix */
-        .stActionButton > button, button[data-testid="stSidebarNav"] {
-            background: rgba(255,255,255,0.1) !important;
-            border: 1px solid rgba(0,245,255,0.3) !important;
-            border-radius: 8px !important;
-            color: #00f5ff !important;
-            transition: all 0.3s ease !important;
+        /* Ocultar loading overlay */
+        .stLoadingOverlay {
+            display: none !important;
         }
         
-        .stActionButton > button:hover, button[data-testid="stSidebarNav"]:hover {
-            background: rgba(0,245,255,0.2) !important;
-            border: 1px solid #00f5ff !important;
-            box-shadow: 0 0 15px rgba(0,245,255,0.4) !important;
+        /* Indicador de carregamento personalizado */
+        .custom-loader {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            z-index: 9999;
+            display: none;
         }
         
-        /* Sidebar specific styling overrides */
-        section[data-testid="stSidebar"] .stButton > button {
-            width: 100% !important;
-            padding: 0.8rem 1.5rem !important;
-            font-size: 0.85rem !important;
-            margin: 0.5rem 0 !important;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         
-        /* Individual analysis buttons - balanced compact styling */
-        section[data-testid="stSidebar"] div[data-testid="column"] .stButton > button {
-            padding: 0.5rem 0.8rem !important;
-            font-size: 0.75rem !important;
-            min-height: 2.8rem !important;
-            margin: 0.25rem 0 !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-        }
-        
-        /* Quick analysis button - full width and readable */
-        section[data-testid="stSidebar"] button[key="quick_analysis_btn"] {
-            width: 100% !important;
-            padding: 0.7rem 1rem !important;
-            font-size: 0.85rem !important;
-            margin: 0.5rem 0 !important;
-            font-weight: 600 !important;
-            min-height: 3rem !important;
-            background: linear-gradient(135deg, rgba(0,245,255,0.8), rgba(255,0,245,0.8)) !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(0,245,255,0.6) !important;
-            border-radius: 8px !important;
-        }
-        
-        /* Quick analysis button hover */
-        section[data-testid="stSidebar"] button[key="quick_analysis_btn"]:hover {
-            background: linear-gradient(135deg, rgba(0,245,255,1), rgba(255,0,245,1)) !important;
-            box-shadow: 0 0 15px rgba(0,245,255,0.5) !important;
-        }
-        
-        /* Slider styling */
-        .stSlider > div > div > div {
-            background: rgba(0,245,255,0.3) !important;
-        }
-        
-        .stSlider > div > div > div > div {
-            background: #00f5ff !important;
-            border: 2px solid #ffffff !important;
-            box-shadow: 0 0 15px rgba(0,245,255,0.6) !important;
-        }
-        
-        /* Radio button styling */
-        .stRadio > div {
-            background: rgba(255,255,255,0.05) !important;
-            border-radius: 10px !important;
-            padding: 1rem !important;
-        }
-        
-        .stRadio > div > label {
-            color: #ffffff !important;
-            font-weight: 600 !important;
-        }
-        
-        /* Checkbox styling */
-        .stCheckbox > label {
-            color: #ffffff !important;
-            font-weight: 600 !important;
-        }
-        
-        /* File uploader styling */
-        .stFileUploader > div {
-            background: rgba(255,255,255,0.1) !important;
-            border: 2px dashed rgba(0,245,255,0.5) !important;
-            border-radius: 12px !important;
-            color: #ffffff !important;
-        }
-        
-        /* Progress bar styling */
-        .stProgress > div > div {
-            background: linear-gradient(90deg, #00f5ff, #ff00f5) !important;
-        }
-        
-        /* Alert boxes */
-        .element-container .stAlert {
-            background: rgba(255,255,255,0.1) !important;
-            border: 1px solid rgba(0,245,255,0.4) !important;
-            border-radius: 10px !important;
-            backdrop-filter: blur(10px) !important;
+        /* Mostrar loader personalizado quando necessário */
+        .show-custom-loader .custom-loader {
+            display: block !important;
         }
     </style>
     """
-    st.markdown(futuristic_css, unsafe_allow_html=True)
+    st.markdown(hide_loading_css, unsafe_allow_html=True)
+    
+    if current_theme == 'dark':
+        st.markdown("""
+        <style>
+            .stApp {
+                background-color: #0e1117 !important;
+                color: #ffffff !important;
+            }
+            .main .block-container {
+                background-color: #0e1117 !important;
+                color: #ffffff !important;
+            }
+            .stSelectbox > div > div {
+                background-color: #262730 !important;
+                color: #ffffff !important;
+            }
+            .stSlider > div > div > div {
+                background-color: #667eea !important;
+            }
+            .stMarkdown {
+                color: #ffffff !important;
+            }
+            .metric-card {
+                background: linear-gradient(135deg, #1e1e1e, #2d2d2d) !important;
+                border: 1px solid #444 !important;
+                color: #ffffff !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <style>
+            .stApp {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+            }
+            .main .block-container {
+                background-color: #ffffff !important;
+            }
+            .metric-card {
+                background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
+                border: 1px solid #dee2e6 !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
 
 def check_authentication():
     """Check if user is authenticated"""
@@ -1164,161 +592,67 @@ def check_authentication():
         st.session_state.authenticated = False
     
     if not st.session_state.authenticated:
-        # Header futurístico mais slim
         st.markdown("""
         <div style="
-            background: linear-gradient(135deg, rgba(0,245,255,0.1), rgba(255,0,245,0.1));
-            backdrop-filter: blur(20px);
-            border: 2px solid rgba(0,245,255,0.3);
-            border-radius: 20px;
-            padding: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 3rem;
+            border-radius: 15px;
             text-align: center;
             color: white;
-            margin: 1rem auto 2rem auto;
-            max-width: 800px;
-            position: relative;
-            overflow: hidden;
+            margin: 2rem auto;
+            max-width: 500px;
         ">
-            <div style="
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 2px;
-                background: linear-gradient(90deg, #00f5ff, #ff00f5, #f5ff00);
-                animation: glow 3s ease-in-out infinite alternate;
-            "></div>
-            <h1 style="
-                background: linear-gradient(135deg, #00f5ff, #ff00f5);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                background-clip: text;
-                font-size: 2.2rem;
-                font-weight: 700;
-                margin-bottom: 0.5rem;
-                text-shadow: 0 0 20px rgba(0,245,255,0.6);
-            ">🔐 FOREX AI ACCESS PORTAL</h1>
-            <p style="
-                color: rgba(255,255,255,0.8);
-                font-size: 1rem;
-                margin: 0;
-                text-shadow: 0 0 10px rgba(0,245,255,0.3);
-            ">Advanced Neural Trading Platform • Secure Authentication Required</p>
+            <h1 style="color: white; margin-bottom: 1rem;">🔐 Acesso Restrito</h1>
+            <h2 style="color: white; margin-bottom: 2rem;">Plataforma Avançada de Análise Forex</h2>
+            <p style="color: rgba(255,255,255,0.9); margin-bottom: 2rem;">
+                Sistema profissional de trading com IA e análise em tempo real
+            </p>
         </div>
         """, unsafe_allow_html=True)
         
-        # Formulário de login horizontal slim
-        st.markdown("""
-        <div style="
-            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(0,245,255,0.3);
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin: 0 auto 2rem auto;
-            max-width: 700px;
-        ">
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Layout horizontal para o formulário
-        col_space1, col_form, col_space2 = st.columns([0.5, 3, 0.5])
-        with col_form:
-            col_label, col_input, col_button = st.columns([1, 2, 1])
+        # Formulário de login centralizado
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown("### 🔑 Digite a Senha de Acesso")
+            password = st.text_input("Senha:", type="password", placeholder="Digite sua senha...")
             
-            with col_label:
-                st.markdown("""
-                <div style="
-                    display: flex;
-                    align-items: center;
-                    height: 100%;
-                    padding-top: 1.5rem;
-                ">
-                    <p style="
-                        color: #00f5ff;
-                        font-weight: 600;
-                        font-size: 1.1rem;
-                        margin: 0;
-                        text-shadow: 0 0 8px rgba(0,245,255,0.5);
-                    ">🔑 Access Key:</p>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col_input:
-                password = st.text_input(
-                    "senha_access", 
-                    type="password", 
-                    placeholder="Enter your access key...",
-                    label_visibility="collapsed"
-                )
-            
-            with col_button:
-                if st.button("🚀 ENTER", type="primary", use_container_width=True):
+            col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+            with col_btn2:
+                if st.button("🚀 Entrar na Plataforma", type="primary", use_container_width=True):
                     if password == "artec2025":
                         st.session_state.authenticated = True
-                        st.success("✅ Access granted! Initializing platform...")
+                        st.success("✅ Acesso autorizado! Redirecionando...")
                         st.rerun()
                     else:
-                        st.error("❌ Invalid access key. Please try again.")
+                        st.error("❌ Senha incorreta. Tente novamente.")
         
-        # Informações da plataforma em formato horizontal slim
-        st.markdown("""
-        <div style="
-            background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0,245,255,0.2);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-        ">
-            <div style="
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 2rem;
-                text-align: center;
-            ">
-                <div>
-                    <h4 style="
-                        color: #00f5ff;
-                        margin-bottom: 0.5rem;
-                        text-shadow: 0 0 10px rgba(0,245,255,0.5);
-                    ">🧠 AI Neural Engine</h4>
-                    <p style="
-                        color: rgba(255,255,255,0.8);
-                        font-size: 0.9rem;
-                        margin: 0;
-                        line-height: 1.4;
-                    ">LSTM Deep Learning • Real-time Sentiment • High Precision Predictions</p>
-                </div>
-                <div>
-                    <h4 style="
-                        color: #00f5ff;
-                        margin-bottom: 0.5rem;
-                        text-shadow: 0 0 10px rgba(0,245,255,0.5);
-                    ">📊 Technical Analysis</h4>
-                    <p style="
-                        color: rgba(255,255,255,0.8);
-                        font-size: 0.9rem;
-                        margin: 0;
-                        line-height: 1.4;
-                    ">15+ Technical Indicators • Auto Trading Signals • Multi-Timeframe</p>
-                </div>
-                <div>
-                    <h4 style="
-                        color: #00f5ff;
-                        margin-bottom: 0.5rem;
-                        text-shadow: 0 0 10px rgba(0,245,255,0.5);
-                    ">💰 Risk Management</h4>
-                    <p style="
-                        color: rgba(255,255,255,0.8);
-                        font-size: 0.9rem;
-                        margin: 0;
-                        line-height: 1.4;
-                    ">MT4/MT5 Real Calculations • Smart Stop Loss • Multiple Risk Profiles</p>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        # Informações da plataforma
+        st.markdown("---")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("""
+            ### 🧠 Inteligência Artificial
+            - Rede neural LSTM avançada
+            - Análise de sentimento em tempo real
+            - Predições com alta precisão
+            """)
+        
+        with col2:
+            st.markdown("""
+            ### 📊 Análise Técnica
+            - 15+ indicadores técnicos
+            - Sinais automáticos de trading
+            - Múltiplos timeframes
+            """)
+        
+        with col3:
+            st.markdown("""
+            ### 💰 Gestão de Risco
+            - Cálculos MT4/MT5 reais
+            - Stop loss inteligente
+            - Múltiplos perfis de risco
+            """)
         
         st.markdown("""
         <div style="text-align: center; color: #666; padding: 2rem; margin-top: 2rem;">
@@ -1392,7 +726,7 @@ def main():
     # Sidebar lateral simples como era antes
     with st.sidebar:
         # Botão Home no topo da sidebar
-        if st.button("🏠 Home", type="primary", use_container_width=True, key="home_btn"):
+        if st.button("🏠 Home", type="primary", use_container_width=True):
             # Limpar todos os resultados e voltar ao estado inicial
             for key in ['analysis_results', 'show_analysis', 'analysis_mode']:
                 if key in st.session_state:
@@ -1400,7 +734,7 @@ def main():
             st.rerun()
         
         # Botão de logout
-        if st.button("🚪 Logout", type="secondary", use_container_width=True, key="logout_btn"):
+        if st.button("🚪 Logout", type="secondary", use_container_width=True):
             # Limpar sessão e autenticação
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
@@ -1408,109 +742,187 @@ def main():
         
         st.markdown("---")
         
-        # Header da sidebar
-        st.markdown("""
-        <div style="text-align: center; padding: 1rem 0; margin-bottom: 1.5rem; 
-                    background: linear-gradient(135deg, #667eea, #764ba2); 
-                    border-radius: 12px; color: white;">
-            <h2 style="margin: 0; font-size: 1.3rem; font-weight: 600;">⚙️ Configurações</h2>
-            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">Ajuste sua análise</p>
-        </div>
-        """, unsafe_allow_html=True)
+        # Header da sidebar compacto
+        st.markdown("## ⚙️ Configurações")
         
-        # Trading Configuration Section
-        st.markdown("### 💱 Configuração de Trading")
+        # Configurações básicas compactas
+        pair = st.selectbox("💱 Par de Moedas", PAIRS)
         
-        # Currency pair selection
-        pair = st.selectbox(
-            "Par de Moedas",
-            PAIRS,
-            help="Selecione o par de moedas para análise"
+        # Sistema unificado de Intervalo e Horizonte
+        st.markdown("**⏰ Configuração Temporal Unificada**")
+        
+        # Presets integrados para máxima coerência (usando valores exatos de HORIZONS)
+        temporal_presets = {
+
+            "Intraday (15-30 min)": {"interval": "15min", "horizon": "1 Hora", "description": "Operações no mesmo dia"},
+            "Swing (1-4 horas)": {"interval": "60min", "horizon": "4 Horas", "description": "Operações de alguns dias"},
+            "Position (Diário)": {"interval": "daily", "horizon": "1 Dia", "description": "Operações de posição"}
+        }
+        
+        preset_choice = st.selectbox(
+            "Estratégia Temporal:",
+            list(temporal_presets.keys()),
+            index=1,  # Default Intraday
+            help="Presets otimizados para máxima precisão entre intervalo e horizonte"
         )
         
-        # Time interval
-        interval = st.selectbox(
-            "Intervalo de Tempo",
-            list(INTERVALS.keys()),
-            index=4,  # Default to 60min
-            help="Intervalo de tempo para coleta de dados"
-        )
+        selected_preset = temporal_presets[preset_choice]
+        interval = selected_preset["interval"]
+        horizon = selected_preset["horizon"]
         
-        # Prediction horizon
-        horizon = st.selectbox(
-            "Horizonte de Previsão",
-            HORIZONS,
-            help="Período de previsão desejado"
-        )
+        # Mapear preset_choice para trading_style
+        trading_style_mapping = {
+            "Intraday (15-30 min)": "intraday",
+            "Swing (1-4 horas)": "swing", 
+            "Position (Diário)": "position"
+        }
         
+        # Definir trading_style baseado na seleção
+        trading_style = trading_style_mapping.get(preset_choice, "swing")
+        st.session_state['trading_style'] = trading_style
+        
+        # Mostrar configuração atual com estratégia
+        st.info(f"📊 **{preset_choice}** | Intervalo: {interval} | Horizonte: {horizon}")
+        st.caption(f"💡 {selected_preset['description']}")
+        st.success(f"🎯 **Estratégia Ativa:** {trading_style.upper()}")
+        
+        # Opção avançada para configuração manual (colapsável)
+        with st.expander("⚙️ Configuração Manual Avançada"):
+            st.warning("⚠️ Configuração manual pode reduzir a precisão se intervalo e horizonte não estiverem alinhados!")
+            
+            manual_interval = st.selectbox("Intervalo Manual:", list(INTERVALS.keys()), 
+                                         index=list(INTERVALS.keys()).index(interval))
+            # Verificar se horizonte existe na lista, senão usar primeiro item
+            horizon_index = 0
+            try:
+                horizon_index = HORIZONS.index(horizon)
+            except ValueError:
+                horizon = HORIZONS[0]  # Usar o primeiro como fallback
+            
+            manual_horizon = st.selectbox("Horizonte Manual:", HORIZONS,
+                                        index=horizon_index)
+            
+            if st.checkbox("Usar Configuração Manual"):
+                interval = manual_interval
+                horizon = manual_horizon
+                # Tentar manter o trading_style consistente mesmo no modo manual
+                if "15min" in interval or "30min" in interval:
+                    st.session_state['trading_style'] = "intraday"
+                elif "60min" in interval or "1hour" in interval:
+                    st.session_state['trading_style'] = "swing"
+                elif "daily" in interval:
+                    st.session_state['trading_style'] = "position"
+                st.error("🔧 Modo manual ativo - Verifique se intervalo e horizonte estão compatíveis!")
+        
+        # Usar configuração de risco padrão (moderado)
+        risk_level_en = "Moderate"
+        
+
+
+        
+        # Gestão de Banca Simplificada
+        st.markdown("**💰 Configuração de Trading**")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            bank_value = st.number_input(
+                "💳 Valor da Banca (USD)", 
+                min_value=100.0, 
+                max_value=1000000.0, 
+                value=5000.0, 
+                step=500.0,
+                help="Valor total da sua banca em dólares"
+            )
+        
+        with col2:
+            lot_size = st.number_input(
+                "📊 Tamanho do Lote",
+                min_value=0.01,
+                max_value=100.0,
+                value=0.1,
+                step=0.01,
+                format="%.2f",
+                help="Tamanho do lote para a operação"
+            )
+        
+        # Armazenar no session state para uso nas análises
+        st.session_state['bank_value'] = bank_value
+        st.session_state['lot_size'] = lot_size
+        
+        # Calculadora de DD/Extensão Independente
         st.markdown("---")
+        st.markdown("**🧮 Calculadora de DD/Extensão**")
         
-        # Risk Management Section
-        st.markdown("### ⚖️ Gestão de Risco")
+        # Usar análise mais recente se disponível
+        if st.session_state.get('analysis_results'):
+            results = st.session_state['analysis_results']
+            if 'drawdown_pips' in results and 'extension_pips' in results:
+                drawdown_pips = results['drawdown_pips']
+                extension_pips = results['extension_pips']
+                
+                # Calcular valor do pip baseado no par selecionado
+                pair_str = str(pair)  # Garantir que é string
+                if 'JPY' in pair_str:
+                    pip_value_per_lot = 10.0
+                elif str(pair) in ['XAUUSD', 'GOLD']:
+                    pip_value_per_lot = 1.0
+                else:
+                    pip_value_per_lot = 10.0
+                
+                # Calcular valores em dólares
+                dd_usd = drawdown_pips * pip_value_per_lot * lot_size
+                ext_usd = extension_pips * pip_value_per_lot * lot_size
+                dd_pct = (dd_usd / bank_value) * 100
+                ext_pct = (ext_usd / bank_value) * 100
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric(
+                        "📉 Drawdown Máximo",
+                        f"${dd_usd:.2f}",
+                        f"{dd_pct:.2f}% da banca"
+                    )
+                with col2:
+                    st.metric(
+                        "📈 Extensão Máxima", 
+                        f"${ext_usd:.2f}",
+                        f"{ext_pct:.2f}% da banca"
+                    )
+                
+                st.caption(f"💡 Baseado em DD: {drawdown_pips} pips | Extensão: {extension_pips} pips")
+            else:
+                st.info("🔍 Execute uma análise para ver os cálculos de DD/Extensão")
+        else:
+            st.info("🔍 Execute uma análise para ver os cálculos de DD/Extensão")
         
-        risk_level = st.selectbox(
-            "Nível de Risco",
-            ["Conservativo", "Moderado", "Agressivo"],
-            index=1,  # Default to Moderate
-            help="Nível de tolerância ao risco"
-        )
+        # Configurações de IA colapsáveis
+        with st.expander("🤖 Configurações Avançadas de IA"):
+            lookback_period = st.slider("Histórico de Dados", 30, 120, LOOKBACK_PERIOD)
+            epochs = st.slider("Épocas de Treinamento", 5, 20, EPOCHS)
+            mc_samples = st.slider("Amostras Monte Carlo", 10, 50, MC_SAMPLES)
         
-        # Map Portuguese to English
-        risk_level_en = {"Conservativo": "Conservative", "Moderado": "Moderate", "Agressivo": "Aggressive"}[risk_level]
-        
-        # Configuration status
+        # Cache compacto
         cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
         if cache_count > 0:
-            st.info(f"💾 {cache_count} análises em cache disponíveis")
-        
-        st.markdown("---")
-        
-        # AI Configuration Section
-        st.markdown("### 🤖 Configuração de IA")
-        
-        lookback_period = st.slider(
-            "Histórico de Dados",
-            min_value=30,
-            max_value=120,
-            value=LOOKBACK_PERIOD,
-            help="Número de períodos históricos para treinamento"
-        )
-        
-        epochs = st.slider(
-            "Épocas de Treinamento",
-            min_value=5,
-            max_value=20,
-            value=EPOCHS,
-            help="Número de épocas para treinamento do modelo"
-        )
-        
-        mc_samples = st.slider(
-            "Amostras Monte Carlo",
-            min_value=10,
-            max_value=50,
-            value=MC_SAMPLES,
-            help="Número de amostras para simulação Monte Carlo"
-        )
-        
-        # Set trading_style and bank values
-        trading_style = "swing"
-        st.session_state['trading_style'] = trading_style
-        st.session_state['bank_value'] = 5000.0
-        st.session_state['lot_size'] = 0.1
-        
-        st.markdown("---")
-        
-        # Cache Management Section
-        st.markdown("### 🗂️ Gerenciamento de Cache")
-        
-        if cache_count > 0:
-            st.success(f"💾 {cache_count} análises em cache")
-            if st.button("🗑️ Limpar Cache", help="Remove todas as análises do cache"):
-                CacheManager.clear_cache()
-                st.success("Cache limpo com sucesso!")
-                st.rerun()
-        else:
-            st.info("📂 Nenhuma análise em cache")
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.caption(f"💾 {cache_count} em cache")
+            with col2:
+                if st.button("🗑️", help="Limpar Cache"):
+                    # Limpar cache do session state
+                    for key in list(st.session_state.keys()):
+                        if isinstance(st.session_state.get(key), tuple):
+                            del st.session_state[key]
+                    
+                    # Limpar outras chaves de cache
+                    cache_keys = ['last_pair', 'last_interval', 'cached_data', 'model_cache', 
+                                  'sentiment_cache', 'indicators_cache', 'analysis_cache']
+                    for key in cache_keys:
+                        if key in st.session_state:
+                            del st.session_state[key]
+                    
+                    st.success("Cache limpo!")
+                    st.rerun()
         
         st.markdown("---")
         
@@ -1518,24 +930,26 @@ def main():
         st.markdown("**🎯 Análises Especializadas**")
         
         # Análise unificada principal
-        unified_analysis = st.button("🧠 Análise Unificada Inteligente →", type="primary", use_container_width=True, 
-                                   help="Combina todas as análises para a melhor previsão do mercado", key="unified_analysis_btn")
+        unified_analysis = st.button("🧠 Análise Unificada Inteligente", type="primary", use_container_width=True, 
+                                   help="Combina todas as análises para a melhor previsão do mercado")
+        
+
         
         st.markdown("**Análises Individuais:**")
         
-        # Análises técnicas em formato compacto mas legível
+        # Análises técnicas em colunas
         col1, col2 = st.columns(2)
         with col1:
-            technical_analysis = st.button("📊 Técnica", use_container_width=True, key="tech_analysis_btn")
-            sentiment_analysis = st.button("📰 Sentimento", use_container_width=True, key="sentiment_analysis_btn")
-            risk_analysis = st.button("⚖️ Risco", use_container_width=True, key="risk_analysis_btn")
+            technical_analysis = st.button("📊 Técnica", use_container_width=True)
+            sentiment_analysis = st.button("📰 Sentimento", use_container_width=True)
+            risk_analysis = st.button("⚖️ Risco", use_container_width=True)
         with col2:
-            ai_analysis = st.button("🤖 IA/LSTM", use_container_width=True, key="ai_analysis_btn")
-            volume_analysis = st.button("📈 Volume", use_container_width=True, key="volume_analysis_btn")
-            trend_analysis = st.button("📉 Tendência", use_container_width=True, key="trend_analysis_btn")
+            ai_analysis = st.button("🤖 IA/LSTM", use_container_width=True)
+            volume_analysis = st.button("📈 Volume", use_container_width=True)
+            trend_analysis = st.button("📉 Tendência", use_container_width=True)
         
-        # Análise rápida com tamanho adequado
-        quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, help="Análise completa rápida", key="quick_analysis_btn")
+        # Análise rápida
+        quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True)
         
         # Processamento dos diferentes tipos de análise
         analyze_button = False
@@ -1564,15 +978,16 @@ def main():
         
         st.markdown("---")
         
-        # Tutorial button
-        if st.button("📚 Tutorial Completo", help="Abrir guia detalhado de todas as funções"):
-            st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
-        
-        # Add logout button
-        if st.button("🚪 Sair", help="Sair da plataforma"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
+        # Botões auxiliares compactos
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📚 Tutorial"):
+                st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
+        with col2:
+            if st.button("🚪 Sair"):
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                st.rerun()
 
     # Analysis buttons are now in sidebar - this section removed
     
@@ -1600,70 +1015,13 @@ def main():
 def display_main_header():
     """Display the main platform header"""
     st.markdown("""
-    <div style="text-align: center; margin-bottom: 3rem; position: relative;">
-        <div style="
-            background: linear-gradient(135deg, rgba(0,245,255,0.1), rgba(255,0,245,0.1));
-            backdrop-filter: blur(20px);
-            border: 2px solid rgba(0,245,255,0.3);
-            border-radius: 20px;
-            padding: 3rem 2rem;
-            box-shadow: 0 15px 50px rgba(0,0,0,0.3), 0 0 40px rgba(0,245,255,0.2);
-            position: relative;
-            overflow: hidden;
-        ">
-            <div style="
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 3px;
-                background: linear-gradient(90deg, #00f5ff, #ff00f5, #f5ff00);
-                animation: glow 3s ease-in-out infinite alternate;
-            "></div>
-            <h1 style='
-                background: linear-gradient(135deg, #00f5ff, #ff00f5);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                background-clip: text;
-                font-size: 3.5rem;
-                font-weight: 700;
-                text-shadow: 0 0 30px rgba(0,245,255,0.8);
-                margin-bottom: 1rem;
-                font-family: Inter, sans-serif;
-            '>
-                🤖 FOREX AI NEURAL PLATFORM
-            </h1>
-            <div style="
-                background: linear-gradient(90deg, #00f5ff, #ff00f5, #f5ff00);
-                height: 3px;
-                width: 400px;
-                margin: 0 auto 1.5rem auto;
-                border-radius: 2px;
-                animation: glow 2s ease-in-out infinite alternate;
-            "></div>
-            <p style='
-                color: rgba(255,255,255,0.9);
-                font-size: 1.3rem;
-                font-weight: 400;
-                text-shadow: 0 0 15px rgba(0,245,255,0.4);
-                font-family: Inter, sans-serif;
-                margin-bottom: 1rem;
-            '>
-                🧠 Advanced Neural Networks • ⚡ Real-Time Analysis • 🎯 Predictive Intelligence
-            </p>
-            <div style="
-                display: flex;
-                justify-content: center;
-                gap: 2rem;
-                margin-top: 1.5rem;
-                font-size: 0.9rem;
-                color: rgba(0,245,255,0.8);
-            ">
-                <span>✨ LSTM Deep Learning</span>
-                <span>📊 Multi-Timeframe Analysis</span>
-                <span>🎯 Smart Risk Management</span>
-            </div>
-        </div>
+    <div class="main-header" style="text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 15px; margin-bottom: 2rem; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3); color: white;">
+        <h1 style="color: white; margin-bottom: 0.5rem; font-size: 2.5rem;">
+            📊 Plataforma Avançada de Análise Forex
+        </h1>
+        <p style="color: rgba(255,255,255,0.9); font-size: 1.2em; margin: 0;">
+            Previsões Forex com IA e Análise em Tempo Real
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -4473,7 +3831,143 @@ def display_main_summary(results, analysis_mode):
             </div>
             """, unsafe_allow_html=True)
     
-    # All unified analysis components display completely removed as requested
+    # Show unified analysis components if available
+    if analysis_mode == 'unified' and 'components' in results:
+        st.markdown("### 🔍 Componentes da Análise Unificada")
+        
+        # Show AI analysis if available
+        if 'ai_analysis' in results and results['ai_analysis'] is not None:
+            ai_analysis = results['ai_analysis']
+            
+            st.markdown("#### 🧠 Interpretação da IA")
+            st.markdown(f"""
+            <div style="
+                background: linear-gradient(135deg, rgba(63,81,181,0.1), rgba(156,39,176,0.1));
+                border-left: 4px solid #3F51B5;
+                border-radius: 8px;
+                padding: 1rem;
+                margin: 1rem 0;
+            ">
+                <h5 style="color: #3F51B5; margin: 0 0 0.8rem 0;">💭 {ai_analysis.unified_interpretation.get('ai_interpretation', 'Análise em processamento...')}</h5>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.8rem; margin-bottom: 1rem;">
+                    <div style="background: rgba(63,81,181,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Direção Unificada</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #3F51B5;">{ai_analysis.unified_interpretation.get('unified_direction', 'neutral').upper()}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Confiança: {ai_analysis.unified_interpretation.get('direction_confidence', 0)*100:.0f}%</p>
+                    </div>
+                    <div style="background: rgba(76,175,80,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Consenso IA</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4CAF50;">{ai_analysis.unified_interpretation.get('consensus_count', 0)}/3</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Componentes alinhados</p>
+                    </div>
+                    <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
+                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Recomendação</strong></p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #FF9800;">{ai_analysis.unified_interpretation.get('recommendation', 'hold').upper()}</p>
+                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Força: {ai_analysis.unified_interpretation.get('combined_strength', 0)*100:.0f}%</p>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 1rem;">
+                    <h6 style="margin: 0 0 0.5rem 0; color: #666;">Pesos dos Componentes:</h6>
+                    <div style="display: flex; justify-content: space-around; text-align: center; font-size: 0.85rem;">
+                        <div>
+                            <strong>Histórico:</strong> {ai_analysis.unified_interpretation.get('component_weights', {}).get('historical', 0)*100:.0f}%
+                        </div>
+                        <div>
+                            <strong>Sentimento:</strong> {ai_analysis.unified_interpretation.get('component_weights', {}).get('sentiment', 0)*100:.0f}%
+                        </div>
+                        <div>
+                            <strong>Probabilidade:</strong> {ai_analysis.unified_interpretation.get('component_weights', {}).get('probability', 0)*100:.0f}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Mostrar componentes individuais
+            st.markdown("#### 📊 Componentes Detalhados")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.markdown("**📈 Análise Histórica**")
+                hist = ai_analysis.historical_analysis
+                st.write(f"• Tendência: {hist.get('trend_direction', 'neutral')}")
+                st.write(f"• Força: {hist.get('trend_strength', 0):.2f}")
+                st.write(f"• Momentum: {hist.get('momentum', 0):.4f}")
+                st.write(f"• Confiança: {hist.get('confidence', 0)*100:.0f}%")
+            
+            with col2:
+                st.markdown("**📰 Análise de Sentimento**")
+                sent = ai_analysis.sentiment_analysis
+                st.write(f"• Direção: {sent.get('sentiment_direction', 'neutral')}")
+                st.write(f"• Score: {sent.get('sentiment_score', 0):.3f}")
+                st.write(f"• Humor: {sent.get('market_mood', 'uncertain')}")
+                st.write(f"• Confiança: {sent.get('confidence', 0)*100:.0f}%")
+            
+            with col3:
+                st.markdown("**🎯 Análise de Probabilidade**")
+                prob = ai_analysis.probability_analysis
+                st.write(f"• Direção: {prob.get('direction_probability', 0)*100:.0f}%")
+                st.write(f"• Magnitude: {prob.get('magnitude_probability', 0)*100:.0f}%")
+                st.write(f"• Sucesso: {prob.get('success_probability', 0)*100:.0f}%")
+                st.write(f"• Confiança: {prob.get('confidence', 0)*100:.0f}%")
+            
+            # Mostrar parâmetros temporais específicos
+            st.markdown("#### ⏰ Parâmetros da Estratégia Temporal")
+            
+            horizon = results.get('temporal_horizon', '1 Hora')
+            pair = results.get('pair', 'EUR/USD')
+            
+            st.markdown(f"""
+            <div style="
+                background: linear-gradient(135deg, rgba(96,125,139,0.1), rgba(55,71,79,0.1));
+                border-left: 4px solid #607D8B;
+                border-radius: 8px;
+                padding: 1rem;
+                margin: 1rem 0;
+            ">
+                <h6 style="color: #607D8B; margin: 0 0 0.8rem 0;">Configuração Temporal: {horizon} | Par: {pair}</h6>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; text-align: center;">
+                    <div style="background: rgba(96,125,139,0.1); padding: 0.6rem; border-radius: 6px;">
+                        <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Períodos Históricos</strong></p>
+                        <p style="margin: 0; font-size: 0.9rem; font-weight: bold; color: #607D8B;">{ai_analysis.historical_analysis.get('periods_analyzed', 'N/A')}</p>
+                    </div>
+                    <div style="background: rgba(96,125,139,0.1); padding: 0.6rem; border-radius: 6px;">
+                        <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Volatilidade Adj.</strong></p>
+                        <p style="margin: 0; font-size: 0.9rem; font-weight: bold; color: #607D8B;">{ai_analysis.historical_analysis.get('volatility_adjustment', 1.0):.1f}x</p>
+                    </div>
+                    <div style="background: rgba(96,125,139,0.1); padding: 0.6rem; border-radius: 6px;">
+                        <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Boost Confiança</strong></p>
+                        <p style="margin: 0; font-size: 0.9rem; font-weight: bold; color: #607D8B;">{ai_analysis.historical_analysis.get('pair_adjustment', 1.0):.1f}x</p>
+                    </div>
+                    <div style="background: rgba(96,125,139,0.1); padding: 0.6rem; border-radius: 6px;">
+                        <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Confirm. Tendência</strong></p>
+                        <p style="margin: 0; font-size: 0.9rem; font-weight: bold; color: #607D8B;">{ai_analysis.historical_analysis.get('trend_confirmation_strength', 0)*100:.0f}%</p>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Create columns for components
+        cols = st.columns(2)
+        components_list = list(results['components'].items())
+        
+        for i, (component, data) in enumerate(components_list):
+            col_idx = i % 2
+            with cols[col_idx]:
+                signal_pct = data['signal'] * 100
+                weight_pct = data['weight'] * 100
+                color = "🟢" if data['signal'] > 0 else "🔴" if data['signal'] < 0 else "🟡"
+                details = data.get('details', '')
+                
+                with st.expander(f"{color} **{component.title()}:** {signal_pct:+.2f}% (peso: {weight_pct:.0f}%)"):
+                    if details:
+                        st.write(f"**Detalhes:** {details}")
+                    st.write(f"**Sinal:** {signal_pct:+.3f}%")
+                    st.write(f"**Peso na análise:** {weight_pct:.0f}%")
     
     if 'analysis_focus' in results:
         st.info(f"**Foco da Análise:** {results['analysis_focus']}")
@@ -4530,7 +4024,21 @@ def display_summary_tab(results, analysis_mode):
     </div>
     """, unsafe_allow_html=True)
     
-    # Unified analysis components display removed as requested
+    # Show unified analysis components if available
+    if analysis_mode == 'unified' and 'components' in results:
+        st.markdown("### 🔍 Componentes da Análise Unificada")
+        
+        for component, data in results['components'].items():
+            signal_pct = data['signal'] * 100
+            weight_pct = data['weight'] * 100
+            color = "🟢" if data['signal'] > 0 else "🔴" if data['signal'] < 0 else "🟡"
+            details = data.get('details', '')
+            
+            with st.expander(f"{color} **{component.title()}:** {signal_pct:+.2f}% (peso: {weight_pct:.0f}%)"):
+                if details:
+                    st.write(f"**Detalhes:** {details}")
+                st.write(f"**Sinal:** {signal_pct:+.3f}%")
+                st.write(f"**Peso na análise:** {weight_pct:.0f}%")
 
 def display_charts_tab(results):
     """Display charts tab content"""
