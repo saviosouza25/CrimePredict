@@ -15,12 +15,14 @@ warnings.filterwarnings('ignore')
 from config.settings import *
 from config.languages import get_text
 
-# Simplified imports - create basic versions if needed later
+# Enhanced imports including Alpha Vantage indicators
 try:
     from models.lstm_model import ForexPredictor
     from services.data_service import DataService  
     from services.sentiment_service import SentimentService
     from services.ai_unified_service import AIUnifiedService
+    from services.alpha_vantage_indicators import AlphaVantageIndicators
+    from services.trend_analysis_engine import TrendAnalysisEngine
     from utils.cache_manager import CacheManager
     
     # Initialize services
@@ -712,7 +714,9 @@ def main():
             from services.sentiment_service import SentimentService
             services = {
                 'data_service': DataService(),
-                'sentiment_service': SentimentService()
+                'sentiment_service': SentimentService(),
+                'alpha_indicators': AlphaVantageIndicators(),
+                'trend_engine': TrendAnalysisEngine()
             }
             # Verify Alpha Vantage API key is present
             from config.settings import API_KEY
@@ -950,8 +954,12 @@ def main():
         # Seção de análises especializadas
         st.markdown("**🎯 Análises Especializadas**")
         
+        # Nova análise de tendência Alpha Vantage - Mais precisa
+        trend_alpha_analysis = st.button("🎯 Análise de Tendência Alpha Vantage", type="primary", use_container_width=True,
+                                        help="Análise avançada de tendências com indicadores Alpha Vantage otimizados por perfil", key="trend_alpha_btn")
+        
         # Análise unificada principal
-        unified_analysis = st.button("🧠 Análise Unificada Inteligente", type="primary", use_container_width=True, 
+        unified_analysis = st.button("🧠 Análise Unificada Inteligente", use_container_width=True, 
                                    help="Combina todas as análises para a melhor previsão do mercado", key="unified_analysis_btn")
         
 
@@ -978,7 +986,9 @@ def main():
         # Processamento dos diferentes tipos de análise
         analyze_button = False
         
-        if unified_analysis:
+        if trend_alpha_analysis:
+            execute_alpha_vantage_trend_analysis(pair, selected_trading_profile, market_type)
+        elif unified_analysis:
             st.session_state['analysis_mode'] = 'unified'
             analyze_button = True
         elif technical_analysis:
@@ -5036,6 +5046,146 @@ def display_metrics_tab(results):
     analysis_mode = results.get('analysis_mode', 'unified')
     if analysis_mode in mode_names:
         st.write(f"**Tipo:** {mode_names.get(analysis_mode, 'Padrão')}")
+
+def execute_alpha_vantage_trend_analysis(pair: str, profile: str, market_type: str):
+    """Execute Alpha Vantage trend analysis optimized by profile"""
+    
+    # Map profile names to internal values
+    profile_mapping = {
+        'Scalping': 'scalping',
+        'Intraday': 'intraday', 
+        'Swing': 'swing',
+        'Position': 'position'
+    }
+    
+    internal_profile = profile_mapping.get(profile, 'swing')
+    
+    # Determine optimal interval for profile
+    interval_mapping = {
+        'scalping': '1min',
+        'intraday': '15min',
+        'swing': '60min', 
+        'position': 'daily'
+    }
+    
+    interval = interval_mapping[internal_profile]
+    
+    with st.spinner("🎯 Executando Análise de Tendência Alpha Vantage..."):
+        try:
+            # Execute trend analysis
+            trend_analysis = services['trend_engine'].analyze_trend_by_profile(
+                pair, internal_profile, interval
+            )
+            
+            if trend_analysis.get('error'):
+                st.error(f"❌ {trend_analysis['error_message']}")
+                return
+            
+            # Store results and display
+            st.session_state['alpha_trend_results'] = trend_analysis
+            display_alpha_vantage_trend_results(trend_analysis)
+            
+        except Exception as e:
+            st.error(f"❌ Erro na análise Alpha Vantage: {e}")
+            st.info("🔑 Verifique se a chave API Alpha Vantage está configurada corretamente")
+
+def display_alpha_vantage_trend_results(analysis: Dict):
+    """Display Alpha Vantage trend analysis results"""
+    
+    st.markdown("## 🎯 Análise de Tendência Alpha Vantage")
+    
+    # Main results header
+    trend_signals = analysis.get('trend_signals', {})
+    unified_trend = trend_signals.get('unified_trend', 'NEUTRAL')
+    confidence = trend_signals.get('confidence', 0.0)
+    
+    # Main trend signal
+    if unified_trend == 'BULLISH':
+        trend_color = "🟢"
+        trend_text = "COMPRA"
+        trend_bg = "background: linear-gradient(135deg, #2ecc71, #27ae60);"
+    elif unified_trend == 'BEARISH':
+        trend_color = "🔴" 
+        trend_text = "VENDA"
+        trend_bg = "background: linear-gradient(135deg, #e74c3c, #c0392b);"
+    else:
+        trend_color = "🟡"
+        trend_text = "NEUTRO"
+        trend_bg = "background: linear-gradient(135deg, #f39c12, #e67e22);"
+    
+    # Display main signal
+    st.markdown(f"""
+    <div style="{trend_bg} color: white; padding: 1.5rem; border-radius: 10px; text-align: center; margin-bottom: 1rem;">
+        <h2 style="margin: 0; font-size: 2.5rem;">{trend_color} {trend_text}</h2>
+        <p style="margin: 0.5rem 0 0 0; font-size: 1.2rem;">Confiança: {confidence*100:.1f}%</p>
+        <p style="margin: 0; opacity: 0.9;">Perfil: {analysis.get('profile', 'N/A').title()} | Par: {analysis.get('pair', 'N/A')}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Key metrics
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("🎯 Força da Tendência", f"{trend_signals.get('strength', 0)*100:.0f}%")
+    with col2:
+        st.metric("📊 Indicadores Ativos", f"{trend_signals.get('indicators_count', 0)}")
+    with col3:
+        st.metric("✅ Taxa de Acordo", f"{trend_signals.get('agreement_rate', 0)*100:.0f}%")
+    
+    # Detailed indicators
+    st.markdown("### 📈 Indicadores Técnicos Alpha Vantage")
+    
+    indicators = analysis.get('indicators', {})
+    if indicators:
+        for indicator_name, indicator_data in indicators.items():
+            with st.expander(f"{indicator_name.upper()} - {indicator_data.get('trend', 'N/A')}"):
+                st.json(indicator_data)
+    
+    # Profile recommendations
+    recommendations = analysis.get('profile_recommendations', {})
+    if recommendations:
+        st.markdown("### 🎯 Recomendações por Perfil")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**⏰ Timing:**")
+            st.write(f"- Sessões ideais: {recommendations.get('optimal_sessions', ['N/A'])}")
+            st.write(f"- Duração máxima: {recommendations.get('max_trade_duration', 'N/A')}")
+            st.write(f"- Spread ideal: {recommendations.get('ideal_spread', 'N/A')}")
+            
+        with col2:
+            st.markdown("**📊 Estratégia:**")
+            st.write(f"- Foco: {recommendations.get('indicators_focus', 'N/A')}")
+            st.write(f"- Volume: {recommendations.get('volume_requirement', 'N/A')}")
+            st.write(f"- News: {recommendations.get('news_impact', 'N/A')}")
+    
+    # Risk management
+    risk_mgmt = analysis.get('risk_management', {})
+    if risk_mgmt:
+        st.markdown("### 🛡️ Gestão de Risco")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("💰 Tamanho Posição", f"{risk_mgmt.get('position_size', 0):.1f}%")
+        with col2:
+            st.metric("🛑 Stop Loss", f"{risk_mgmt.get('stop_loss_pips', 0)} pips")
+        with col3:
+            st.metric("🎯 Take Profit", f"{risk_mgmt.get('take_profit_pips', 0)} pips")
+    
+    # Execution plan
+    execution_plan = analysis.get('execution_plan', {})
+    if execution_plan:
+        st.markdown("### ⚡ Plano de Execução")
+        
+        action = execution_plan.get('recommended_action', 'WAIT')
+        if action == 'EXECUTE':
+            st.success(f"✅ **Ação Recomendada:** {action}")
+        elif action == 'PREPARE':
+            st.warning(f"⚠️ **Ação Recomendada:** {action}")
+        else:
+            st.info(f"ℹ️ **Ação Recomendada:** {action}")
+            
+        st.write(f"- **Estratégia de Entrada:** {execution_plan.get('entry_strategy', 'N/A')}")
+        st.write(f"- **Monitoramento:** {execution_plan.get('monitoring_frequency', 'N/A')}")
 
 if __name__ == "__main__":
     main()
