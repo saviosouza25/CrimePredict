@@ -986,9 +986,6 @@ def main():
         # Análise rápida
         quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, key="quick_analysis_btn")
         
-        # Sistema Multi-Pares Avançado
-        multi_analysis = st.button("🌍 Sistema Multi-Pares Avançado", type="primary", use_container_width=True, key="multi_system_btn")
-        
 
         
         # Processamento dos diferentes tipos de análise
@@ -1037,40 +1034,6 @@ def main():
             pair, interval, horizon, lookback_period, 
             mc_samples, epochs, quick_analysis
         )
-    elif multi_analysis:
-        # Redirecionar para o sistema multi-pares avançado
-        st.info("🚀 Redirecionando para o Sistema Multi-Pares Avançado...")
-        st.markdown("""
-        ### 🌍 Sistema Multi-Pares Avançado
-        
-        Este é um sistema completo de análise multi-pares com:
-        
-        ✅ **Análise de Liquidez**: Volume >1M, spreads, profundidade  
-        ✅ **Análise Técnica**: RSI, EMA, ADX, MACD com dados reais  
-        ✅ **Sentimento NLP**: Notícias e redes sociais processadas  
-        ✅ **IA LSTM**: Predições >80% acurácia com TensorFlow  
-        ✅ **Backtesting**: DD máximo, extensão, win rate por perfil  
-        ✅ **Perfis Trader**: Scalper, Day, Swing, Position personalizados  
-        ✅ **Dashboard Moderno**: Design 2024-2025 otimizado  
-        
-        **Para usar o sistema avançado:**
-        1. Sistema simplificado rodando na porta 5001
-        2. Use o botão abaixo para acessar
-        """)
-        
-        if st.button("🚀 Abrir Sistema Multi-Pares", type="primary"):
-            st.markdown("""
-            **✅ Sistema Multi-Pares está rodando!**
-            
-            Acesse em: http://localhost:5001 (ou porta 5001 do Replit)
-            
-            O sistema inclui:
-            - Análise técnica em tempo real
-            - Dados da Alpha Vantage API
-            - Métricas de risco e oportunidades
-            - Interface responsiva e moderna
-            """)
-            st.balloons()
 
     
     # Always show main header
