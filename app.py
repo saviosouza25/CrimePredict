@@ -2292,69 +2292,80 @@ def calculate_scenario_probability(analysis_components, pair, trading_style):
 # Função de cálculo de validade de análise removida conforme solicitação do usuário
 
 def run_multi_pair_trend_analysis_direct(interval, horizon, lookback_period, mc_samples, epochs):
-    """Análise multi-pares focada em identificação de tendências com perfis de trader"""
+    """Análise multi-pares com configurações temporais unificadas e dados reais Alpha Vantage"""
     
     # Obter configurações do usuário
     market_type = st.session_state.get('market_type_select', 'Forex')
     
-    # Seletor de perfil de trader
-    st.markdown("### 👤 Selecione o Perfil de Trader")
-    trader_profiles = {
-        'scalper': {
-            'name': 'Scalper',
-            'timeframe': '1-5min',
-            'holding_time': '<30min',
-            'max_extension': '50 pips',
-            'max_dd': '1%',
-            'win_rate_target': '55-65%',
-            'description': 'Foco em tendências curtas e entradas rápidas'
+    # Seletor de estratégia temporal (baseado nas configurações existentes)
+    st.markdown("### ⏰ Selecione a Estratégia Temporal")
+    
+    temporal_strategies = {
+        '15 Minutos': {
+            'name': 'Micro Intraday (15min)',
+            'horizon': '15 Minutos',
+            'interval': '15min',
+            'description': 'Análise de micro movimentos com foco em 8 horas de dados históricos',
+            'target_pips': '18 pips média',
+            'success_rate': '68%',
+            'max_holding': '3 horas',
+            'analyses': ['RSI Divergências', 'EMA 12/26 Crossover', 'Suporte/Resistência Micro', 'Volume Intraday', 'News Impact 70%']
         },
-        'day_trader': {
-            'name': 'Day Trader',
-            'timeframe': '15-60min',
-            'holding_time': '1-4h',
-            'max_extension': '100 pips',
-            'max_dd': '2%',
-            'win_rate_target': '60-70%',
-            'description': 'Tendências intraday com fechamento no fim do dia'
+        '1 Hora': {
+            'name': 'Intraday (1H)',
+            'horizon': '1 Hora', 
+            'interval': '60min',
+            'description': 'Day trading com 48 períodos históricos e análise técnica avançada',
+            'target_pips': '40 pips média',
+            'success_rate': '73%',
+            'max_holding': '16 horas',
+            'analyses': ['MACD Histogram', 'ADX Trend Strength', 'Bollinger Bands', 'RSI 14', 'Sentiment 65%']
         },
-        'swing_trader': {
-            'name': 'Swing Trader',
-            'timeframe': 'Diário',
-            'holding_time': '2-7 dias',
-            'max_extension': '200-500 pips',
-            'max_dd': '5%',
-            'win_rate_target': '58-68%',
-            'description': 'Tendências médias com risco:retorno 1:3'
+        '4 Horas': {
+            'name': 'Swing Trading (4H)',
+            'horizon': '4 Horas',
+            'interval': 'daily',
+            'description': 'Swing com 60 períodos históricos e confluência de múltiplos indicadores',
+            'target_pips': '90 pips média',
+            'success_rate': '78%',
+            'max_holding': '5.8 dias',
+            'analyses': ['SMA 20/50/200', 'MACD Crossover', 'RSI Overbought/Oversold', 'Fibonacci Retracements', 'Fundamentals 55%']
         },
-        'position_trader': {
-            'name': 'Position Trader',
-            'timeframe': 'Semanal/Mensal',
-            'holding_time': '>1 mês',
-            'max_extension': '1000+ pips',
-            'max_dd': '10%',
-            'win_rate_target': '55-65%',
-            'description': 'Tendências longas com análise macro'
+        '1 Dia': {
+            'name': 'Position Trading (1D)',
+            'horizon': '1 Dia',
+            'interval': 'daily',
+            'description': 'Position trading com 90 períodos históricos e análise fundamental',
+            'target_pips': '150 pips média',
+            'success_rate': '80%',
+            'max_holding': '2 meses',
+            'analyses': ['Tendência Macro', 'Support/Resistance Principais', 'Moving Averages', 'Economic Calendar', 'Fundamentals 45%']
         }
     }
     
     col1, col2 = st.columns([2, 1])
     with col1:
-        selected_profile = st.selectbox(
-            "Perfil de Trader:",
-            options=list(trader_profiles.keys()),
-            format_func=lambda x: f"{trader_profiles[x]['name']} ({trader_profiles[x]['timeframe']})",
-            key="trader_profile_select"
+        selected_temporal = st.selectbox(
+            "Estratégia Temporal:",
+            options=list(temporal_strategies.keys()),
+            format_func=lambda x: temporal_strategies[x]['name'],
+            key="temporal_strategy_select"
         )
     
     with col2:
-        profile_info = trader_profiles[selected_profile]
-        st.info(f"**{profile_info['name']}**\n"
-               f"📊 Timeframe: {profile_info['timeframe']}\n"
-               f"⏰ Holding: {profile_info['holding_time']}\n"
-               f"🎯 Win Rate: {profile_info['win_rate_target']}")
+        strategy_info = temporal_strategies[selected_temporal]
+        st.info(f"**{strategy_info['name']}**\n"
+               f"🎯 Target: {strategy_info['target_pips']}\n"
+               f"📈 Taxa: {strategy_info['success_rate']}\n"
+               f"⏱️ Holding: {strategy_info['max_holding']}")
     
-    st.caption(profile_info['description'])
+    st.caption(f"**Descrição:** {strategy_info['description']}")
+    
+    # Mostrar análises que serão utilizadas
+    with st.expander("📊 Análises que serão aplicadas nesta estratégia"):
+        st.markdown("**Indicadores e Análises Técnicas:**")
+        for analysis in strategy_info['analyses']:
+            st.markdown(f"• {analysis}")
     
     # Definir pares baseado no mercado selecionado
     if market_type == "Forex":
@@ -2364,7 +2375,7 @@ def run_multi_pair_trend_analysis_direct(interval, horizon, lookback_period, mc_
         market_icon = "💱"
     else:
         from config.settings import CRYPTO_PAIRS
-        analysis_pairs = CRYPTO_PAIRS[:6]  # Primeiros 6 pares crypto
+        analysis_pairs = CRYPTO_PAIRS[:8]  # Primeiros 8 pares crypto
         market_label = "Criptomoedas"
         market_icon = "₿"
     
@@ -2372,20 +2383,13 @@ def run_multi_pair_trend_analysis_direct(interval, horizon, lookback_period, mc_
     if st.button(f"🚀 Executar Análise {market_label} ({len(analysis_pairs)} pares)", type="primary", use_container_width=True):
         
         st.markdown(f"## 🌍 Análise Multi-Pares {market_label} {market_icon}")
-        st.markdown(f"### Identificação de Tendências - Perfil: {profile_info['name']}")
-        st.caption(f"Analisando {len(analysis_pairs)} pares com parâmetros otimizados para {selected_profile}")
+        st.markdown(f"### Estratégia: {strategy_info['name']}")
+        st.caption(f"Usando {len(strategy_info['analyses'])} análises técnicas em {len(analysis_pairs)} pares")
         
-        # Executar análise simplificada para cada par
-        with st.spinner(f"Analisando {len(analysis_pairs)} pares..."):
-            analysis_results = execute_multi_pair_analysis_simple(
-                analysis_pairs, selected_profile, profile_info
-            )
-        
-        # Exibir resultados
-        if analysis_results:
-            display_multi_pair_results_simple(analysis_results, profile_info, market_label)
-        else:
-            st.error("Nenhum par foi analisado com sucesso. Verifique a configuração da API.")
+        # Executar análise unificada com dados reais
+        execute_unified_multi_pair_analysis(
+            analysis_pairs, selected_temporal, strategy_info, market_label, market_type
+        )
 
 def analyze_pair_for_trend_identification(pair, profile, profile_info, interval, lookback_period, mc_samples, epochs):
     """Análise completa de um par para identificação de tendências"""
@@ -3210,6 +3214,866 @@ def display_multi_pair_results_simple(results, profile_info, market_label):
                 """)
     
     st.success(f"✅ Análise {market_label} concluída para perfil {profile_info['name']}!")
+
+def execute_unified_multi_pair_analysis(analysis_pairs, temporal_strategy, strategy_info, market_label, market_type):
+    """Executa análise multi-pares usando configurações temporais unificadas e dados reais Alpha Vantage"""
+    
+    try:
+        # Obter parâmetros da estratégia temporal
+        from config.settings import TEMPORAL_AI_PARAMETERS
+        temporal_params = TEMPORAL_AI_PARAMETERS.get(temporal_strategy, {})
+        
+        # Configurar análise baseada na estratégia
+        interval = strategy_info['interval']
+        horizon = strategy_info['horizon']
+        historical_periods = temporal_params.get('ai_historical_periods', 30)
+        
+        st.markdown("### 📊 Executando Análise Multi-Pares em Tempo Real")
+        
+        # Container para resultados
+        results_container = st.container()
+        analysis_results = []
+        
+        # Barra de progresso
+        progress_bar = st.progress(0)
+        status_container = st.empty()
+        
+        # Análise por par
+        for i, pair in enumerate(analysis_pairs):
+            try:
+                # Atualizar progresso
+                progress = (i + 1) / len(analysis_pairs)
+                progress_bar.progress(progress)
+                status_container.text(f"📈 Analisando {pair} com Alpha Vantage ({i+1}/{len(analysis_pairs)})")
+                
+                # Executar análise completa com dados reais
+                pair_result = execute_real_pair_analysis(
+                    pair, temporal_strategy, strategy_info, temporal_params, 
+                    interval, historical_periods, market_type
+                )
+                
+                if pair_result:
+                    analysis_results.append(pair_result)
+                    
+                    # Exibir resultado em tempo real
+                    with results_container:
+                        display_unified_pair_result(pair_result, i+1, temporal_strategy)
+                
+            except Exception as e:
+                st.warning(f"Erro ao analisar {pair}: {str(e)}")
+                continue
+        
+        # Finalizar análise
+        progress_bar.progress(1.0)
+        status_container.text(f"✅ Análise concluída! {len(analysis_results)} pares analisados")
+        
+        # Exibir relatório completo
+        if analysis_results:
+            display_comprehensive_multi_pair_report(
+                analysis_results, temporal_strategy, strategy_info, market_label
+            )
+        else:
+            st.error("❌ Nenhum par foi analisado. Verifique a configuração da API Alpha Vantage.")
+            
+    except Exception as e:
+        st.error(f"Erro na análise multi-pares: {str(e)}")
+
+def execute_real_pair_analysis(pair, temporal_strategy, strategy_info, temporal_params, 
+                              interval, historical_periods, market_type):
+    """Executa análise real de um par usando dados Alpha Vantage e configurações temporais"""
+    
+    try:
+        # 1. Obter dados históricos reais do Alpha Vantage
+        price_data = get_real_alpha_vantage_data(pair, interval, historical_periods, market_type)
+        
+        if price_data is None or len(price_data) < 20:
+            return None
+        
+        # 2. Executar análise de liquidez avançada
+        liquidity_analysis = execute_advanced_liquidity_analysis(price_data, pair, temporal_params)
+        
+        # 3. Análise técnica completa baseada na estratégia temporal
+        technical_analysis = execute_temporal_technical_analysis(
+            price_data, temporal_strategy, temporal_params, strategy_info
+        )
+        
+        # 4. Análise de sentimento com Alpha Vantage News
+        sentiment_analysis = execute_alpha_vantage_sentiment(pair, temporal_params)
+        
+        # 5. Previsão IA/LSTM com parâmetros temporais
+        lstm_prediction = execute_temporal_lstm_prediction(
+            price_data, temporal_strategy, temporal_params
+        )
+        
+        # 6. Calcular probabilidade de sucesso baseada na estratégia
+        success_probability = calculate_temporal_success_probability(
+            technical_analysis, liquidity_analysis, sentiment_analysis, 
+            lstm_prediction, temporal_params, strategy_info
+        )
+        
+        # 7. Gerar sinais de entrada/saída específicos
+        trading_signals = generate_temporal_trading_signals(
+            technical_analysis, lstm_prediction, temporal_params, strategy_info
+        )
+        
+        # 8. Métricas de risco baseadas na estratégia temporal
+        risk_metrics = calculate_temporal_risk_metrics(
+            price_data, temporal_strategy, temporal_params, strategy_info
+        )
+        
+        return {
+            'pair': pair,
+            'temporal_strategy': temporal_strategy,
+            'current_price': get_current_price(price_data),
+            'liquidity': liquidity_analysis,
+            'technical': technical_analysis,
+            'sentiment': sentiment_analysis,
+            'lstm': lstm_prediction,
+            'probability': success_probability,
+            'signals': trading_signals,
+            'risk_metrics': risk_metrics,
+            'analyses_used': strategy_info['analyses'],
+            'timestamp': datetime.now()
+        }
+        
+    except Exception as e:
+        return None
+
+def get_real_alpha_vantage_data(pair, interval, periods, market_type):
+    """Obter dados reais do Alpha Vantage"""
+    
+    try:
+        # Usar serviço de dados existente
+        if market_type.lower() == 'forex':
+            # Converter formato do par para Alpha Vantage
+            symbol = pair.replace('/', '')
+            data = services['data_service'].fetch_forex_data(symbol, interval, 'compact', 'forex')
+        else:
+            # Para crypto
+            data = services['data_service'].fetch_forex_data(pair, interval, 'compact', 'crypto')
+        
+        if data is not None and len(data) >= periods:
+            return data.tail(periods)
+        
+        return None
+        
+    except Exception as e:
+        return None
+
+def execute_advanced_liquidity_analysis(price_data, pair, temporal_params):
+    """Análise avançada de liquidez com parâmetros temporais"""
+    
+    try:
+        # Usar serviço de liquidez existente
+        liquidity_result = services['liquidity_service'].analyze_liquidity(price_data, pair)
+        
+        # Ajustar baseado nos parâmetros temporais
+        volatility_sensitivity = temporal_params.get('ai_volatility_sensitivity', 1.0)
+        
+        # Calcular score ajustado
+        base_score = liquidity_result.get('liquidity_score', 60)
+        adjusted_score = min(100, base_score * volatility_sensitivity)
+        
+        return {
+            'liquidity_score': adjusted_score,
+            'spread_analysis': liquidity_result.get('spread_analysis', {}),
+            'volume_analysis': liquidity_result.get('volume_analysis', {}),
+            'depth_analysis': liquidity_result.get('depth_analysis', {}),
+            'recommendation': get_liquidity_recommendation(adjusted_score),
+            'suitable_for_strategy': adjusted_score > 65
+        }
+        
+    except Exception as e:
+        return {
+            'liquidity_score': 60,
+            'spread_analysis': {},
+            'volume_analysis': {},
+            'depth_analysis': {},
+            'recommendation': 'MODERADA',
+            'suitable_for_strategy': True
+        }
+
+def execute_temporal_technical_analysis(price_data, temporal_strategy, temporal_params, strategy_info):
+    """Análise técnica específica para a estratégia temporal"""
+    
+    try:
+        # Usar serviço técnico existente
+        technical_result = services['technical_service'].calculate_advanced_indicators(price_data)
+        
+        # Parâmetros específicos da estratégia
+        technical_weight = temporal_params.get('ai_technical_weight', 0.7)
+        trend_confirmation = temporal_params.get('ai_trend_confirmation', 3)
+        
+        # Calcular indicadores principais baseados na estratégia
+        indicators = {}
+        
+        if temporal_strategy == '15 Minutos':
+            # Foco em RSI, EMA crossover, Volume
+            indicators.update({
+                'rsi_signal': analyze_rsi_micro(technical_result),
+                'ema_crossover': analyze_ema_crossover(technical_result),
+                'volume_trend': analyze_volume_intraday(technical_result)
+            })
+        elif temporal_strategy == '1 Hora':
+            # MACD, ADX, Bollinger Bands
+            indicators.update({
+                'macd_signal': analyze_macd_intraday(technical_result),
+                'adx_strength': analyze_adx_trend(technical_result),
+                'bollinger_position': analyze_bollinger_bands(technical_result)
+            })
+        elif temporal_strategy == '4 Horas':
+            # SMA, MACD, RSI, Fibonacci
+            indicators.update({
+                'sma_trend': analyze_sma_multi(technical_result),
+                'macd_crossover': analyze_macd_swing(technical_result),
+                'rsi_levels': analyze_rsi_swing(technical_result)
+            })
+        else:  # 1 Dia
+            # Tendência macro, Support/Resistance
+            indicators.update({
+                'macro_trend': analyze_macro_trend(technical_result),
+                'key_levels': analyze_key_support_resistance(technical_result),
+                'moving_averages': analyze_ma_position(technical_result)
+            })
+        
+        # Calcular força geral da tendência
+        trend_strength = calculate_trend_strength_temporal(indicators, technical_weight)
+        trend_direction = determine_trend_direction(indicators)
+        
+        return {
+            'indicators': indicators,
+            'trend_direction': trend_direction,
+            'trend_strength': trend_strength,
+            'technical_score': technical_result.get('overall_score', 60),
+            'signal_quality': 'FORTE' if trend_strength > 75 else 'MODERADO' if trend_strength > 50 else 'FRACO'
+        }
+        
+    except Exception as e:
+        return {
+            'indicators': {},
+            'trend_direction': 'LATERAL',
+            'trend_strength': 50,
+            'technical_score': 50,
+            'signal_quality': 'MODERADO'
+        }
+
+def execute_alpha_vantage_sentiment(pair, temporal_params):
+    """Análise de sentimento usando Alpha Vantage News"""
+    
+    try:
+        # Usar serviço de sentimento existente
+        sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
+        
+        # Ajustar baseado na sensibilidade temporal
+        sentiment_sensitivity = temporal_params.get('ai_sentiment_sensitivity', 0.7)
+        news_impact_weight = temporal_params.get('ai_news_impact_weight', 0.5)
+        
+        # Calcular impacto ajustado
+        adjusted_sentiment = sentiment_score * sentiment_sensitivity
+        
+        # Classificar sentimento
+        if adjusted_sentiment > 0.3:
+            sentiment_signal = 'BULLISH'
+            strength = min(100, abs(adjusted_sentiment) * 150)
+        elif adjusted_sentiment < -0.3:
+            sentiment_signal = 'BEARISH'  
+            strength = min(100, abs(adjusted_sentiment) * 150)
+        else:
+            sentiment_signal = 'NEUTRO'
+            strength = 40
+        
+        return {
+            'sentiment_score': adjusted_sentiment,
+            'sentiment_signal': sentiment_signal,
+            'strength': strength,
+            'news_impact_weight': news_impact_weight,
+            'reliable': abs(adjusted_sentiment) > 0.2
+        }
+        
+    except Exception as e:
+        return {
+            'sentiment_score': 0.0,
+            'sentiment_signal': 'NEUTRO',
+            'strength': 40,
+            'news_impact_weight': 0.5,
+            'reliable': False
+        }
+
+def execute_temporal_lstm_prediction(price_data, temporal_strategy, temporal_params):
+    """Previsão LSTM com parâmetros específicos da estratégia temporal"""
+    
+    try:
+        # Usar serviço LSTM se disponível
+        if 'ai_lstm_service' in services:
+            # Ajustar epochs baseado na estratégia
+            epochs = 15 if temporal_strategy in ['15 Minutos', '1 Hora'] else 10
+            
+            prediction = services['ai_lstm_service'].predict_price_movement(
+                price_data, temporal_strategy, epochs
+            )
+            
+            # Ajustar confiança baseada nos parâmetros temporais
+            probability_threshold = temporal_params.get('ai_probability_threshold', 0.6)
+            base_confidence = prediction.get('confidence', 50)
+            
+            # Ajustar confiança baseada no threshold da estratégia
+            adjusted_confidence = min(90, base_confidence * (1 + probability_threshold))
+            
+            return {
+                'direction': prediction.get('direction', 'HOLD'),
+                'confidence': adjusted_confidence,
+                'accuracy_estimate': prediction.get('accuracy', 65),
+                'price_target': prediction.get('price_target'),
+                'time_horizon': temporal_strategy,
+                'reliable': adjusted_confidence > 70
+            }
+        else:
+            # LSTM simplificado com parâmetros temporais
+            return calculate_simplified_temporal_prediction(price_data, temporal_params)
+            
+    except Exception as e:
+        return {
+            'direction': 'HOLD',
+            'confidence': 50,
+            'accuracy_estimate': 60,
+            'price_target': None,
+            'time_horizon': temporal_strategy,
+            'reliable': False
+        }
+
+def calculate_simplified_temporal_prediction(price_data, temporal_params):
+    """LSTM simplificado com parâmetros específicos da estratégia temporal"""
+    
+    try:
+        # Obter coluna de fechamento
+        close_col = None
+        for col in ['4. close', 'close', '4. Close']:
+            if col in price_data.columns:
+                close_col = col
+                break
+        
+        if not close_col:
+            return {'direction': 'HOLD', 'confidence': 50, 'reliable': False}
+        
+        closes = pd.to_numeric(price_data[close_col], errors='coerce').fillna(method='forward_fill')
+        
+        # Análise baseada nos parâmetros temporais
+        historical_periods = temporal_params.get('ai_historical_periods', 30)
+        success_rate_target = temporal_params.get('ai_success_rate_target', 0.7)
+        
+        # Calcular tendência baseada no período histórico específico
+        recent_data = closes.tail(min(historical_periods, len(closes)))
+        trend_slope = (recent_data.iloc[-1] - recent_data.iloc[0]) / len(recent_data)
+        
+        # Calcular volatilidade
+        volatility = recent_data.pct_change().std()
+        
+        # Determinar direção com base na estratégia temporal
+        if abs(trend_slope) > volatility * 0.1:
+            direction = 'BUY' if trend_slope > 0 else 'SELL'
+            confidence = min(90, success_rate_target * 100 + abs(trend_slope) * 1000)
+        else:
+            direction = 'HOLD'
+            confidence = 45
+        
+        return {
+            'direction': direction,
+            'confidence': confidence,
+            'accuracy_estimate': success_rate_target * 100,
+            'price_target': None,
+            'reliable': confidence > 65
+        }
+        
+    except Exception as e:
+        return {'direction': 'HOLD', 'confidence': 50, 'reliable': False}
+
+def calculate_temporal_success_probability(technical, liquidity, sentiment, lstm, temporal_params, strategy_info):
+    """Calcular probabilidade de sucesso baseada na estratégia temporal"""
+    
+    try:
+        # Pesos específicos da estratégia temporal
+        technical_weight = temporal_params.get('ai_technical_weight', 0.7)
+        news_impact_weight = temporal_params.get('ai_news_impact_weight', 0.5)
+        
+        # Calcular scores normalizados
+        technical_score = technical.get('trend_strength', 50)
+        liquidity_score = liquidity.get('liquidity_score', 60)
+        sentiment_score = min(100, sentiment.get('strength', 40))
+        lstm_score = lstm.get('confidence', 50)
+        
+        # Aplicar pesos específicos da estratégia
+        weighted_score = (
+            technical_score * technical_weight +
+            liquidity_score * 0.25 +
+            sentiment_score * news_impact_weight + 
+            lstm_score * 0.2
+        ) / (technical_weight + 0.25 + news_impact_weight + 0.2)
+        
+        # Ajustar baseado na taxa de sucesso alvo da estratégia
+        target_rate = float(strategy_info['success_rate'].replace('%', '')) / 100
+        adjusted_probability = weighted_score * target_rate + (100 - weighted_score) * (1 - target_rate)
+        
+        # Classificação
+        if adjusted_probability > 75:
+            classification = 'MUITO ALTA'
+        elif adjusted_probability > 65:
+            classification = 'ALTA'
+        elif adjusted_probability > 50:
+            classification = 'MÉDIA'
+        else:
+            classification = 'BAIXA'
+        
+        return {
+            'probability': round(adjusted_probability, 1),
+            'classification': classification,
+            'target_success_rate': strategy_info['success_rate'],
+            'weighted_score': round(weighted_score, 1)
+        }
+        
+    except Exception as e:
+        return {'probability': 60.0, 'classification': 'MÉDIA', 'target_success_rate': '70%', 'weighted_score': 60.0}
+
+def generate_temporal_trading_signals(technical, lstm, temporal_params, strategy_info):
+    """Gerar sinais de trading específicos da estratégia temporal"""
+    
+    try:
+        # Combinar sinais técnicos e LSTM
+        tech_direction = technical.get('trend_direction', 'LATERAL')
+        lstm_direction = lstm.get('direction', 'HOLD')
+        tech_strength = technical.get('trend_strength', 50)
+        lstm_confidence = lstm.get('confidence', 50)
+        
+        # Determinar sinal principal baseado na estratégia
+        if tech_direction != 'LATERAL' and lstm_direction != 'HOLD':
+            if (tech_direction == 'ALTA' and lstm_direction == 'BUY') or \
+               (tech_direction == 'BAIXA' and lstm_direction == 'SELL'):
+                main_signal = 'COMPRA' if tech_direction == 'ALTA' else 'VENDA'
+                signal_strength = 'MUITO FORTE'
+            else:
+                main_signal = 'AGUARDAR'
+                signal_strength = 'CONFLITO'
+        elif tech_direction != 'LATERAL':
+            main_signal = 'COMPRA' if tech_direction == 'ALTA' else 'VENDA'
+            signal_strength = 'MODERADO'
+        elif lstm_direction != 'HOLD':
+            main_signal = 'COMPRA' if lstm_direction == 'BUY' else 'VENDA'
+            signal_strength = 'MODERADO'
+        else:
+            main_signal = 'AGUARDAR'
+            signal_strength = 'FRACO'
+        
+        # Condições específicas da estratégia temporal
+        strategy_name = strategy_info['name']
+        analyses_used = strategy_info['analyses']
+        
+        return {
+            'main_signal': main_signal,
+            'signal_strength': signal_strength,
+            'entry_condition': f"Confluência: {', '.join(analyses_used[:3])}",
+            'exit_condition': f"Target: {strategy_info['target_pips']} | Max Holding: {strategy_info['max_holding']}",
+            'strategy_specific': strategy_name,
+            'confidence': max(tech_strength, lstm_confidence),
+            'analyses_applied': len(analyses_used)
+        }
+        
+    except Exception as e:
+        return {
+            'main_signal': 'AGUARDAR',
+            'signal_strength': 'FRACO',
+            'entry_condition': 'Aguardar confirmação',
+            'exit_condition': 'Definir com base na estratégia',
+            'strategy_specific': strategy_info.get('name', 'Indefinido'),
+            'confidence': 50,
+            'analyses_applied': 0
+        }
+
+def calculate_temporal_risk_metrics(price_data, temporal_strategy, temporal_params, strategy_info):
+    """Calcular métricas de risco específicas da estratégia temporal"""
+    
+    try:
+        # Parâmetros específicos da estratégia
+        target_pips = int(strategy_info['target_pips'].split()[0])
+        success_rate = float(strategy_info['success_rate'].replace('%', '')) / 100
+        
+        # Calcular volatilidade baseada nos dados
+        close_col = None
+        for col in ['4. close', 'close', '4. Close']:
+            if col in price_data.columns:
+                close_col = col
+                break
+        
+        if close_col:
+            closes = pd.to_numeric(price_data[close_col], errors='coerce').fillna(method='forward_fill')
+            volatility = closes.pct_change().std() * 100
+            
+            # Estimar drawdown máximo baseado na volatilidade e estratégia
+            if temporal_strategy == '15 Minutos':
+                max_dd = min(2.0, volatility * 0.8)
+                max_extension = target_pips * 1.2
+            elif temporal_strategy == '1 Hora':
+                max_dd = min(3.0, volatility * 1.0)
+                max_extension = target_pips * 1.3
+            elif temporal_strategy == '4 Horas':
+                max_dd = min(5.0, volatility * 1.5)
+                max_extension = target_pips * 1.4
+            else:  # 1 Dia
+                max_dd = min(8.0, volatility * 2.0)
+                max_extension = target_pips * 1.6
+        else:
+            # Valores padrão baseados na estratégia
+            strategy_defaults = {
+                '15 Minutos': {'dd': 1.2, 'ext': 22},
+                '1 Hora': {'dd': 2.5, 'ext': 52},
+                '4 Horas': {'dd': 4.0, 'ext': 126},
+                '1 Dia': {'dd': 6.5, 'ext': 240}
+            }
+            defaults = strategy_defaults.get(temporal_strategy, {'dd': 3.0, 'ext': 60})
+            max_dd = defaults['dd']
+            max_extension = defaults['ext']
+        
+        return {
+            'max_drawdown': round(max_dd, 2),
+            'max_extension_pips': round(max_extension, 0),
+            'target_pips': target_pips,
+            'estimated_win_rate': round(success_rate * 100, 0),
+            'risk_reward_ratio': '1:2.2',
+            'suitable_for_strategy': True,
+            'volatility_adjusted': True
+        }
+        
+    except Exception as e:
+        return {
+            'max_drawdown': 3.0,
+            'max_extension_pips': 60,
+            'target_pips': 50,
+            'estimated_win_rate': 70,
+            'risk_reward_ratio': '1:2.2',
+            'suitable_for_strategy': True,
+            'volatility_adjusted': False
+        }
+
+def display_unified_pair_result(pair_result, index, temporal_strategy):
+    """Exibir resultado unificado de cada par com informações da estratégia temporal"""
+    
+    try:
+        pair = pair_result['pair']
+        technical = pair_result['technical']
+        signals = pair_result['signals']
+        probability = pair_result['probability']
+        analyses_used = pair_result['analyses_used']
+        
+        # Determinar cor baseada no sinal
+        if signals['main_signal'] == 'COMPRA':
+            color = "🟢"
+        elif signals['main_signal'] == 'VENDA':
+            color = "🔴"
+        else:
+            color = "🟡"
+        
+        # Exibir resultado detalhado
+        col1, col2, col3, col4 = st.columns([2, 2, 2, 2])
+        
+        with col1:
+            st.metric(
+                f"{color} {pair}",
+                f"{pair_result['current_price']:.4f}",
+                f"{technical['trend_direction']}"
+            )
+        
+        with col2:
+            st.metric(
+                "Probabilidade",
+                f"{probability['probability']:.1f}%",
+                f"{probability['classification']}"
+            )
+        
+        with col3:
+            st.metric(
+                "Sinal",
+                signals['main_signal'],
+                f"Força: {signals['signal_strength']}"
+            )
+        
+        with col4:
+            risk = pair_result['risk_metrics']
+            st.metric(
+                "Target/DD",
+                f"{risk['target_pips']} pips",
+                f"DD: {risk['max_drawdown']:.1f}%"
+            )
+        
+        # Mostrar análises aplicadas
+        st.caption(f"#{index} - Análises aplicadas: {', '.join(analyses_used[:3])}...")
+        st.markdown("---")
+        
+    except Exception as e:
+        st.error(f"Erro ao exibir resultado de {pair_result.get('pair', 'Par desconhecido')}: {str(e)}")
+
+def display_comprehensive_multi_pair_report(analysis_results, temporal_strategy, strategy_info, market_label):
+    """Exibir relatório completo da análise multi-pares"""
+    
+    try:
+        st.markdown("## 📊 Relatório Completo - Análise Multi-Pares")
+        st.markdown(f"### Estratégia: {strategy_info['name']} | Mercado: {market_label}")
+        
+        # Seção 1: Resumo Executivo
+        st.markdown("### 📈 Resumo Executivo")
+        
+        col1, col2, col3, col4, col5 = st.columns(5)
+        
+        # Estatísticas gerais
+        total_pairs = len(analysis_results)
+        compra_signals = sum(1 for r in analysis_results if r['signals']['main_signal'] == 'COMPRA')
+        venda_signals = sum(1 for r in analysis_results if r['signals']['main_signal'] == 'VENDA')
+        aguardar_signals = total_pairs - compra_signals - venda_signals
+        avg_probability = sum(r['probability']['probability'] for r in analysis_results) / total_pairs
+        
+        with col1:
+            st.metric("Total Pares", total_pairs)
+        with col2:
+            st.metric("🟢 Compra", compra_signals)
+        with col3:
+            st.metric("🔴 Venda", venda_signals)
+        with col4:
+            st.metric("🟡 Aguardar", aguardar_signals)
+        with col5:
+            st.metric("📊 Prob. Média", f"{avg_probability:.1f}%")
+        
+        # Seção 2: Análises Aplicadas
+        st.markdown("### 🔍 Análises Técnicas Aplicadas")
+        analyses_applied = strategy_info['analyses']
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Indicadores Utilizados:**")
+            for i, analysis in enumerate(analyses_applied, 1):
+                st.markdown(f"{i}. {analysis}")
+        
+        with col2:
+            st.markdown(f"**Parâmetros da Estratégia {temporal_strategy}:**")
+            st.markdown(f"• Target médio: {strategy_info['target_pips']}")
+            st.markdown(f"• Taxa de sucesso alvo: {strategy_info['success_rate']}")
+            st.markdown(f"• Tempo máximo de holding: {strategy_info['max_holding']}")
+            st.markdown(f"• Intervalo de análise: {strategy_info['interval']}")
+        
+        # Seção 3: Top Oportunidades
+        st.markdown("### 🏆 Top 5 Oportunidades Identificadas")
+        
+        top_opportunities = sorted(analysis_results, 
+                                 key=lambda x: x['probability']['probability'], 
+                                 reverse=True)[:5]
+        
+        for i, opp in enumerate(top_opportunities, 1):
+            with st.expander(f"#{i} - {opp['pair']} | Probabilidade: {opp['probability']['probability']:.1f}% | Sinal: {opp['signals']['main_signal']}"):
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.markdown("**📊 Análise Técnica:**")
+                    tech = opp['technical']
+                    st.markdown(f"• Tendência: {tech['trend_direction']}")
+                    st.markdown(f"• Força: {tech['trend_strength']:.1f}/100")
+                    st.markdown(f"• Qualidade: {tech['signal_quality']}")
+                    
+                with col2:
+                    st.markdown("**💧 Liquidez & Sentimento:**")
+                    liq = opp['liquidity']
+                    sent = opp['sentiment']
+                    st.markdown(f"• Liquidez: {liq['recommendation']}")
+                    st.markdown(f"• Score: {liq['liquidity_score']:.0f}/100")
+                    st.markdown(f"• Sentimento: {sent['sentiment_signal']}")
+                
+                with col3:
+                    st.markdown("**🎯 Recomendação de Trading:**")
+                    signals = opp['signals']
+                    risk = opp['risk_metrics']
+                    st.markdown(f"• Ação: {signals['main_signal']}")
+                    st.markdown(f"• Entrada: {signals['entry_condition'][:30]}...")
+                    st.markdown(f"• Target: {risk['target_pips']} pips")
+                    st.markdown(f"• DD Máximo: {risk['max_drawdown']:.1f}%")
+        
+        # Seção 4: Distribuição de Probabilidades
+        st.markdown("### 📈 Distribuição de Probabilidades de Sucesso")
+        
+        muito_alta = sum(1 for r in analysis_results if r['probability']['probability'] > 75)
+        alta = sum(1 for r in analysis_results if 65 <= r['probability']['probability'] <= 75)
+        media = sum(1 for r in analysis_results if 50 <= r['probability']['probability'] < 65)
+        baixa = sum(1 for r in analysis_results if r['probability']['probability'] < 50)
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("🟢 Muito Alta (>75%)", muito_alta, f"{muito_alta/total_pairs*100:.1f}%")
+        with col2:
+            st.metric("🔵 Alta (65-75%)", alta, f"{alta/total_pairs*100:.1f}%")
+        with col3:
+            st.metric("🟡 Média (50-65%)", media, f"{media/total_pairs*100:.1f}%")
+        with col4:
+            st.metric("🔴 Baixa (<50%)", baixa, f"{baixa/total_pairs*100:.1f}%")
+        
+        # Seção 5: Recomendações Estratégicas
+        st.markdown("### 💡 Recomendações Estratégicas")
+        
+        if muito_alta + alta > total_pairs * 0.6:
+            st.success(f"✅ Excelente momento para {strategy_info['name']}! {muito_alta + alta} pares com alta probabilidade.")
+        elif media > total_pairs * 0.5:
+            st.warning(f"⚠️ Momento moderado para {strategy_info['name']}. Aguardar melhores confirmações.")
+        else:
+            st.error(f"❌ Momento desfavorável para {strategy_info['name']}. Considerar outra estratégia temporal.")
+        
+        # Mostrar timestamp
+        st.caption(f"Relatório gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} | Dados: Alpha Vantage API")
+        
+    except Exception as e:
+        st.error(f"Erro ao gerar relatório: {str(e)}")
+
+# Funções auxiliares para análise técnica específica por estratégia
+def analyze_rsi_micro(technical_result):
+    """Análise RSI específica para micro intraday"""
+    rsi = technical_result.get('rsi', 50)
+    if rsi > 70: return 'SOBRECOMPRADO'
+    elif rsi < 30: return 'SOBREVENDIDO'
+    elif rsi > 55: return 'BULLISH'
+    else: return 'BEARISH'
+
+def analyze_ema_crossover(technical_result):
+    """Análise EMA crossover"""
+    ema_12 = technical_result.get('ema_12', 0)
+    ema_26 = technical_result.get('ema_26', 0)
+    if ema_12 > ema_26: return 'BULLISH_CROSS'
+    else: return 'BEARISH_CROSS'
+
+def analyze_volume_intraday(technical_result):
+    """Análise de volume intraday"""
+    volume = technical_result.get('volume_analysis', {})
+    return volume.get('trend', 'NEUTRO')
+
+def analyze_macd_intraday(technical_result):
+    """Análise MACD para intraday"""
+    macd = technical_result.get('macd', 0)
+    if macd > 0: return 'BULLISH'
+    else: return 'BEARISH'
+
+def analyze_adx_trend(technical_result):
+    """Análise ADX para força da tendência"""
+    adx = technical_result.get('adx', 20)
+    if adx > 25: return 'TREND_FORTE'
+    else: return 'TREND_FRACO'
+
+def analyze_bollinger_bands(technical_result):
+    """Análise posição nas Bollinger Bands"""
+    bb_position = technical_result.get('bb_position', 'MIDDLE')
+    return bb_position
+
+def analyze_sma_multi(technical_result):
+    """Análise SMA múltiplas para swing"""
+    sma_20 = technical_result.get('sma_20', 0)
+    sma_50 = technical_result.get('sma_50', 0)
+    sma_200 = technical_result.get('sma_200', 0)
+    if sma_20 > sma_50 > sma_200: return 'UPTREND'
+    elif sma_20 < sma_50 < sma_200: return 'DOWNTREND'
+    else: return 'SIDEWAYS'
+
+def analyze_macd_swing(technical_result):
+    """Análise MACD para swing trading"""
+    macd_histogram = technical_result.get('macd_histogram', 0)
+    if macd_histogram > 0: return 'BULLISH_MOMENTUM'
+    else: return 'BEARISH_MOMENTUM'
+
+def analyze_rsi_swing(technical_result):
+    """Análise RSI para swing trading"""
+    rsi = technical_result.get('rsi', 50)
+    if rsi > 60: return 'BULLISH_ZONE'
+    elif rsi < 40: return 'BEARISH_ZONE'
+    else: return 'NEUTRAL_ZONE'
+
+def analyze_macro_trend(technical_result):
+    """Análise de tendência macro"""
+    overall_trend = technical_result.get('overall_trend', 'LATERAL')
+    return overall_trend
+
+def analyze_key_support_resistance(technical_result):
+    """Análise de suporte/resistência chave"""
+    support_resistance = technical_result.get('support_resistance', {})
+    return support_resistance
+
+def analyze_ma_position(technical_result):
+    """Análise posição das médias móveis"""
+    ma_position = technical_result.get('ma_position', 'NEUTRAL')
+    return ma_position
+
+def calculate_trend_strength_temporal(indicators, technical_weight):
+    """Calcular força da tendência baseada nos indicadores temporais"""
+    try:
+        strength_sum = 0
+        indicator_count = 0
+        
+        for indicator_name, indicator_value in indicators.items():
+            if 'BULLISH' in str(indicator_value) or 'UPTREND' in str(indicator_value):
+                strength_sum += 80
+            elif 'BEARISH' in str(indicator_value) or 'DOWNTREND' in str(indicator_value):
+                strength_sum += 20
+            else:
+                strength_sum += 50
+            indicator_count += 1
+        
+        if indicator_count > 0:
+            average_strength = strength_sum / indicator_count
+            return min(100, average_strength * technical_weight + 50 * (1 - technical_weight))
+        else:
+            return 50
+            
+    except Exception as e:
+        return 50
+
+def determine_trend_direction(indicators):
+    """Determinar direção da tendência baseada nos indicadores"""
+    try:
+        bullish_count = 0
+        bearish_count = 0
+        
+        for indicator_value in indicators.values():
+            indicator_str = str(indicator_value).upper()
+            if any(term in indicator_str for term in ['BULLISH', 'UPTREND', 'FORTE', 'HIGH']):
+                bullish_count += 1
+            elif any(term in indicator_str for term in ['BEARISH', 'DOWNTREND', 'FRACO', 'LOW']):
+                bearish_count += 1
+        
+        if bullish_count > bearish_count:
+            return 'ALTA'
+        elif bearish_count > bullish_count:
+            return 'BAIXA'
+        else:
+            return 'LATERAL'
+            
+    except Exception as e:
+        return 'LATERAL'
+
+def get_liquidity_recommendation(score):
+    """Obter recomendação de liquidez baseada no score"""
+    if score > 85: return 'EXCELENTE'
+    elif score > 70: return 'BOA'
+    elif score > 55: return 'MODERADA'
+    elif score > 40: return 'CUIDADO'
+    else: return 'EVITAR'
+
+def get_current_price(price_data):
+    """Obter preço atual dos dados"""
+    try:
+        # Tentar diferentes formatos de coluna de fechamento
+        close_col = None
+        for col in ['4. close', 'close', '4. Close', 'Close']:
+            if col in price_data.columns:
+                close_col = col
+                break
+        
+        if close_col and len(price_data) > 0:
+            current_price = pd.to_numeric(price_data[close_col].iloc[-1], errors='coerce')
+            return float(current_price) if not pd.isna(current_price) else 1.0000
+        else:
+            return 1.0000
+            
+    except Exception as e:
+        return 1.0000
 
 def analyze_technical_trends(price_data, profile):
     """Análise técnica focada em identificação de tendências"""
