@@ -595,18 +595,20 @@ def check_authentication():
         st.markdown("""
         <div style="
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 3rem;
-            border-radius: 15px;
+            padding: 2.5rem 4rem;
+            border-radius: 20px;
             text-align: center;
             color: white;
             margin: 2rem auto;
-            max-width: 500px;
+            max-width: 900px;
+            width: 90%;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
         ">
-            <h1 style="color: white; margin-bottom: 1rem;">🔐 Acesso Restrito</h1>
-            <h2 style="color: white; margin-bottom: 2rem;">Plataforma Avançada de Análise Forex</h2>
-            <p style="color: rgba(255,255,255,0.9); margin-bottom: 2rem;">
+            <h1 style="color: white; margin-bottom: 1rem; font-size: 2.4em; font-weight: 700;">🔐 Acesso Restrito</h1>
+            <h2 style="color: white; margin-bottom: 1rem; font-size: 1.9em; font-weight: 600;">Plataforma Avançada de Análise Forex</h2>
+            <h3 style="color: rgba(255,255,255,0.95); margin-bottom: 2rem; font-size: 1.4em; font-weight: 400; line-height: 1.4;">
                 Sistema profissional de trading com IA e análise em tempo real
-            </p>
+            </h3>
         </div>
         """, unsafe_allow_html=True)
         
@@ -4454,4 +4456,7 @@ def display_metrics_tab(results):
         st.write(f"**Tipo:** {mode_names.get(analysis_mode, 'Padrão')}")
 
 if __name__ == "__main__":
+    main()
+
+if __name__ == '__main__':
     main()
