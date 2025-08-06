@@ -1879,29 +1879,60 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     potential_profit = tp_distance_pips * position_size
     potential_loss = stop_distance_pips * position_size
     
-    # Market timing based on profile and confidence
-    if profile == 'scalping':
-        if confidence > 0.8 and is_strong:
-            market_timing = "Imediato (1-5min)"
-        else:
-            market_timing = "Aguardar Setup (15min)"
-    elif profile == 'intraday':
-        if confidence > 0.7 and is_strong:
-            market_timing = "Curto Prazo (1-4h)"
-        else:
-            market_timing = "Médio Prazo (4-8h)"
-    elif profile == 'swing':
-        if confidence > 0.6:
-            market_timing = "1-3 dias"
-        else:
-            market_timing = "3-7 dias"
-    elif profile == 'position':
-        if confidence > 0.6:
-            market_timing = "1-2 semanas"
-        else:
-            market_timing = "2-4 semanas"
+    # TIMING INTELIGENTE: baseado nas condições REAIS de mercado, não apenas no perfil
+    # Análise multi-dimensional para determinar timing ideal de execução
+    
+    # 1. Análise de Momentum (dados Alpha Vantage)
+    momentum_score = 0
+    if len(df) > 5:
+        recent_returns = df['close'].pct_change().tail(5)
+        momentum_score = recent_returns.mean() * 1000  # Convertido para escala
+    
+    # 2. Análise de Volatilidade Atual vs Histórica
+    volatility_current = df['close'].pct_change().tail(10).std() * 10000 if len(df) > 10 else 0
+    volatility_historical = df['close'].pct_change().std() * 10000 if len(df) > 1 else 0
+    volatility_ratio = volatility_current / max(volatility_historical, 0.001)
+    
+    # 3. Convergência dos Indicadores (força do sinal)
+    signal_quality = confidence * signal_strength
+    
+    # 4. Score de Convergência Final (0-100)
+    timing_score = 0
+    
+    # Peso: Confiança (40%)
+    timing_score += confidence * 40
+    
+    # Peso: Força do Sinal (30%)  
+    timing_score += signal_strength * 30
+    
+    # Peso: Momentum (20%)
+    momentum_component = min(abs(momentum_score) / 2, 20) if momentum_score != 0 else 0
+    timing_score += momentum_component
+    
+    # Peso: Volatilidade Adequada (10%) - volatilidade normal é melhor
+    volatility_component = 10 if 0.8 <= volatility_ratio <= 1.5 else 5 if volatility_ratio <= 2.0 else 2
+    timing_score += volatility_component
+    
+    # DECISÃO DE TIMING baseada no score total (independente do perfil)
+    if timing_score >= 85:
+        market_timing = "🟢 EXECUTAR AGORA (Setup Perfeito)"
+    elif timing_score >= 70:
+        market_timing = "🟡 Aguardar 5-15min (Confirmação)"
+    elif timing_score >= 55:
+        market_timing = "🟠 Aguardar 30-60min (Melhor Setup)"
+    elif timing_score >= 40:
+        market_timing = "🔴 Aguardar 2-4h (Condições Inadequadas)"
     else:
-        market_timing = "Médio Prazo"
+        market_timing = "⚫ Evitar - Aguardar Novo Ciclo (24h+)"
+    
+    # Adicionar contexto específico do perfil ao timing
+    profile_context = {
+        'scalping': " | Foco: Movimentos 1-5min",
+        'intraday': " | Foco: Movimentos diários",
+        'swing': " | Foco: Movimentos 2-7 dias",
+        'position': " | Foco: Tendências longas"
+    }
+    market_timing += profile_context.get(profile, "")
     
     # Risk level assessment based on Alpha Vantage calculated stops (dinâmico)
     # Remove valores fixos - usa apenas análise real dos dados Alpha Vantage
@@ -1932,6 +1963,7 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         'stop_distance_pips': round(stop_distance_pips, 1),
         'tp_distance_pips': round(tp_distance_pips, 1),
         'market_timing': market_timing,
+        'timing_score': round(timing_score, 1),  # Score transparente do timing
         'risk_level': risk_level,
         'confidence': round(confidence * 100, 1),
         'sentiment_bias': 'Positivo' if sentiment_score > 0.05 else 'Negativo' if sentiment_score < -0.05 else 'Neutro',
