@@ -980,8 +980,22 @@ def main():
         # Análise rápida
         quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, key="quick_analysis_btn")
         
-        # Análise multi-pares
-        multi_pair_analysis = st.button("🌍 Análise Multi-Pares", use_container_width=True, key="multi_pair_btn")
+        # Análise multi-pares com seleção de tipo
+        st.markdown("**🌍 Análise Multi-Pares Especializada**")
+        
+        # Seleção do tipo de análise baseado no perfil
+        multi_analysis_type = st.selectbox(
+            "Tipo de Análise Multi-Pares:",
+            options=[
+                "Scalping (Técnica + Volume + Micro Tendência)",
+                "Intraday (Análise Unificada Completa)", 
+                "Swing (Todas com Pesos Equilibrados)",
+                "Position (Sentiment + Tendência + LSTM)"
+            ],
+            key="multi_analysis_type"
+        )
+        
+        multi_pair_analysis = st.button("🌍 Executar Análise Multi-Pares", use_container_width=True, key="multi_pair_btn")
         
         # Processamento dos diferentes tipos de análise
         analyze_button = False
@@ -1032,7 +1046,9 @@ def main():
             mc_samples, epochs, quick_analysis
         )
     elif multi_pair_analysis:
-        run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs)
+        # Get selected analysis type
+        multi_analysis_type = st.session_state.get('multi_analysis_type', 'Swing (Todas com Pesos Equilibrados)')
+        run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs, multi_analysis_type)
     
     # Always show main header
     display_main_header()
@@ -1586,8 +1602,8 @@ def display_comprehensive_tutorial():
     
     st.success("🎯 **Sucesso no Trading**: Consistência + Disciplina + Gestão de Risco = Lucros Sustentáveis!")
 
-def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs):
-    """Análise completa de todos os pares de moedas com recomendações de execução"""
+def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs, analysis_type=None):
+    """Análise completa de todos os pares de moedas com tipo de análise otimizada por perfil"""
     
     # Progress container
     progress_container = st.container()
@@ -1601,8 +1617,14 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
         status_text.text("🔍 Iniciando análise de todos os pares disponíveis...")
         progress_bar.progress(10)
         
-        # Get trading style for consistent analysis
+        # Get trading style and analysis type
         trading_style = st.session_state.get('trading_style', 'swing')
+        
+        # Parse analysis type to determine which analyses to run
+        analysis_config = parse_analysis_type(analysis_type or 'Swing (Todas com Pesos Equilibrados)')
+        
+        status_text.text(f"🎯 Usando configuração: {analysis_config['description']}")
+        progress_bar.progress(15)
         
         # Include both forex and crypto pairs based on market selection
         market_type_selected = st.session_state.get('market_type_select', 'Forex')
@@ -1646,9 +1668,9 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                 # Get sentiment score
                 sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
                 
-                # Run unified analysis for this pair
-                analysis_result = run_unified_analysis(
-                    current_price, pair, sentiment_score, df_with_indicators, trading_style
+                # Run profile-specific analysis based on selected type
+                analysis_result = run_profile_specific_analysis(
+                    current_price, pair, sentiment_score, df_with_indicators, trading_style, analysis_config
                 )
                 
                 # Calculate trading opportunity score
@@ -1683,13 +1705,15 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
         # Sort by opportunity score
         all_results.sort(key=lambda x: x['opportunity_score'], reverse=True)
         
-        # Store results in session state
+        # Store results in session state with analysis configuration
         st.session_state.multi_pair_results = {
             'results': all_results,
             'timestamp': datetime.now(),
             'trading_style': trading_style,
             'interval': interval,
-            'horizon': horizon
+            'horizon': horizon,
+            'analysis_config': analysis_config,  # Store analysis configuration
+            'analysis_type': analysis_type  # Store original analysis type
         }
         
         status_text.text("✅ Análise multi-pares concluída!")
@@ -1853,6 +1877,8 @@ def display_multi_pair_results():
     
     results = results_data['results']
     timestamp = results_data['timestamp']
+    analysis_config = results_data.get('analysis_config', {})
+    analysis_type = results_data.get('analysis_type', 'N/A')
     trading_style = results_data['trading_style']
     
     # Header
@@ -1868,6 +1894,36 @@ def display_multi_pair_results():
         st.metric("Oportunidades Válidas", len(valid_results))
     
     st.caption(f"Última atualização: {timestamp.strftime('%d/%m/%Y %H:%M:%S')}")
+    
+    # Display analysis configuration used
+    if analysis_config:
+        with st.expander("🎯 Configuração de Análise Utilizada", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown(f"**📋 Tipo:** {analysis_config.get('description', 'N/A')}")
+                st.markdown(f"**⏱️ Timeframe:** {analysis_config.get('timeframe', 'N/A')}")
+                st.markdown(f"**🎯 Foco:** {analysis_config.get('focus', 'N/A')}")
+                
+            with col2:
+                st.markdown("**⚖️ Pesos das Análises:**")
+                weights = analysis_config.get('weights', {})
+                for analysis_name, weight in weights.items():
+                    analysis_display_names = {
+                        'technical': '📊 Técnica',
+                        'trend': '📈 Tendência', 
+                        'volume': '📊 Volume',
+                        'sentiment': '📰 Sentimento',
+                        'ai_lstm': '🤖 IA/LSTM',
+                        'risk': '⚖️ Risco'
+                    }
+                    display_name = analysis_display_names.get(analysis_name, analysis_name.title())
+                    st.write(f"- {display_name}: {weight*100:.0f}%")
+            
+            # Priority indicators
+            priority_indicators = analysis_config.get('priority_indicators', [])
+            if priority_indicators:
+                st.markdown("**🎯 Indicadores Prioritários:**")
+                st.write(", ".join(priority_indicators))
     
     # Filtros
     st.markdown("### 🔍 Filtros")
@@ -5088,6 +5144,160 @@ def execute_alpha_vantage_trend_analysis(pair: str, profile: str, market_type: s
         except Exception as e:
             st.error(f"❌ Erro na análise Alpha Vantage: {e}")
             st.info("🔑 Verifique se a chave API Alpha Vantage está configurada corretamente")
+
+def parse_analysis_type(analysis_type_str: str) -> Dict:
+    """Parse analysis type string and return configuration for multi-pair analysis"""
+    
+    if "Scalping" in analysis_type_str:
+        return {
+            'profile': 'scalping',
+            'description': 'Scalping: Técnica + Volume + Micro Tendência',
+            'analyses': ['technical', 'volume', 'trend'],
+            'weights': {'technical': 0.4, 'volume': 0.35, 'trend': 0.25},
+            'focus': 'Sinais rápidos e precisos para entrada/saída',
+            'timeframe': '1-5 minutos',
+            'priority_indicators': ['EMA rápidas', 'Stochastic', 'RSI', 'Volume breakouts']
+        }
+    elif "Intraday" in analysis_type_str:
+        return {
+            'profile': 'intraday', 
+            'description': 'Intraday: Análise Unificada Completa',
+            'analyses': ['technical', 'trend', 'volume', 'sentiment'],
+            'weights': {'technical': 0.3, 'trend': 0.3, 'volume': 0.25, 'sentiment': 0.15},
+            'focus': 'Análise completa balanceada para operações intraday',
+            'timeframe': '15min-4h',
+            'priority_indicators': ['MACD', 'RSI', 'Bollinger', 'ADX', 'Volume', 'News impact']
+        }
+    elif "Position" in analysis_type_str:
+        return {
+            'profile': 'position',
+            'description': 'Position: Sentiment + Tendência + LSTM',
+            'analyses': ['sentiment', 'trend', 'ai_lstm'],
+            'weights': {'sentiment': 0.4, 'trend': 0.35, 'ai_lstm': 0.2, 'risk': 0.05},
+            'focus': 'Fundamentos e tendências de longo prazo',
+            'timeframe': 'Semanal-Mensal',
+            'priority_indicators': ['Macro fundamentals', 'SMA longas', 'Aroon', 'LSTM predictions']
+        }
+    else:  # Default to Swing
+        return {
+            'profile': 'swing',
+            'description': 'Swing: Todas as Análises com Pesos Equilibrados',
+            'analyses': ['technical', 'trend', 'sentiment', 'ai_lstm', 'volume'],
+            'weights': {'technical': 0.25, 'trend': 0.25, 'sentiment': 0.25, 'ai_lstm': 0.15, 'volume': 0.1},
+            'focus': 'Análise completa equilibrada para swing trading',
+            'timeframe': '4h-Diário', 
+            'priority_indicators': ['SMA systems', 'MACD', 'Bollinger', 'ADX', 'SAR', 'Sentiment', 'LSTM']
+        }
+
+def run_profile_specific_analysis(current_price, pair, sentiment_score, df_with_indicators, trading_style, analysis_config):
+    """Run analysis based on profile-specific configuration"""
+    
+    analyses_to_run = analysis_config['analyses']
+    weights = analysis_config['weights']
+    
+    # Initialize result structure
+    analysis_result = {
+        'profile': analysis_config['profile'],
+        'analyses_used': analyses_to_run,
+        'weights_used': weights,
+        'components': {},
+        'unified_signal': 0.0,
+        'unified_confidence': 0.0
+    }
+    
+    total_weight = 0
+    weighted_signal = 0
+    
+    # Run each required analysis
+    for analysis_type in analyses_to_run:
+        weight = weights.get(analysis_type, 0.2)  # Default weight if not specified
+        
+        if analysis_type == 'technical':
+            # Technical analysis
+            technical_result = calculate_technical_analysis(df_with_indicators)
+            analysis_result['components']['technical'] = technical_result
+            weighted_signal += technical_result['signal'] * weight
+            
+        elif analysis_type == 'trend':
+            # Trend analysis 
+            trend_result = calculate_trend_analysis(df_with_indicators)
+            analysis_result['components']['trend'] = trend_result
+            weighted_signal += trend_result['signal'] * weight
+            
+        elif analysis_type == 'volume':
+            # Volume analysis
+            volume_result = calculate_volume_analysis(df_with_indicators)
+            analysis_result['components']['volume'] = volume_result  
+            weighted_signal += volume_result['signal'] * weight
+            
+        elif analysis_type == 'sentiment':
+            # Sentiment analysis
+            sentiment_result = {'signal': sentiment_score, 'confidence': 0.8}
+            analysis_result['components']['sentiment'] = sentiment_result
+            weighted_signal += sentiment_score * weight
+            
+        elif analysis_type == 'ai_lstm':
+            # AI/LSTM analysis - simplified for multi-pair
+            try:
+                ai_result = calculate_ai_analysis_simple(df_with_indicators, current_price)
+                analysis_result['components']['ai_lstm'] = ai_result
+                weighted_signal += ai_result['signal'] * weight
+            except:
+                # Fallback if AI analysis fails
+                ai_result = {'signal': 0.0, 'confidence': 0.3}
+                analysis_result['components']['ai_lstm'] = ai_result
+                
+        elif analysis_type == 'risk':
+            # Risk analysis
+            risk_result = calculate_risk_analysis_simple(df_with_indicators, current_price)
+            analysis_result['components']['risk'] = risk_result
+            weighted_signal += risk_result['signal'] * weight
+            
+        total_weight += weight
+    
+    # Normalize final signal
+    if total_weight > 0:
+        analysis_result['unified_signal'] = weighted_signal / total_weight
+    
+    # Calculate confidence based on agreement between components
+    signals = [comp.get('signal', 0) for comp in analysis_result['components'].values()]
+    if signals:
+        # Calculate agreement (how much components agree on direction)
+        avg_signal = sum(signals) / len(signals)
+        agreement = 1 - (sum(abs(s - avg_signal) for s in signals) / len(signals)) / 2
+        analysis_result['unified_confidence'] = max(0.1, min(1.0, agreement))
+    else:
+        analysis_result['unified_confidence'] = 0.5
+        
+    return analysis_result
+
+def calculate_ai_analysis_simple(df_with_indicators, current_price):
+    """Simplified AI analysis for multi-pair processing"""
+    try:
+        # Simple trend momentum using price data
+        recent_prices = df_with_indicators['close'].tail(10)
+        price_momentum = (recent_prices.iloc[-1] - recent_prices.iloc[0]) / recent_prices.iloc[0]
+        
+        # Convert to signal (-1 to 1)
+        signal = max(-1, min(1, price_momentum * 10))
+        
+        return {'signal': signal, 'confidence': 0.6, 'method': 'price_momentum'}
+    except:
+        return {'signal': 0.0, 'confidence': 0.3, 'method': 'fallback'}
+
+def calculate_risk_analysis_simple(df_with_indicators, current_price):
+    """Simplified risk analysis for multi-pair processing"""
+    try:
+        # Calculate volatility-based risk
+        returns = df_with_indicators['close'].pct_change().tail(20)
+        volatility = returns.std()
+        
+        # Higher volatility = higher risk = negative signal for risk-averse
+        risk_signal = max(-1, min(0, -volatility * 100))  # Scale and invert
+        
+        return {'signal': risk_signal, 'confidence': 0.7, 'volatility': volatility}
+    except:
+        return {'signal': -0.1, 'confidence': 0.4, 'volatility': 0.02}
 
 def display_alpha_vantage_trend_results(analysis: Dict):
     """Display Alpha Vantage trend analysis results"""
