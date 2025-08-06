@@ -2165,6 +2165,16 @@ def display_execution_positions(results):
                 st.write(f"• **Stop Loss:** {execution['stop_loss']:.5f}")
                 st.write(f"• **Take Profit:** {execution['take_profit']:.5f}")
                 st.write(f"• **Tamanho da Posição:** {execution['position_size']:.2f} lotes")
+                
+                # Profile-specific characteristics - movido para cá
+                if 'profile_characteristics' in execution:
+                    characteristics = execution['profile_characteristics']
+                    st.markdown("**🔧 Características do Perfil:**")
+                    st.write(f"• **Stops:** {characteristics['stop_behavior']}")
+                    st.write(f"• **Takes:** {characteristics['take_behavior']}")
+                    st.write(f"• **Risco:** {characteristics['risk_approach']}")
+                    st.write(f"• **Timing:** {characteristics['timing']}")
+                    st.write(f"• **Foco:** {characteristics['focus']}")
             
             with col2:
                 st.markdown("**💰 Análise Probabilística Alpha Vantage:**")
@@ -2224,20 +2234,7 @@ def display_execution_positions(results):
                 sentiment_color = "🟢" if execution['sentiment_bias'] == 'Positivo' else "🔴" if execution['sentiment_bias'] == 'Negativo' else "🟡"
                 st.info(f"**Sentimento:** {sentiment_color} {execution['sentiment_bias']}")
             
-            # Profile-specific characteristics
-            if 'profile_characteristics' in execution:
-                characteristics = execution['profile_characteristics']
-                st.markdown("**🔧 Características do Perfil:**")
-                
-                char_col1, char_col2 = st.columns(2)
-                with char_col1:
-                    st.write(f"• **Stops:** {characteristics['stop_behavior']}")
-                    st.write(f"• **Takes:** {characteristics['take_behavior']}")
-                    st.write(f"• **Risco:** {characteristics['risk_approach']}")
-                
-                with char_col2:
-                    st.write(f"• **Timing:** {characteristics['timing']}")
-                    st.write(f"• **Foco:** {characteristics['focus']}")
+
                     
             if 'optimization_method' in execution:
                 st.success(f"**🎯 {execution['optimization_method']}**")
