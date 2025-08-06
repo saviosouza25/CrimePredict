@@ -5299,6 +5299,225 @@ def calculate_risk_analysis_simple(df_with_indicators, current_price):
     except:
         return {'signal': -0.1, 'confidence': 0.4, 'volatility': 0.02}
 
+def calculate_technical_analysis(df_with_indicators):
+    """Calculate technical analysis signals from indicators"""
+    try:
+        signals = []
+        confidences = []
+        
+        # RSI Signal
+        if 'rsi' in df_with_indicators.columns:
+            latest_rsi = df_with_indicators['rsi'].iloc[-1]
+            if latest_rsi < 30:
+                signals.append(0.7)  # Strong buy
+            elif latest_rsi < 40:
+                signals.append(0.3)  # Weak buy
+            elif latest_rsi > 70:
+                signals.append(-0.7)  # Strong sell
+            elif latest_rsi > 60:
+                signals.append(-0.3)  # Weak sell
+            else:
+                signals.append(0)  # Neutral
+            confidences.append(0.8)
+        
+        # MACD Signal
+        if 'macd' in df_with_indicators.columns and 'macd_signal' in df_with_indicators.columns:
+            macd = df_with_indicators['macd'].iloc[-1]
+            macd_signal = df_with_indicators['macd_signal'].iloc[-1]
+            if macd > macd_signal:
+                signals.append(0.5)  # Bullish
+            else:
+                signals.append(-0.5)  # Bearish
+            confidences.append(0.7)
+        
+        # Bollinger Bands Signal
+        if all(col in df_with_indicators.columns for col in ['bb_upper', 'bb_lower', 'close']):
+            close = df_with_indicators['close'].iloc[-1]
+            bb_upper = df_with_indicators['bb_upper'].iloc[-1]
+            bb_lower = df_with_indicators['bb_lower'].iloc[-1]
+            bb_width = bb_upper - bb_lower
+            
+            if close <= bb_lower:
+                signals.append(0.6)  # Oversold
+            elif close >= bb_upper:
+                signals.append(-0.6)  # Overbought
+            else:
+                # Position within bands
+                bb_position = (close - bb_lower) / bb_width - 0.5
+                signals.append(bb_position)
+            confidences.append(0.6)
+        
+        # Aggregate signals
+        if signals:
+            avg_signal = sum(signals) / len(signals)
+            avg_confidence = sum(confidences) / len(confidences)
+            
+            return {
+                'signal': max(-1, min(1, avg_signal)),
+                'confidence': avg_confidence,
+                'components': len(signals)
+            }
+        else:
+            return {'signal': 0.0, 'confidence': 0.3, 'components': 0}
+            
+    except Exception as e:
+        return {'signal': 0.0, 'confidence': 0.2, 'error': str(e)}
+
+def calculate_trend_analysis(df_with_indicators):
+    """Calculate trend analysis signals"""
+    try:
+        signals = []
+        confidences = []
+        
+        # SMA Trend
+        if 'sma_20' in df_with_indicators.columns and 'sma_50' in df_with_indicators.columns:
+            sma_20 = df_with_indicators['sma_20'].iloc[-1]
+            sma_50 = df_with_indicators['sma_50'].iloc[-1]
+            
+            if sma_20 > sma_50:
+                signals.append(0.6)  # Uptrend
+            else:
+                signals.append(-0.6)  # Downtrend
+            confidences.append(0.7)
+        
+        # EMA Trend
+        if 'ema_12' in df_with_indicators.columns and 'ema_26' in df_with_indicators.columns:
+            ema_12 = df_with_indicators['ema_12'].iloc[-1]
+            ema_26 = df_with_indicators['ema_26'].iloc[-1]
+            
+            if ema_12 > ema_26:
+                signals.append(0.5)  # Short-term uptrend
+            else:
+                signals.append(-0.5)  # Short-term downtrend
+            confidences.append(0.6)
+        
+        # Price vs SMA
+        if 'sma_20' in df_with_indicators.columns:
+            close = df_with_indicators['close'].iloc[-1]
+            sma_20 = df_with_indicators['sma_20'].iloc[-1]
+            
+            price_sma_ratio = (close - sma_20) / sma_20
+            signals.append(max(-1, min(1, price_sma_ratio * 10)))
+            confidences.append(0.5)
+        
+        # ADX Trend Strength (if available)
+        if 'adx' in df_with_indicators.columns:
+            adx = df_with_indicators['adx'].iloc[-1]
+            if adx > 25:  # Strong trend
+                # Determine direction with DI+/DI-
+                if 'di_plus' in df_with_indicators.columns and 'di_minus' in df_with_indicators.columns:
+                    di_plus = df_with_indicators['di_plus'].iloc[-1]
+                    di_minus = df_with_indicators['di_minus'].iloc[-1]
+                    
+                    if di_plus > di_minus:
+                        signals.append(0.8)
+                    else:
+                        signals.append(-0.8)
+                    confidences.append(0.9)
+        
+        # Aggregate signals
+        if signals:
+            avg_signal = sum(signals) / len(signals)
+            avg_confidence = sum(confidences) / len(confidences)
+            
+            return {
+                'signal': max(-1, min(1, avg_signal)),
+                'confidence': avg_confidence,
+                'components': len(signals)
+            }
+        else:
+            return {'signal': 0.0, 'confidence': 0.3, 'components': 0}
+            
+    except Exception as e:
+        return {'signal': 0.0, 'confidence': 0.2, 'error': str(e)}
+
+def calculate_volume_analysis(df_with_indicators):
+    """Calculate volume-based signals"""
+    try:
+        signals = []
+        confidences = []
+        
+        if 'volume' not in df_with_indicators.columns:
+            return {'signal': 0.0, 'confidence': 0.2, 'components': 0}
+        
+        # Volume trend
+        recent_volume = df_with_indicators['volume'].tail(5).mean()
+        longer_volume = df_with_indicators['volume'].tail(20).mean()
+        
+        volume_ratio = recent_volume / longer_volume if longer_volume > 0 else 1
+        
+        # High volume = more significance to price movement
+        if volume_ratio > 1.5:  # High volume
+            # Determine price direction
+            recent_close = df_with_indicators['close'].tail(5)
+            if recent_close.iloc[-1] > recent_close.iloc[0]:
+                signals.append(0.6)  # Volume-supported uptrend
+            else:
+                signals.append(-0.6)  # Volume-supported downtrend
+            confidences.append(0.8)
+        elif volume_ratio > 1.2:  # Moderate volume
+            recent_close = df_with_indicators['close'].tail(3)
+            if recent_close.iloc[-1] > recent_close.iloc[0]:
+                signals.append(0.3)
+            else:
+                signals.append(-0.3)
+            confidences.append(0.6)
+        else:  # Low volume
+            signals.append(0)  # Neutral on low volume
+            confidences.append(0.4)
+        
+        # Volume breakout detection
+        if volume_ratio > 2:  # Volume spike
+            # Price breakout with volume
+            price_change = (df_with_indicators['close'].iloc[-1] - df_with_indicators['close'].iloc[-2]) / df_with_indicators['close'].iloc[-2]
+            
+            if abs(price_change) > 0.005:  # 0.5% price move
+                signals.append(0.8 if price_change > 0 else -0.8)
+                confidences.append(0.9)
+        
+        # On-Balance Volume (simplified)
+        if len(df_with_indicators) >= 10:
+            obv_changes = []
+            for i in range(-10, 0):
+                if i == 0 or i >= len(df_with_indicators):
+                    continue
+                price_change = df_with_indicators['close'].iloc[i] - df_with_indicators['close'].iloc[i-1]
+                volume = df_with_indicators['volume'].iloc[i]
+                
+                if price_change > 0:
+                    obv_changes.append(volume)
+                elif price_change < 0:
+                    obv_changes.append(-volume)
+                else:
+                    obv_changes.append(0)
+            
+            if obv_changes:
+                obv_trend = sum(obv_changes[-5:])  # Last 5 periods
+                if obv_trend > 0:
+                    signals.append(0.4)
+                elif obv_trend < 0:
+                    signals.append(-0.4)
+                else:
+                    signals.append(0)
+                confidences.append(0.5)
+        
+        # Aggregate signals
+        if signals:
+            avg_signal = sum(signals) / len(signals)
+            avg_confidence = sum(confidences) / len(confidences)
+            
+            return {
+                'signal': max(-1, min(1, avg_signal)),
+                'confidence': avg_confidence,
+                'components': len(signals),
+                'volume_ratio': volume_ratio
+            }
+        else:
+            return {'signal': 0.0, 'confidence': 0.3, 'components': 0}
+            
+    except Exception as e:
+        return {'signal': 0.0, 'confidence': 0.2, 'error': str(e)}
+
 def display_alpha_vantage_trend_results(analysis: Dict):
     """Display Alpha Vantage trend analysis results"""
     
