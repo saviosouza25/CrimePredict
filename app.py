@@ -1031,34 +1031,31 @@ def main():
         
         st.markdown("---")
         
-        # Seção de análises especializadas
-        st.markdown("**🎯 Análises Especializadas**")
-        
-        # Nova análise de tendência Alpha Vantage - Mais precisa
-        trend_alpha_analysis = st.button("🎯 Análise de Tendência Alpha Vantage", type="primary", use_container_width=True,
-                                        help="Análise avançada de tendências com indicadores Alpha Vantage otimizados por perfil", key="trend_alpha_btn")
-        
-        # Análise unificada principal
-        unified_analysis = st.button("🧠 Análise Unificada Inteligente", use_container_width=True, 
-                                   help="Combina todas as análises para a melhor previsão do mercado", key="unified_analysis_btn")
-        
-
-        
-        st.markdown("**Análises Individuais:**")
-        
-        # Análises técnicas em colunas
-        col1, col2 = st.columns(2)
-        with col1:
-            technical_analysis = st.button("📊 Técnica", use_container_width=True, key="technical_btn")
-            sentiment_analysis = st.button("📰 Sentimento", use_container_width=True, key="sentiment_btn")
-            risk_analysis = st.button("⚖️ Risco", use_container_width=True, key="risk_btn")
-        with col2:
-            ai_analysis = st.button("🤖 IA/LSTM", use_container_width=True, key="ai_btn")
-            volume_analysis = st.button("📈 Volume", use_container_width=True, key="volume_btn")
-            trend_analysis = st.button("📉 Tendência", use_container_width=True, key="trend_btn")
-        
-        # Análise rápida
-        quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, key="quick_analysis_btn")
+        # Seção de análises especializadas em expander colapsável
+        with st.expander("🎯 Análises Especializadas", expanded=False):
+            # Nova análise de tendência Alpha Vantage - Mais precisa
+            trend_alpha_analysis = st.button("🎯 Análise de Tendência Alpha Vantage", type="primary", use_container_width=True,
+                                            help="Análise avançada de tendências com indicadores Alpha Vantage otimizados por perfil", key="trend_alpha_btn")
+            
+            # Análise unificada principal
+            unified_analysis = st.button("🧠 Análise Unificada Inteligente", use_container_width=True, 
+                                       help="Combina todas as análises para a melhor previsão do mercado", key="unified_analysis_btn")
+            
+            st.markdown("**Análises Individuais:**")
+            
+            # Análises técnicas em colunas
+            col1, col2 = st.columns(2)
+            with col1:
+                technical_analysis = st.button("📊 Técnica", use_container_width=True, key="technical_btn")
+                sentiment_analysis = st.button("📰 Sentimento", use_container_width=True, key="sentiment_btn")
+                risk_analysis = st.button("⚖️ Risco", use_container_width=True, key="risk_btn")
+            with col2:
+                ai_analysis = st.button("🤖 IA/LSTM", use_container_width=True, key="ai_btn")
+                volume_analysis = st.button("📈 Volume", use_container_width=True, key="volume_btn")
+                trend_analysis = st.button("📉 Tendência", use_container_width=True, key="trend_btn")
+            
+            # Análise rápida
+            quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, key="quick_analysis_btn")
         
 
         
