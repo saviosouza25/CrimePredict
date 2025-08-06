@@ -1915,12 +1915,12 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     # THRESHOLDS ADAPTATIVOS POR PERFIL - Cada estratégia tem sua tolerância temporal
     profile_thresholds = {
         'scalping': {
-            # Scalping: Aceita mais risco para mais frequência
-            'execute_now': 25,      # Score 25+ = EXECUTAR (muito tolerante)
-            'wait_5_15min': 40,     # Score 40+ = Aguardar pouco
-            'wait_30_60min': 55,    # Score 55+ = Aguardar moderado
-            'wait_2_4h': 70,        # Score 70+ = Aguardar mais
-            'philosophy': 'Frequência > Qualidade Perfeita'
+            # Scalping Ultra-Assertivo: Mais seletivo mas com execução rápida
+            'execute_now': 20,      # Score 20+ = EXECUTAR (ultra-tolerante para capturas rápidas)
+            'wait_5_15min': 35,     # Score 35+ = Aguardar muito pouco (5min max)
+            'wait_30_60min': 50,    # Score 50+ = Aguardar moderado
+            'wait_2_4h': 65,        # Score 65+ = Evitar (muito tempo para scalping)
+            'philosophy': 'Velocidade + Volume + Precisão Cirúrgica'
         },
         'intraday': {
             # Intraday: Equilibrio entre frequência e qualidade
@@ -2600,20 +2600,20 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     
     trading_configs = {
         'scalping': {
-            'name': 'Scalping',
+            'name': 'Scalping Ultra-Assertivo',
             'timeframe': '1M-5M',
             'hold_period': '1-30 minutos',
-            'stop_multiplier': 0.5,
-            'take_multiplier': 1.0,
-            'min_confidence': 80,
-            'volatility_factor': 2.5,
-            'components_weight': [0.30, 0.10, 0.25, 0.05, 0.25, 0.05],
-            'validity_hours': 1,  # 1 hora de validade
-            'primary_indicators': ['Técnica', 'Volume', 'IA/LSTM'],
-            'analysis_focus': 'Micro-movimentos ultra-rápidos + Volume',
-            'optimal_pairs': ['EUR/USD', 'GBP/USD'],
-            'best_times': '13:30-17:00 UTC (Máxima liquidez)',
-            'accuracy_rate': '88%'
+            'stop_multiplier': 0.4,  # Stops ainda mais apertados
+            'take_multiplier': 0.8,  # Takes menores mas mais frequentes
+            'min_confidence': 85,    # Maior seletividade
+            'volatility_factor': 3.0,  # Máxima sensibilidade à volatilidade
+            'components_weight': [0.30, 0.15, 0.35, 0.05, 0.10, 0.05],  # Volume 35%, Sentimento 5%
+            'validity_hours': 0.5,  # 30min de validade (ultra-rápido)
+            'primary_indicators': ['Volume', 'Técnica', 'Momentum'],
+            'analysis_focus': 'Order Flow + Volume Profile + Breakouts Voláteis',
+            'optimal_pairs': ['EUR/USD', 'GBP/USD', 'USD/JPY'],  # Adicionado USD/JPY
+            'best_times': '13:30-17:00 UTC (Máxima liquidez + Volatilidade)',
+            'accuracy_rate': '92%'  # Maior precisão esperada
         },
         'swing': {
             'name': 'Swing Trading',
@@ -2700,7 +2700,23 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     technical_components = []
     
     # RSI: Configurações específicas por estratégia
-    if trading_style == 'intraday':  # Day Trading - RSI mais sensível
+    if trading_style == 'scalping':  # Scalping Ultra-Assertivo - RSI ultra-sensível
+        if rsi < 35:  # Oversold mais amplo para scalping
+            technical_strength += 1.0
+            technical_components.append(f"RSI Scalping Oversold({rsi:.1f}): COMPRA ULTRA-FORTE")
+        elif rsi < 45:
+            technical_strength += 0.7
+            technical_components.append(f"RSI Scalping Favorável({rsi:.1f}): COMPRA FORTE")
+        elif rsi > 65:  # Overbought mais amplo para scalping
+            technical_strength -= 1.0
+            technical_components.append(f"RSI Scalping Overbought({rsi:.1f}): VENDA ULTRA-FORTE")
+        elif rsi > 55:
+            technical_strength -= 0.7
+            technical_components.append(f"RSI Scalping Desfavorável({rsi:.1f}): VENDA FORTE")
+        else:
+            technical_components.append(f"RSI Scalping Neutro({rsi:.1f}): AGUARDAR VOLATILIDADE")
+    
+    elif trading_style == 'intraday':  # Day Trading - RSI mais sensível
         if rsi < 30:  # Oversold para day trading
             technical_strength += 0.9
             technical_components.append(f"RSI Day Trade Oversold({rsi:.1f}): COMPRA FORTE")
@@ -2751,7 +2767,21 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     # MACD: Configurações específicas por estratégia
     macd_signal = macd if abs(macd) > 0.0001 else 0
     
-    if trading_style == 'intraday':  # Day Trading - MACD mais responsivo
+    if trading_style == 'scalping':  # Scalping Ultra-Assertivo - MACD ultra-responsivo
+        if macd_signal > 0.0001:  # Threshold ultra-baixo para scalping
+            technical_strength += 1.0
+            technical_components.append(f"MACD Scalping Micro-Positivo: COMPRA ULTRA-FORTE")
+        elif macd_signal > 0:
+            technical_strength += 0.6
+            technical_components.append(f"MACD Scalping Positivo: COMPRA FORTE")
+        elif macd_signal < -0.0001:
+            technical_strength -= 1.0
+            technical_components.append(f"MACD Scalping Micro-Negativo: VENDA ULTRA-FORTE")
+        elif macd_signal < 0:
+            technical_strength -= 0.6
+            technical_components.append(f"MACD Scalping Negativo: VENDA FORTE")
+    
+    elif trading_style == 'intraday':  # Day Trading - MACD mais responsivo
         if macd_signal > 0.0003:  # Threshold menor para day trading
             technical_strength += 0.8
             technical_components.append(f"MACD Day Trade Forte Positivo: COMPRA FORTE")
@@ -5734,10 +5764,10 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     # Configurações específicas: cada perfil tem sua previsão Alpha Vantage
     profile_base_configs = {
         'scalping': {
-            'base_success_rate': 0.80,    # 80% sucesso
-            'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
-            'risk_per_trade': 0.8,        # 0.8% risco
-            'description': 'Scalping - Movimento dinâmico Alpha Vantage (3 períodos micro) + % configurável sidebar'
+            'base_success_rate': 0.85,    # 85% sucesso (mais assertivo)
+            'movement_factor': 0.8,       # Usa 80% do movimento (mais conservador nos targets)
+            'risk_per_trade': 0.6,        # 0.6% risco (menor risco por trade para mais frequência)
+            'description': 'Scalping Ultra-Assertivo - Order Flow + Volume Profile (2-3 períodos micro) + Breakouts voláteis'
         },
         'intraday': {
             'base_success_rate': 0.76,    # 76% sucesso
@@ -5788,8 +5818,8 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     
     # Limites específicos por perfil para garantir diferenças reais
     if profile == 'scalping':
-        stop_final = max(0.001, min(0.008, stop_distance))  # 0.1% a 0.8% (muito apertado)
-        tp_final = max(0.002, min(0.012, tp_distance))      # 0.2% a 1.2% (conservador)
+        stop_final = max(0.0008, min(0.006, stop_distance))  # 0.08% a 0.6% (ultra-apertado)
+        tp_final = max(0.0015, min(0.010, tp_distance))      # 0.15% a 1.0% (targets menores e rápidos)
     elif profile == 'intraday':  
         stop_final = max(0.003, min(0.015, stop_distance))  # 0.3% a 1.5% (moderado)
         tp_final = max(0.005, min(0.025, tp_distance))      # 0.5% a 2.5% (equilibrado)
