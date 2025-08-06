@@ -2145,6 +2145,7 @@ def display_execution_positions(results):
         return
     
     st.markdown("#### ⚡ Posições de Execução Prontas")
+    st.info("💵 **Valores calculados automaticamente baseados na Calculadora de Lote configurada na sidebar**")
     
     for result in results[:10]:  # Top 10 para execução
         pair = result['pair']
@@ -2172,6 +2173,31 @@ def display_execution_positions(results):
                 st.write(f"• **Take Profit:** {execution.get('tp_pct', 0):.3f}% ({execution['tp_distance_pips']:.1f} pips)")
                 st.write(f"• **R/R REAL:** 1:{execution['risk_reward_ratio']:.2f}")
                 st.write(f"• **Risco da Banca:** {execution.get('actual_risk_pct', 0):.1f}%")
+                
+                # Calcular valores em dólares baseados na calculadora de lote
+                bank_value = st.session_state.get('bank_value', 5000.0)
+                lot_size = st.session_state.get('lot_size', 0.1)
+                
+                # Calcular valor do pip baseado no par
+                pair_str = str(pair)
+                if 'JPY' in pair_str:
+                    pip_value_per_lot = 10.0
+                elif pair_str in ['XAUUSD', 'GOLD']:
+                    pip_value_per_lot = 1.0
+                else:
+                    pip_value_per_lot = 10.0
+                
+                # Calcular valores monetários
+                stop_usd = execution['stop_distance_pips'] * pip_value_per_lot * lot_size
+                take_usd = execution['tp_distance_pips'] * pip_value_per_lot * lot_size
+                stop_pct_bank = (stop_usd / bank_value) * 100
+                take_pct_bank = (take_usd / bank_value) * 100
+                
+                st.markdown("**💵 Calculadora de Lote Integrada:**")
+                st.write(f"• **Stop Loss:** ${stop_usd:.2f} ({stop_pct_bank:.2f}% da banca)")
+                st.write(f"• **Take Profit:** ${take_usd:.2f} ({take_pct_bank:.2f}% da banca)")
+                st.write(f"• **Lote Usado:** {lot_size} | **Banca:** ${bank_value:,.0f}")
+                st.write(f"• **Valor do Pip:** ${pip_value_per_lot:.1f} por lote")
                 
                 # Análise Alpha Vantage específica do perfil
                 if execution.get('movement_direction'):
