@@ -956,6 +956,9 @@ def main():
         # Análise rápida
         quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, key="quick_analysis_btn")
         
+        # Análise multi-pares
+        multi_pair_analysis = st.button("🌍 Análise Multi-Pares", use_container_width=True, key="multi_pair_btn")
+        
         # Processamento dos diferentes tipos de análise
         analyze_button = False
         
@@ -1002,6 +1005,8 @@ def main():
             pair, interval, horizon, lookback_period, 
             mc_samples, epochs, quick_analysis
         )
+    elif multi_pair_analysis:
+        run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs)
     
     # Always show main header
     display_main_header()
@@ -1011,6 +1016,8 @@ def main():
         display_comprehensive_tutorial()
     
     # Display results if available
+    elif st.session_state.get('multi_pair_results'):
+        display_multi_pair_results()
     elif st.session_state.get('analysis_results'):
         display_analysis_results_with_tabs()
     else:
@@ -1552,6 +1559,518 @@ def display_comprehensive_tutorial():
         """)
     
     st.success("🎯 **Sucesso no Trading**: Consistência + Disciplina + Gestão de Risco = Lucros Sustentáveis!")
+
+def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs):
+    """Análise completa de todos os pares de moedas com recomendações de execução"""
+    
+    # Progress container
+    progress_container = st.container()
+    
+    with progress_container:
+        st.markdown("## 🌍 Análise Multi-Pares - Scanner Completo")
+        
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        status_text.text("🔍 Iniciando análise de todos os pares disponíveis...")
+        progress_bar.progress(10)
+        
+        # Get trading style for consistent analysis
+        trading_style = st.session_state.get('trading_style', 'swing')
+        
+        # Results storage
+        all_results = []
+        total_pairs = len(PAIRS)
+        
+        status_text.text(f"📊 Analisando {total_pairs} pares de moedas...")
+        
+        for i, pair in enumerate(PAIRS):
+            try:
+                # Update progress
+                progress = 10 + int((i / total_pairs) * 80)
+                progress_bar.progress(progress)
+                status_text.text(f"🔄 Analisando {pair} ({i+1}/{total_pairs})...")
+                
+                # Fetch data for current pair
+                df = services['data_service'].fetch_forex_data(pair, INTERVALS[interval], 'compact')
+                
+                if not services['data_service'].validate_data(df):
+                    continue
+                
+                # Add technical indicators
+                df_with_indicators = add_technical_indicators(df)
+                
+                # Get current price
+                current_price = services['data_service'].get_latest_price(pair)
+                if current_price is None:
+                    continue
+                
+                # Get sentiment score
+                sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
+                
+                # Run unified analysis for this pair
+                analysis_result = run_unified_analysis(
+                    current_price, pair, sentiment_score, df_with_indicators, trading_style
+                )
+                
+                # Calculate trading opportunity score
+                opportunity_score = calculate_opportunity_score(analysis_result, pair, trading_style)
+                
+                # Generate execution position
+                execution_position = generate_execution_position(
+                    analysis_result, pair, current_price, trading_style, sentiment_score
+                )
+                
+                # Store comprehensive result
+                pair_result = {
+                    'pair': pair,
+                    'current_price': current_price,
+                    'opportunity_score': opportunity_score,
+                    'execution_position': execution_position,
+                    'analysis_result': analysis_result,
+                    'sentiment_score': sentiment_score,
+                    'trading_style': trading_style
+                }
+                
+                all_results.append(pair_result)
+                
+            except Exception as e:
+                st.warning(f"Erro ao analisar {pair}: {str(e)}")
+                continue
+        
+        # Final processing
+        status_text.text("🎯 Processando resultados e gerando recomendações...")
+        progress_bar.progress(95)
+        
+        # Sort by opportunity score
+        all_results.sort(key=lambda x: x['opportunity_score'], reverse=True)
+        
+        # Store results in session state
+        st.session_state.multi_pair_results = {
+            'results': all_results,
+            'timestamp': datetime.now(),
+            'trading_style': trading_style,
+            'interval': interval,
+            'horizon': horizon
+        }
+        
+        status_text.text("✅ Análise multi-pares concluída!")
+        progress_bar.progress(100)
+        
+        # Clear progress after moment
+        import time
+        time.sleep(1)
+        progress_container.empty()
+
+def calculate_opportunity_score(analysis_result, pair, trading_style):
+    """Calcula score de oportunidade baseado em múltiplos fatores"""
+    
+    # Base score from model confidence
+    base_score = analysis_result.get('model_confidence', 0.5) * 100
+    
+    # Direction strength bonus
+    direction = analysis_result.get('market_direction', '')
+    if 'FORTE' in str(direction):
+        direction_bonus = 25
+    elif 'COMPRA' in str(direction) or 'VENDA' in str(direction):
+        direction_bonus = 15
+    else:
+        direction_bonus = 0
+    
+    # Components agreement bonus
+    agreement_score = analysis_result.get('agreement_score', 0)
+    agreement_bonus = agreement_score * 5  # 0-20 points
+    
+    # Confluence strength bonus
+    confluence = analysis_result.get('confluence_strength', 0)
+    confluence_bonus = confluence * 3  # 0-15 points
+    
+    # Success probability bonus
+    success_prob = analysis_result.get('success_probability', 50)
+    prob_bonus = (success_prob - 50) * 0.5  # Bonus for >50% probability
+    
+    # Pair volatility adjustment
+    pair_adjustment = PAIR_AI_ADJUSTMENTS.get(pair, {})
+    volatility_mult = pair_adjustment.get('volatility_multiplier', 1.0)
+    confidence_boost = pair_adjustment.get('prediction_confidence_boost', 1.0)
+    
+    # Calculate final score
+    total_score = (base_score + direction_bonus + agreement_bonus + 
+                   confluence_bonus + prob_bonus) * confidence_boost
+    
+    # Adjust for volatility (higher volatility = higher potential but more risk)
+    if volatility_mult > 1.5:  # High volatility pairs
+        total_score *= 1.1  # 10% bonus for risk-takers
+    elif volatility_mult < 0.9:  # Low volatility pairs
+        total_score *= 1.05  # 5% bonus for stability
+    
+    return min(100, max(0, total_score))
+
+def generate_execution_position(analysis_result, pair, current_price, trading_style, sentiment_score):
+    """Gera posição completa de execução com todos os parâmetros"""
+    
+    direction = analysis_result.get('market_direction', '')
+    confidence = analysis_result.get('model_confidence', 0.5)
+    price_change_pct = analysis_result.get('price_change_pct', 0)
+    
+    # Determine position type
+    is_buy = 'COMPRA' in str(direction)
+    is_strong = 'FORTE' in str(direction)
+    
+    # Get risk profile parameters
+    risk_profile = 'Moderate'  # Default
+    risk_params = RISK_PROFILES[risk_profile]
+    
+    # Get temporal parameters  
+    horizon_key = st.session_state.get('horizon', '1 Hora')
+    temporal_params = TEMPORAL_AI_PARAMETERS.get(horizon_key, TEMPORAL_AI_PARAMETERS['1 Hora'])
+    
+    # Calculate position sizing
+    bank_value = st.session_state.get('bank_value', 10000)  # Default $10,000
+    risk_percentage = risk_params['banca_risk'] / 100
+    
+    # Calculate stop loss and take profit based on ATR and strategy
+    if 'df_with_indicators' in analysis_result:
+        df = analysis_result['df_with_indicators']
+        if len(df) > 14:
+            # Calculate ATR for stop/TP calculation
+            tr1 = df['high'] - df['low']
+            tr2 = abs(df['high'] - df['close'].shift())
+            tr3 = abs(df['low'] - df['close'].shift())
+            true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+            atr = true_range.rolling(window=14).mean().iloc[-1]
+        else:
+            atr = current_price * 0.001  # Fallback 0.1%
+    else:
+        atr = current_price * 0.001
+    
+    # Calculate levels based on strategy
+    if is_buy:
+        entry_price = current_price
+        stop_loss = entry_price - (atr * risk_params['atr_multiplier_stop'])
+        take_profit = entry_price + (atr * risk_params['atr_multiplier_tp'])
+    else:
+        entry_price = current_price
+        stop_loss = entry_price + (atr * risk_params['atr_multiplier_stop'])
+        take_profit = entry_price - (atr * risk_params['atr_multiplier_tp'])
+    
+    # Calculate position size
+    risk_amount = bank_value * risk_percentage
+    pip_value = 1  # Simplified - would need proper pip calculation
+    stop_distance_pips = abs(entry_price - stop_loss) * 10000  # Convert to pips
+    
+    if stop_distance_pips > 0:
+        position_size = risk_amount / stop_distance_pips
+    else:
+        position_size = 0.01  # Minimum position
+    
+    # Calculate potential profit/loss
+    tp_distance_pips = abs(take_profit - entry_price) * 10000
+    risk_reward_ratio = tp_distance_pips / stop_distance_pips if stop_distance_pips > 0 else 0
+    
+    potential_profit = tp_distance_pips * position_size
+    potential_loss = stop_distance_pips * position_size
+    
+    # Market timing based on sentiment and technical confluence
+    market_timing = "Imediato"
+    if confidence > 0.8 and is_strong:
+        market_timing = "Imediato"
+    elif confidence > 0.7:
+        market_timing = "Curto Prazo (2-4h)"
+    else:
+        market_timing = "Médio Prazo (1-2 dias)"
+    
+    # Risk level assessment
+    if stop_distance_pips < 20:
+        risk_level = "Baixo"
+    elif stop_distance_pips < 40:
+        risk_level = "Moderado"
+    else:
+        risk_level = "Alto"
+    
+    return {
+        'direction': 'COMPRA' if is_buy else 'VENDA',
+        'strength': 'FORTE' if is_strong else 'NORMAL',
+        'entry_price': round(entry_price, 5),
+        'stop_loss': round(stop_loss, 5),
+        'take_profit': round(take_profit, 5),
+        'position_size': round(position_size, 2),
+        'risk_reward_ratio': round(risk_reward_ratio, 2),
+        'potential_profit': round(potential_profit, 2),
+        'potential_loss': round(potential_loss, 2),
+        'stop_distance_pips': round(stop_distance_pips, 1),
+        'tp_distance_pips': round(tp_distance_pips, 1),
+        'market_timing': market_timing,
+        'risk_level': risk_level,
+        'confidence': round(confidence * 100, 1),
+        'sentiment_bias': 'Positivo' if sentiment_score > 0.05 else 'Negativo' if sentiment_score < -0.05 else 'Neutro'
+    }
+
+def display_multi_pair_results():
+    """Exibir resultados da análise multi-pares com ranking de oportunidades"""
+    
+    results_data = st.session_state.get('multi_pair_results', {})
+    if not results_data:
+        return
+    
+    results = results_data['results']
+    timestamp = results_data['timestamp']
+    trading_style = results_data['trading_style']
+    
+    # Header
+    st.markdown("## 🌍 Análise Multi-Pares - Oportunidades de Trading")
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total de Pares Analisados", len(results))
+    with col2:
+        st.metric("Estratégia", trading_style.title())
+    with col3:
+        valid_results = [r for r in results if r['opportunity_score'] > 60]
+        st.metric("Oportunidades Válidas", len(valid_results))
+    
+    st.caption(f"Última atualização: {timestamp.strftime('%d/%m/%Y %H:%M:%S')}")
+    
+    # Filtros
+    st.markdown("### 🔍 Filtros")
+    filter_col1, filter_col2, filter_col3 = st.columns(3)
+    
+    with filter_col1:
+        min_score = st.slider("Score Mínimo", 0, 100, 50, 5)
+    with filter_col2:
+        direction_filter = st.selectbox("Direção", ["Todas", "COMPRA", "VENDA"])
+    with filter_col3:
+        strength_filter = st.selectbox("Força", ["Todas", "FORTE", "NORMAL"])
+    
+    # Filter results
+    filtered_results = []
+    for result in results:
+        if result['opportunity_score'] < min_score:
+            continue
+        
+        execution = result['execution_position']
+        if direction_filter != "Todas" and execution['direction'] != direction_filter:
+            continue
+        if strength_filter != "Todas" and execution['strength'] != strength_filter:
+            continue
+        
+        filtered_results.append(result)
+    
+    st.markdown(f"### 📊 Top Oportunidades ({len(filtered_results)} pares)")
+    
+    # Create tabs for different views
+    tab1, tab2, tab3 = st.tabs(["🏆 Ranking", "📈 Posições de Execução", "📋 Resumo Detalhado"])
+    
+    with tab1:
+        display_opportunity_ranking(filtered_results)
+    
+    with tab2:
+        display_execution_positions(filtered_results)
+    
+    with tab3:
+        display_detailed_summary(filtered_results)
+    
+    # Action buttons
+    st.markdown("---")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🔄 Nova Análise Multi-Pares"):
+            del st.session_state['multi_pair_results']
+            st.rerun()
+    
+    with col2:
+        if st.button("📊 Análise Individual"):
+            del st.session_state['multi_pair_results']
+            st.rerun()
+    
+    with col3:
+        if st.button("💾 Exportar Resultados"):
+            st.info("Funcionalidade de exportação em desenvolvimento")
+
+def display_opportunity_ranking(results):
+    """Exibir ranking de oportunidades"""
+    
+    if not results:
+        st.warning("Nenhuma oportunidade encontrada com os filtros aplicados.")
+        return
+    
+    st.markdown("#### 🎯 Ranking por Score de Oportunidade")
+    
+    for i, result in enumerate(results[:15]):  # Top 15
+        pair = result['pair']
+        score = result['opportunity_score']
+        execution = result['execution_position']
+        current_price = result['current_price']
+        
+        # Color coding
+        if score >= 80:
+            color = "#00C851"  # Green
+            badge = "🟢 EXCELENTE"
+        elif score >= 70:
+            color = "#4CAF50"  # Light green
+            badge = "🟡 BOA"
+        elif score >= 60:
+            color = "#FF9800"  # Orange
+            badge = "🟠 MODERADA"
+        else:
+            color = "#F44336"  # Red
+            badge = "🔴 BAIXA"
+        
+        direction_icon = "📈" if execution['direction'] == 'COMPRA' else "📉"
+        strength_text = execution['strength']
+        
+        st.markdown(f"""
+        <div style="
+            border: 2px solid {color}; 
+            border-radius: 10px; 
+            padding: 1rem; 
+            margin: 0.5rem 0;
+            background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0.95));
+        ">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h4 style="margin: 0; color: {color};">#{i+1} {pair} {direction_icon}</h4>
+                    <p style="margin: 0.2rem 0; color: #666;">
+                        <strong>{execution['direction']} {strength_text}</strong> | 
+                        Preço: {current_price:.5f} | 
+                        Confiança: {execution['confidence']}%
+                    </p>
+                </div>
+                <div style="text-align: right;">
+                    <div style="
+                        background: {color}; 
+                        color: white; 
+                        padding: 0.3rem 0.8rem; 
+                        border-radius: 20px; 
+                        font-weight: bold;
+                        margin-bottom: 0.5rem;
+                    ">
+                        {score:.1f}/100
+                    </div>
+                    <div style="color: {color}; font-weight: bold; font-size: 0.9rem;">
+                        {badge}
+                    </div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+def display_execution_positions(results):
+    """Exibir posições de execução detalhadas"""
+    
+    if not results:
+        st.warning("Nenhuma posição encontrada com os filtros aplicados.")
+        return
+    
+    st.markdown("#### ⚡ Posições de Execução Prontas")
+    
+    for result in results[:10]:  # Top 10 para execução
+        pair = result['pair']
+        execution = result['execution_position']
+        
+        direction_color = "#00C851" if execution['direction'] == 'COMPRA' else "#F44336"
+        direction_icon = "📈" if execution['direction'] == 'COMPRA' else "📉"
+        
+        with st.expander(f"{direction_icon} **{pair}** - {execution['direction']} {execution['strength']} (Score: {result['opportunity_score']:.1f})"):
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**📊 Parâmetros de Entrada:**")
+                st.write(f"• **Direção:** {execution['direction']} {execution['strength']}")
+                st.write(f"• **Preço de Entrada:** {execution['entry_price']:.5f}")
+                st.write(f"• **Stop Loss:** {execution['stop_loss']:.5f}")
+                st.write(f"• **Take Profit:** {execution['take_profit']:.5f}")
+                st.write(f"• **Tamanho da Posição:** {execution['position_size']:.2f} lotes")
+            
+            with col2:
+                st.markdown("**💰 Análise de Risco/Retorno:**")
+                st.write(f"• **Risco/Retorno:** 1:{execution['risk_reward_ratio']:.2f}")
+                st.write(f"• **Lucro Potencial:** ${execution['potential_profit']:.2f}")
+                st.write(f"• **Perda Potencial:** ${execution['potential_loss']:.2f}")
+                st.write(f"• **Stop Distance:** {execution['stop_distance_pips']:.1f} pips")
+                st.write(f"• **TP Distance:** {execution['tp_distance_pips']:.1f} pips")
+            
+            # Risk and timing info
+            st.markdown("**⏰ Timing e Risco:**")
+            timing_col1, timing_col2, timing_col3 = st.columns(3)
+            
+            with timing_col1:
+                st.info(f"**Timing:** {execution['market_timing']}")
+            with timing_col2:
+                risk_color = "🟢" if execution['risk_level'] == 'Baixo' else "🟡" if execution['risk_level'] == 'Moderado' else "🔴"
+                st.info(f"**Risco:** {risk_color} {execution['risk_level']}")
+            with timing_col3:
+                sentiment_color = "🟢" if execution['sentiment_bias'] == 'Positivo' else "🔴" if execution['sentiment_bias'] == 'Negativo' else "🟡"
+                st.info(f"**Sentimento:** {sentiment_color} {execution['sentiment_bias']}")
+
+def display_detailed_summary(results):
+    """Exibir resumo detalhado da análise"""
+    
+    if not results:
+        st.warning("Nenhum resultado para resumir.")
+        return
+    
+    st.markdown("#### 📋 Resumo Estatístico da Análise")
+    
+    # Calculate statistics
+    total_pairs = len(results)
+    avg_score = sum(r['opportunity_score'] for r in results) / total_pairs
+    buy_signals = len([r for r in results if r['execution_position']['direction'] == 'COMPRA'])
+    sell_signals = len([r for r in results if r['execution_position']['direction'] == 'VENDA'])
+    strong_signals = len([r for r in results if r['execution_position']['strength'] == 'FORTE'])
+    
+    # High opportunity pairs
+    high_opportunity = [r for r in results if r['opportunity_score'] >= 75]
+    medium_opportunity = [r for r in results if 60 <= r['opportunity_score'] < 75]
+    low_opportunity = [r for r in results if r['opportunity_score'] < 60]
+    
+    # Display metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Score Médio", f"{avg_score:.1f}/100")
+    with col2:
+        st.metric("Sinais de Compra", buy_signals, f"{(buy_signals/total_pairs*100):.1f}%")
+    with col3:
+        st.metric("Sinais de Venda", sell_signals, f"{(sell_signals/total_pairs*100):.1f}%")
+    with col4:
+        st.metric("Sinais Fortes", strong_signals, f"{(strong_signals/total_pairs*100):.1f}%")
+    
+    # Opportunity distribution
+    st.markdown("**📊 Distribuição de Oportunidades:**")
+    
+    opp_col1, opp_col2, opp_col3 = st.columns(3)
+    
+    with opp_col1:
+        st.success(f"🟢 **Alta Oportunidade (75+):** {len(high_opportunity)} pares")
+        if high_opportunity:
+            for result in high_opportunity[:5]:
+                st.write(f"• {result['pair']}: {result['opportunity_score']:.1f}")
+    
+    with opp_col2:
+        st.warning(f"🟡 **Média Oportunidade (60-74):** {len(medium_opportunity)} pares")
+        if medium_opportunity:
+            for result in medium_opportunity[:5]:
+                st.write(f"• {result['pair']}: {result['opportunity_score']:.1f}")
+    
+    with opp_col3:
+        st.error(f"🔴 **Baixa Oportunidade (<60):** {len(low_opportunity)} pares")
+        if low_opportunity:
+            for result in low_opportunity[:5]:
+                st.write(f"• {result['pair']}: {result['opportunity_score']:.1f}")
+    
+    # Best pairs summary
+    if results:
+        st.markdown("**🏆 Top 5 Recomendações Imediatas:**")
+        for i, result in enumerate(results[:5]):
+            pair = result['pair']
+            execution = result['execution_position']
+            score = result['opportunity_score']
+            
+            direction_icon = "📈" if execution['direction'] == 'COMPRA' else "📉"
+            st.write(f"{i+1}. **{pair}** {direction_icon} - {execution['direction']} {execution['strength']} (Score: {score:.1f}) - {execution['market_timing']}")
 
 def display_footer():
     """Display the footer section"""
