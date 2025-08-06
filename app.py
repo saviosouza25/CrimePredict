@@ -2595,7 +2595,7 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
             elif analysis_mode == 'trend':
                 results.update(run_trend_analysis(current_price, df_with_indicators))
             else:
-                results.update(run_basic_analysis(current_price, df_with_indicators, sentiment_score))
+                results.update(run_basic_analysis(current_price, is_quick, sentiment_score))
             
             # Step 7: Finalizing
             status_text.text("✅ Finalizando análise...")
