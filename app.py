@@ -2292,27 +2292,34 @@ def calculate_scenario_probability(analysis_components, pair, trading_style):
 # Função de cálculo de validade de análise removida conforme solicitação do usuário
 
 def run_multi_pair_trend_analysis_direct(interval, horizon, lookback_period, mc_samples, epochs):
-    """Análise multi-pares com configurações temporais unificadas e dados reais Alpha Vantage"""
+    """Análise multi-pares automática baseada no estilo de operação"""
     
     # Obter configurações do usuário
     market_type = st.session_state.get('market_type_select', 'Forex')
+    trading_style = st.session_state.get('trading_style_select', 'Swing Trading')
     
-    # Seletor de estratégia temporal (baseado nas configurações existentes)
-    st.markdown("### ⏰ Selecione a Estratégia Temporal")
+    # Mapeamento automático de estilo para estratégia temporal
+    style_to_strategy = {
+        'Scalping': '15 Minutos',
+        'Day Trading': '1 Hora', 
+        'Swing Trading': '4 Horas',
+        'Position Trading': '1 Dia'
+    }
     
+    # Estratégias temporais baseadas no estilo
     temporal_strategies = {
         '15 Minutos': {
-            'name': 'Micro Intraday (15min)',
+            'name': 'Scalping (15min)',
             'horizon': '15 Minutos',
             'interval': '15min',
-            'description': 'Análise de micro movimentos com foco em 8 horas de dados históricos',
+            'description': 'Scalping com análise de micro movimentos e 8 horas de histórico',
             'target_pips': '18 pips média',
             'success_rate': '68%',
             'max_holding': '3 horas',
             'analyses': ['RSI Divergências', 'EMA 12/26 Crossover', 'Suporte/Resistência Micro', 'Volume Intraday', 'News Impact 70%']
         },
         '1 Hora': {
-            'name': 'Intraday (1H)',
+            'name': 'Day Trading (1H)',
             'horizon': '1 Hora', 
             'interval': '60min',
             'description': 'Day trading com 48 períodos históricos e análise técnica avançada',
@@ -2343,29 +2350,32 @@ def run_multi_pair_trend_analysis_direct(interval, horizon, lookback_period, mc_
         }
     }
     
-    col1, col2 = st.columns([2, 1])
+    # Determinar estratégia automaticamente baseada no estilo selecionado
+    selected_temporal = style_to_strategy.get(trading_style, '4 Horas')
+    strategy_info = temporal_strategies[selected_temporal]
+    
+    # Mostrar estratégia selecionada automaticamente
+    st.markdown("### ⚡ Estratégia Automática Selecionada")
+    
+    col1, col2, col3 = st.columns([2, 2, 1])
     with col1:
-        selected_temporal = st.selectbox(
-            "Estratégia Temporal:",
-            options=list(temporal_strategies.keys()),
-            format_func=lambda x: temporal_strategies[x]['name'],
-            key="temporal_strategy_select"
-        )
+        st.success(f"**Estilo:** {trading_style}")
+        st.caption("Baseado na sua seleção de estilo de trading")
     
     with col2:
-        strategy_info = temporal_strategies[selected_temporal]
-        st.info(f"**{strategy_info['name']}**\n"
-               f"🎯 Target: {strategy_info['target_pips']}\n"
-               f"📈 Taxa: {strategy_info['success_rate']}\n"
-               f"⏱️ Holding: {strategy_info['max_holding']}")
+        st.info(f"**Estratégia:** {strategy_info['name']}")
+        st.caption(f"Target: {strategy_info['target_pips']} | Taxa: {strategy_info['success_rate']}")
     
-    st.caption(f"**Descrição:** {strategy_info['description']}")
+    with col3:
+        st.metric("Holding", strategy_info['max_holding'])
+    
+    st.markdown(f"**📋 Descrição:** {strategy_info['description']}")
     
     # Mostrar análises que serão utilizadas
-    with st.expander("📊 Análises que serão aplicadas nesta estratégia"):
-        st.markdown("**Indicadores e Análises Técnicas:**")
-        for analysis in strategy_info['analyses']:
-            st.markdown(f"• {analysis}")
+    with st.expander("📊 Análises automáticas aplicadas"):
+        st.markdown(f"**Baseado no {trading_style}, estas análises serão executadas:**")
+        for i, analysis in enumerate(strategy_info['analyses'], 1):
+            st.markdown(f"{i}. {analysis}")
     
     # Definir pares baseado no mercado selecionado
     if market_type == "Forex":
@@ -2379,21 +2389,22 @@ def run_multi_pair_trend_analysis_direct(interval, horizon, lookback_period, mc_
         market_label = "Criptomoedas"
         market_icon = "₿"
     
-    # Teste de debug
-    if st.button("🧪 Teste Debug", key="debug_button"):
-        st.success(f"Debug: Estratégia = {selected_temporal}")
-        st.info(f"Pares = {len(analysis_pairs)} | Tipo = {market_type}")
-        st.json({"strategy_info": strategy_info})
-        
-    # Botão para executar análise
-    if st.button(f"🚀 Executar Análise {market_label} ({len(analysis_pairs)} pares)", type="primary", use_container_width=True, key="execute_analysis_button"):
-        
+    # Botão para executar análise - SEMPRE VISÍVEL
+    st.markdown("---")
+    analysis_button = st.button(
+        f"🚀 Executar Análise {market_label} - {strategy_info['name']} ({len(analysis_pairs)} pares)", 
+        type="primary", 
+        use_container_width=True,
+        key=f"execute_analysis_{trading_style}_{market_type}"
+    )
+    
+    # Executar análise quando o botão for pressionado
+    if analysis_button:
         st.markdown(f"## 🌍 Análise Multi-Pares {market_label} {market_icon}")
-        st.markdown(f"### Estratégia: {strategy_info['name']}")
-        st.caption(f"Usando {len(strategy_info['analyses'])} análises técnicas em {len(analysis_pairs)} pares")
+        st.markdown(f"### 📊 {strategy_info['name']} - {trading_style}")
+        st.caption(f"Executando {len(strategy_info['analyses'])} análises técnicas em {len(analysis_pairs)} pares")
         
-        # Sempre usar backup funcional
-        st.info("Executando análise com parâmetros temporais...")
+        # Executar análise com parâmetros temporais
         execute_simple_multi_pair_backup(analysis_pairs, selected_temporal, strategy_info, market_label)
 
 def analyze_pair_for_trend_identification(pair, profile, profile_info, interval, lookback_period, mc_samples, epochs):
