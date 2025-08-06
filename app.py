@@ -882,20 +882,22 @@ def apply_theme_css():
             margin: 0.5rem 0 !important;
         }
         
-        /* Individual analysis buttons - compact styling */
+        /* Individual analysis buttons - balanced compact styling */
         section[data-testid="stSidebar"] div[data-testid="column"] .stButton > button {
-            padding: 0.4rem 0.6rem !important;
-            font-size: 1.2rem !important;
-            min-height: 2.5rem !important;
-            margin: 0.2rem 0 !important;
+            padding: 0.5rem 0.8rem !important;
+            font-size: 0.75rem !important;
+            min-height: 2.8rem !important;
+            margin: 0.25rem 0 !important;
             border-radius: 8px !important;
+            font-weight: 600 !important;
         }
         
         /* Quick analysis button - slightly larger */
         button[key="quick_analysis_btn"] {
             padding: 0.6rem 1rem !important;
-            font-size: 0.9rem !important;
+            font-size: 0.8rem !important;
             margin: 0.5rem 0 !important;
+            font-weight: 600 !important;
         }
         
         /* Slider styling */
@@ -1352,17 +1354,16 @@ def main():
         
         st.markdown("**Análises Individuais:**")
         
-        # Análises técnicas em grid 3x2 mais compacto
-        col1, col2, col3 = st.columns(3)
+        # Análises técnicas em formato compacto mas legível
+        col1, col2 = st.columns(2)
         with col1:
-            technical_analysis = st.button("📊", help="Análise Técnica", key="tech_analysis_btn")
-            ai_analysis = st.button("🤖", help="IA/LSTM", key="ai_analysis_btn")
+            technical_analysis = st.button("📊 Técnica", use_container_width=True, key="tech_analysis_btn")
+            sentiment_analysis = st.button("📰 Sentimento", use_container_width=True, key="sentiment_analysis_btn")
+            risk_analysis = st.button("⚖️ Risco", use_container_width=True, key="risk_analysis_btn")
         with col2:
-            sentiment_analysis = st.button("📰", help="Sentimento", key="sentiment_analysis_btn")
-            volume_analysis = st.button("📈", help="Volume", key="volume_analysis_btn")
-        with col3:
-            risk_analysis = st.button("⚖️", help="Risco", key="risk_analysis_btn")
-            trend_analysis = st.button("📉", help="Tendência", key="trend_analysis_btn")
+            ai_analysis = st.button("🤖 IA/LSTM", use_container_width=True, key="ai_analysis_btn")
+            volume_analysis = st.button("📈 Volume", use_container_width=True, key="volume_analysis_btn")
+            trend_analysis = st.button("📉 Tendência", use_container_width=True, key="trend_analysis_btn")
         
         # Análise rápida compacta
         quick_analysis = st.button("⚡ Verificação Rápida", help="Análise completa rápida", key="quick_analysis_btn")
