@@ -758,17 +758,6 @@ def main():
                 index=0,
                 key="market_type_select"
             )
-            
-            # Pair selection based on market type
-            if market_type == "Forex":
-                available_pairs = PAIRS
-                pair_label = "💱 Par de Moedas"
-            else:  # Criptomoedas
-                available_pairs = CRYPTO_PAIRS
-                pair_label = "₿ Par Cripto"
-            
-            # Configurações básicas compactas
-            pair = st.selectbox(pair_label, available_pairs, key="pair_selectbox")
         
         # Análise multi-pares com seleção de tipo em expander colapsável
         with st.expander("🌍 Análise Multi-Pares Especializada", expanded=False):
@@ -916,6 +905,19 @@ def main():
         
         # Seção de análises especializadas em expander colapsável
         with st.expander("🎯 Análises Especializadas", expanded=False):
+            # Seleção do par de moedas
+            market_type = st.session_state.get('market_type_select', 'Forex')
+            if market_type == "Forex":
+                available_pairs = PAIRS
+                pair_label = "💱 Par de Moedas"
+            else:  # Criptomoedas
+                available_pairs = CRYPTO_PAIRS
+                pair_label = "₿ Par Cripto"
+            
+            pair = st.selectbox(pair_label, available_pairs, key="pair_selectbox")
+            
+            st.markdown("---")
+            
             # Análise unificada principal
             unified_analysis = st.button("🧠 Análise Unificada Inteligente", type="primary", use_container_width=True, 
                                        help="Combina todas as análises para a melhor previsão do mercado", key="unified_analysis_btn")
