@@ -104,7 +104,9 @@ class TechnicalIndicators:
         # ATR
         df.loc[:, 'ATR'] = TechnicalIndicators.atr(df['high'], df['low'], df['close'])
         
-        # Liquidity-based indicators removed - using dedicated liquidity service instead
+        # Volume-based indicators (if volume data available)
+        if 'volume' in df.columns:
+            df.loc[:, 'Volume_SMA'] = TechnicalIndicators.sma(df['volume'], 20)
         
         return df.dropna()
     

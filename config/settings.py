@@ -3,35 +3,46 @@ from typing import Dict, List
 
 # API Configuration
 API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
-ALPHA_VANTAGE_API_KEY = API_KEY  # Alias for backward compatibility
 
-# Trading Pairs - User specified list only (excluding XAU/USD due to API limitations)
+# Trading Pairs - User specified list only
 PAIRS: List[str] = [
     'AUD/CAD', 'AUD/CHF', 'AUD/JPY', 'AUD/NZD', 'AUD/USD',
     'CAD/CHF', 'CAD/JPY', 'CHF/JPY',
     'EUR/AUD', 'EUR/CAD', 'EUR/CHF', 'EUR/GBP', 'EUR/JPY', 'EUR/NZD', 'EUR/USD',
     'GBP/AUD', 'GBP/CAD', 'GBP/CHF', 'GBP/JPY', 'GBP/USD',
-    'NZD/USD', 'USD/CAD', 'USD/CHF', 'USD/JPY'
+    'NZD/USD', 'USD/CAD', 'USD/CHF', 'USD/JPY',
+    'XAU/USD'  # Gold - limited support
 ]
 
-# Note: XAU/USD (Gold) removed due to Alpha Vantage API limitations
-# User can add it back when proper API access is available
+# Special handling pairs with limited API support
+LIMITED_SUPPORT_PAIRS = ['XAU/USD']  # Gold has limited support in Alpha Vantage
 
-# Cryptocurrency Pairs - Alpha Vantage Compatible (Verified Working)
+# Cryptocurrency Pairs - Alpha Vantage Compatible
 CRYPTO_PAIRS: List[str] = [
-    # Major Cryptocurrencies - Verified Working
-    'BTC/USD',   # Bitcoin/US Dollar ✓
-    'ETH/USD',   # Ethereum/US Dollar ✓
-    'ADA/USD',   # Cardano/US Dollar ✓
-    'SOL/USD',   # Solana/US Dollar ✓
+    # Major Cryptocurrencies
+    'BTC/USD',   # Bitcoin/US Dollar
+    'ETH/USD',   # Ethereum/US Dollar
+    'BNB/USD',   # Binance Coin/US Dollar
+    'ADA/USD',   # Cardano/US Dollar
+    'SOL/USD',   # Solana/US Dollar
     'XRP/USD',   # Ripple/US Dollar
     'DOT/USD',   # Polkadot/US Dollar
     'DOGE/USD',  # Dogecoin/US Dollar
+    'AVAX/USD',  # Avalanche/US Dollar
+    'MATIC/USD', # Polygon/US Dollar
+    'ATOM/USD',  # Cosmos/US Dollar
+    'LINK/USD',  # Chainlink/US Dollar
+    'UNI/USD',   # Uniswap/US Dollar
     'LTC/USD',   # Litecoin/US Dollar
     'BCH/USD',   # Bitcoin Cash/US Dollar
     
-    # Note: BNB/USD removed due to Alpha Vantage API limitations
-    # Note: Some pairs may have limited availability depending on Alpha Vantage access
+    # Alternative Markets
+    'BTC/EUR',   # Bitcoin/Euro
+    'ETH/EUR',   # Ethereum/Euro
+    'BTC/GBP',   # Bitcoin/British Pound
+    'ETH/GBP',   # Ethereum/British Pound
+    'BTC/JPY',   # Bitcoin/Japanese Yen
+    'ETH/JPY',   # Ethereum/Japanese Yen
 ]
 
 # Time Intervals
