@@ -1606,7 +1606,7 @@ def create_empty_timeframe_analysis():
         'trend_direction': 'NEUTRO',
         'trend_strength': 'Indefinida',
         'trend_signal': 'NEUTRO',
-        'volume_trend': 'NEUTRO',
+        'liquidity_analysis': {'trading_recommendation': 'MODERADA', 'liquidity_level': 'Média'},
         'ai_prediction': None,
         'sentiment_bias': 'NEUTRO',
         'probability': 50.0,
@@ -1706,8 +1706,10 @@ def analyze_timeframe_trend(df, pair, timeframe, market_type):
         else:
             trend_strength = 'Fraca'
         
-        # Volume analysis
-        volume_trend = analyze_volume_direction(df)
+        # Market liquidity analysis using real Alpha Vantage data
+        from services.liquidity_service import LiquidityService
+        liquidity_analysis = LiquidityService.get_market_liquidity(pair, market_type)
+        liquidity_signal = liquidity_analysis['trading_recommendation']
         
         # AI/LSTM prediction for this timeframe
         ai_prediction = get_ai_timeframe_prediction(df, pair, timeframe)
@@ -1723,7 +1725,7 @@ def analyze_timeframe_trend(df, pair, timeframe, market_type):
         
         # Calculate probability based on confluence
         probability = calculate_timeframe_probability(
-            trend_signal, volume_trend, sentiment_bias, ai_prediction
+            trend_signal, liquidity_signal, sentiment_bias, ai_prediction
         )
         
         # Confidence level
@@ -1750,8 +1752,8 @@ def analyze_timeframe_trend(df, pair, timeframe, market_type):
         return {
             'trend_direction': trend_direction,
             'trend_strength': trend_strength,
-            'trend_signal': trend_signal,  # Changed from ema_signal
-            'volume_trend': volume_trend,
+            'trend_signal': trend_signal,
+            'liquidity_analysis': liquidity_analysis,
             'ai_prediction': ai_prediction,
             'sentiment_bias': sentiment_bias,
             'probability': round(probability, 1),
@@ -1768,21 +1770,21 @@ def analyze_timeframe_trend(df, pair, timeframe, market_type):
     except Exception as e:
         return create_empty_timeframe_analysis()
 
-def analyze_volume_direction(df):
-    """Analyze volume trend direction"""
-    if df.empty or 'Volume' not in df.columns:
-        return 'NEUTRO'
-    
+def analyze_liquidity_impact(liquidity_analysis):
+    """Analyze liquidity impact on trading signals"""
     try:
-        recent_volume = df['Volume'].iloc[-5:].mean()
-        previous_volume = df['Volume'].iloc[-10:-5].mean()
+        recommendation = liquidity_analysis.get('trading_recommendation', 'MODERADA')
+        liquidity_level = liquidity_analysis.get('liquidity_level', 'Média')
         
-        if recent_volume > previous_volume * 1.2:
-            return 'ALTA'
-        elif recent_volume < previous_volume * 0.8:
-            return 'BAIXA'
-        else:
-            return 'ESTÁVEL'
+        # Convert liquidity to directional signal
+        if recommendation in ['ÓTIMA', 'BOA']:
+            return 'FAVORÁVEL'
+        elif recommendation == 'MODERADA':
+            return 'NEUTRO'
+        elif recommendation == 'CUIDADO':
+            return 'ATENÇÃO'
+        else:  # EVITAR
+            return 'DESFAVORÁVEL'
     except:
         return 'NEUTRO'
 
@@ -1807,7 +1809,7 @@ def get_ai_timeframe_prediction(df, pair, timeframe):
     except:
         return None
 
-def calculate_timeframe_probability(trend_signal, volume_trend, sentiment_bias, ai_prediction):
+def calculate_timeframe_probability(trend_signal, liquidity_signal, sentiment_bias, ai_prediction):
     """Calculate probability based on timeframe confluence"""
     
     score = 0
@@ -1822,11 +1824,17 @@ def calculate_timeframe_probability(trend_signal, volume_trend, sentiment_bias, 
         score += 0.4 * -0.6
     total_factors += 0.4
     
-    # Volume trend weight (20%)
-    if volume_trend == 'ALTA':
-        score += 0.2 * 0.7
-    elif volume_trend == 'BAIXA':
+    # Liquidity signal weight (20%)
+    if liquidity_signal == 'ÓTIMA':
+        score += 0.2 * 0.8
+    elif liquidity_signal == 'BOA':
+        score += 0.2 * 0.6
+    elif liquidity_signal == 'MODERADA':
+        score += 0.2 * 0.2
+    elif liquidity_signal == 'CUIDADO':
         score += 0.2 * -0.3
+    elif liquidity_signal == 'EVITAR':
+        score += 0.2 * -0.6
     total_factors += 0.2
     
     # Sentiment weight (20%)
@@ -2255,7 +2263,7 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
     
     with progress_container:
         st.markdown("## 🌍 Análise Avançada Multi-Pares - Tendências Futuras")
-        st.markdown("**Análise baseada em:** Indicadores Técnicos (RSI + MACD + SMA + Bollinger) + AI/LSTM + Volume + Sentimento")
+        st.markdown("**Análise baseada em:** Indicadores Técnicos (RSI + MACD + SMA + Bollinger) + AI/LSTM + Liquidez Real + Sentimento")
         
         progress_bar = st.progress(0)
         status_text = st.empty()
