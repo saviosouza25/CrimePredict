@@ -840,6 +840,40 @@ def apply_theme_css():
             display: none !important;
         }
         
+        /* Fix sidebar collapse/expand button to show arrows instead of text */
+        button[title="Close sidebar"], button[title="Open sidebar"] {
+            font-size: 0 !important;
+        }
+        
+        button[title="Close sidebar"]::before {
+            content: "◀" !important;
+            font-size: 1.2rem !important;
+            color: #00f5ff !important;
+            text-shadow: 0 0 10px rgba(0,245,255,0.6) !important;
+        }
+        
+        button[title="Open sidebar"]::before {
+            content: "▶" !important;
+            font-size: 1.2rem !important;
+            color: #00f5ff !important;
+            text-shadow: 0 0 10px rgba(0,245,255,0.6) !important;
+        }
+        
+        /* Streamlit toolbar hide/show button fix */
+        .stActionButton > button, button[data-testid="stSidebarNav"] {
+            background: rgba(255,255,255,0.1) !important;
+            border: 1px solid rgba(0,245,255,0.3) !important;
+            border-radius: 8px !important;
+            color: #00f5ff !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .stActionButton > button:hover, button[data-testid="stSidebarNav"]:hover {
+            background: rgba(0,245,255,0.2) !important;
+            border: 1px solid #00f5ff !important;
+            box-shadow: 0 0 15px rgba(0,245,255,0.4) !important;
+        }
+        
         /* Sidebar specific styling overrides */
         section[data-testid="stSidebar"] .stButton > button {
             width: 100% !important;
@@ -1135,7 +1169,7 @@ def main():
     # Sidebar lateral simples como era antes
     with st.sidebar:
         # Botão Home no topo da sidebar
-        if st.button("🏠 Home", type="primary", use_container_width=True):
+        if st.button("🏠 Home", type="primary", use_container_width=True, key="home_btn"):
             # Limpar todos os resultados e voltar ao estado inicial
             for key in ['analysis_results', 'show_analysis', 'analysis_mode']:
                 if key in st.session_state:
@@ -1143,7 +1177,7 @@ def main():
             st.rerun()
         
         # Botão de logout
-        if st.button("🚪 Logout", type="secondary", use_container_width=True):
+        if st.button("🚪 Logout", type="secondary", use_container_width=True, key="logout_btn"):
             # Limpar sessão e autenticação
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
@@ -1346,10 +1380,10 @@ def main():
         # Botões auxiliares compactos
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("📚 Tutorial"):
+            if st.button("📚 Tutorial", key="tutorial_btn"):
                 st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
         with col2:
-            if st.button("🚪 Sair"):
+            if st.button("🚪 Sair", key="exit_btn"):
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
                 st.rerun()
