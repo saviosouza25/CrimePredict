@@ -1577,6 +1577,228 @@ def display_comprehensive_tutorial():
     
     st.success("🎯 **Sucesso no Trading**: Consistência + Disciplina + Gestão de Risco = Lucros Sustentáveis!")
 
+def get_technical_analysis_summary(df):
+    """Get technical analysis summary from indicators"""
+    if df.empty or len(df) < 20:
+        return {'recommendation': 'NEUTRO', 'signals': []}
+    
+    latest = df.iloc[-1]
+    signals = []
+    
+    # RSI analysis
+    if 'RSI' in df.columns:
+        rsi = latest['RSI']
+        if rsi < 30:
+            signals.append('COMPRA')
+        elif rsi > 70:
+            signals.append('VENDA')
+    
+    # MACD analysis
+    if 'MACD' in df.columns and 'MACD_Signal' in df.columns:
+        if latest['MACD'] > latest['MACD_Signal']:
+            signals.append('COMPRA')
+        else:
+            signals.append('VENDA')
+    
+    # Moving average analysis
+    if 'SMA_20' in df.columns and 'SMA_50' in df.columns:
+        if latest['Close'] > latest['SMA_20'] > latest['SMA_50']:
+            signals.append('COMPRA')
+        elif latest['Close'] < latest['SMA_20'] < latest['SMA_50']:
+            signals.append('VENDA')
+    
+    # Determine overall recommendation
+    buy_signals = signals.count('COMPRA')
+    sell_signals = signals.count('VENDA')
+    
+    if buy_signals > sell_signals:
+        recommendation = 'COMPRA'
+    elif sell_signals > buy_signals:
+        recommendation = 'VENDA'
+    else:
+        recommendation = 'NEUTRO'
+    
+    return {
+        'recommendation': recommendation,
+        'signals': signals,
+        'buy_count': buy_signals,
+        'sell_count': sell_signals
+    }
+
+def get_trend_analysis_summary(df):
+    """Get trend analysis summary"""
+    if df.empty or len(df) < 10:
+        return {'direction': 'LATERAL', 'strength': 'Fraca'}
+    
+    # Calculate price change over period
+    start_price = df['Close'].iloc[0]
+    end_price = df['Close'].iloc[-1]
+    change_percent = ((end_price - start_price) / start_price) * 100
+    
+    # Determine trend direction
+    if change_percent > 2:
+        direction = 'ALTA FORTE'
+        strength = 'Forte'
+    elif change_percent > 0.5:
+        direction = 'ALTA'
+        strength = 'Moderada'
+    elif change_percent < -2:
+        direction = 'BAIXA FORTE'
+        strength = 'Forte'
+    elif change_percent < -0.5:
+        direction = 'BAIXA'
+        strength = 'Moderada'
+    else:
+        direction = 'LATERAL'
+        strength = 'Fraca'
+    
+    return {
+        'direction': direction,
+        'strength': strength,
+        'change_percent': round(change_percent, 2)
+    }
+
+def calculate_scenario_probability(analysis_components, pair, trading_style):
+    """Calculate probability of each scenario based on all analysis criteria"""
+    
+    # Extract individual component signals
+    unified = analysis_components.get('unified', {})
+    technical = analysis_components.get('technical', {})
+    volume = analysis_components.get('volume', {})
+    trend = analysis_components.get('trend', {})
+    risk = analysis_components.get('risk', {})
+    sentiment = analysis_components.get('sentiment', {})
+    ai_prediction = analysis_components.get('ai_prediction')
+    
+    # Initialize component scores (-1 to 1 scale)
+    component_scores = {}
+    
+    # Unified analysis component
+    if unified.get('direction'):
+        if 'COMPRA' in unified['direction']:
+            component_scores['unified'] = unified.get('probability', 50) / 100 * 2 - 1
+        elif 'VENDA' in unified['direction']:
+            component_scores['unified'] = -(unified.get('probability', 50) / 100 * 2 - 1)
+        else:
+            component_scores['unified'] = 0
+    else:
+        component_scores['unified'] = 0
+    
+    # Technical analysis component
+    if technical.get('recommendation'):
+        if technical['recommendation'] == 'COMPRA':
+            component_scores['technical'] = 0.7
+        elif technical['recommendation'] == 'VENDA':
+            component_scores['technical'] = -0.7
+        else:
+            component_scores['technical'] = 0
+    else:
+        component_scores['technical'] = 0
+    
+    # Volume analysis component
+    if volume.get('direction'):
+        if volume['direction'] == 'COMPRA':
+            component_scores['volume'] = 0.6
+        elif volume['direction'] == 'VENDA':
+            component_scores['volume'] = -0.6
+        else:
+            component_scores['volume'] = 0
+    else:
+        component_scores['volume'] = 0
+    
+    # Trend analysis component
+    if trend.get('direction'):
+        if 'ALTA' in trend['direction'] or 'COMPRA' in trend['direction']:
+            component_scores['trend'] = 0.8
+        elif 'BAIXA' in trend['direction'] or 'VENDA' in trend['direction']:
+            component_scores['trend'] = -0.8
+        else:
+            component_scores['trend'] = 0
+    else:
+        component_scores['trend'] = 0
+    
+    # Sentiment component
+    sentiment_score = sentiment.get('score', 0)
+    if sentiment_score > 0.1:
+        component_scores['sentiment'] = min(0.5, sentiment_score)
+    elif sentiment_score < -0.1:
+        component_scores['sentiment'] = max(-0.5, sentiment_score)
+    else:
+        component_scores['sentiment'] = 0
+    
+    # AI/LSTM component
+    if ai_prediction and ai_prediction.get('direction'):
+        ai_confidence = ai_prediction.get('confidence', 0.5)
+        if 'COMPRA' in ai_prediction['direction']:
+            component_scores['ai'] = ai_confidence
+        elif 'VENDA' in ai_prediction['direction']:
+            component_scores['ai'] = -ai_confidence
+        else:
+            component_scores['ai'] = 0
+    else:
+        component_scores['ai'] = 0
+    
+    # Risk component (inverted - high risk = negative score)
+    if risk.get('risk_level'):
+        risk_level = risk['risk_level']
+        if risk_level == 'Baixo':
+            component_scores['risk'] = 0.3
+        elif risk_level == 'Alto':
+            component_scores['risk'] = -0.3
+        else:
+            component_scores['risk'] = 0
+    else:
+        component_scores['risk'] = 0
+    
+    # Calculate weighted average (equal weights for simplicity)
+    total_components = len(component_scores)
+    if total_components > 0:
+        weighted_score = sum(component_scores.values()) / total_components
+    else:
+        weighted_score = 0
+    
+    # Convert to probability percentages
+    if weighted_score > 0.4:
+        scenario = "COMPRA FORTE"
+        probability = min(95, 50 + weighted_score * 45)
+    elif weighted_score > 0.2:
+        scenario = "COMPRA"
+        probability = min(85, 50 + weighted_score * 35)
+    elif weighted_score > 0.05:
+        scenario = "COMPRA FRACA"
+        probability = min(70, 50 + weighted_score * 20)
+    elif weighted_score < -0.4:
+        scenario = "VENDA FORTE"
+        probability = min(95, 50 + abs(weighted_score) * 45)
+    elif weighted_score < -0.2:
+        scenario = "VENDA"
+        probability = min(85, 50 + abs(weighted_score) * 35)
+    elif weighted_score < -0.05:
+        scenario = "VENDA FRACA"
+        probability = min(70, 50 + abs(weighted_score) * 20)
+    else:
+        scenario = "LATERAL/NEUTRO"
+        probability = 50
+    
+    # Count supporting vs opposing signals
+    positive_signals = sum(1 for score in component_scores.values() if score > 0.1)
+    negative_signals = sum(1 for score in component_scores.values() if score < -0.1)
+    neutral_signals = total_components - positive_signals - negative_signals
+    
+    return {
+        'scenario': scenario,
+        'probability': round(probability, 1),
+        'weighted_score': round(weighted_score, 3),
+        'component_scores': component_scores,
+        'signal_breakdown': {
+            'positive': positive_signals,
+            'negative': negative_signals,
+            'neutral': neutral_signals,
+            'total': total_components
+        },
+        'confidence_level': 'Alta' if abs(weighted_score) > 0.3 else 'Média' if abs(weighted_score) > 0.15 else 'Baixa'
+    }
+
 def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs):
     """Análise completa de todos os pares de moedas com recomendações de execução"""
     
@@ -1637,10 +1859,38 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                 # Get sentiment score
                 sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
                 
-                # Run unified analysis for this pair
+                # Run COMPLETE analysis for this pair (all criteria)
                 analysis_result = run_unified_analysis(
                     current_price, pair, sentiment_score, df_with_indicators, trading_style
                 )
+                
+                # Calculate individual analysis components
+                technical_analysis = get_technical_analysis_summary(df_with_indicators)
+                volume_analysis = analyze_volume_trend(df_with_indicators)
+                trend_analysis = get_trend_analysis_summary(df_with_indicators)
+                risk_analysis = {'risk_level': 'Moderado'}  # Simplified for now
+                
+                # Calculate AI/LSTM prediction if available
+                ai_prediction = None
+                try:
+                    from services.ai_unified_service import AIUnifiedService
+                    ai_service = AIUnifiedService()
+                    ai_prediction = ai_service.get_enhanced_prediction(
+                        df_with_indicators, pair, sentiment_score, trading_style
+                    )
+                except:
+                    pass
+                
+                # Calculate comprehensive probability based on all criteria
+                probability_analysis = calculate_scenario_probability({
+                    'unified': analysis_result,
+                    'technical': technical_analysis,
+                    'volume': volume_analysis,
+                    'trend': trend_analysis,
+                    'risk': risk_analysis,
+                    'sentiment': {'score': sentiment_score},
+                    'ai_prediction': ai_prediction
+                }, pair, trading_style)
                 
                 # Calculate trading opportunity score
                 opportunity_score = calculate_opportunity_score(analysis_result, pair, trading_style)
@@ -1650,7 +1900,7 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                     analysis_result, pair, current_price, trading_style, sentiment_score
                 )
                 
-                # Store comprehensive result
+                # Store comprehensive result with probability analysis
                 pair_result = {
                     'pair': pair,
                     'current_price': current_price,
@@ -1658,7 +1908,13 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                     'execution_position': execution_position,
                     'analysis_result': analysis_result,
                     'sentiment_score': sentiment_score,
-                    'trading_style': trading_style
+                    'trading_style': trading_style,
+                    'probability_analysis': probability_analysis,
+                    'technical_analysis': technical_analysis,
+                    'volume_analysis': volume_analysis,
+                    'trend_analysis': trend_analysis,
+                    'risk_analysis': risk_analysis,
+                    'ai_prediction': ai_prediction
                 }
                 
                 all_results.append(pair_result)
@@ -1918,19 +2174,20 @@ def display_multi_pair_results():
             st.info("Funcionalidade de exportação em desenvolvimento")
 
 def display_opportunity_ranking(results):
-    """Exibir ranking de oportunidades"""
+    """Exibir ranking de oportunidades com análise de probabilidade"""
     
     if not results:
         st.warning("Nenhuma oportunidade encontrada com os filtros aplicados.")
         return
     
-    st.markdown("#### 🎯 Ranking por Score de Oportunidade")
+    st.markdown("#### 🎯 Ranking por Score de Oportunidade com Probabilidades")
     
     for i, result in enumerate(results[:15]):  # Top 15
         pair = result['pair']
         score = result['opportunity_score']
         execution = result['execution_position']
         current_price = result['current_price']
+        probability_analysis = result.get('probability_analysis', {})
         
         # Color coding
         if score >= 80:
@@ -1949,6 +2206,12 @@ def display_opportunity_ranking(results):
         direction_icon = "📈" if execution['direction'] == 'COMPRA' else "📉"
         strength_text = execution['strength']
         
+        # Get probability information
+        scenario = probability_analysis.get('scenario', execution['direction'])
+        probability = probability_analysis.get('probability', execution['confidence'])
+        confidence_level = probability_analysis.get('confidence_level', 'Média')
+        signal_breakdown = probability_analysis.get('signal_breakdown', {})
+        
         st.markdown(f"""
         <div style="
             border: 2px solid {color}; 
@@ -1958,12 +2221,16 @@ def display_opportunity_ranking(results):
             background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0.95));
         ">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
+                <div style="flex: 1;">
                     <h4 style="margin: 0; color: {color};">#{i+1} {pair} {direction_icon}</h4>
                     <p style="margin: 0.2rem 0; color: #666;">
-                        <strong>{execution['direction']} {strength_text}</strong> | 
+                        <strong>Cenário: {scenario}</strong> | 
+                        Probabilidade: <strong>{probability:.1f}%</strong>
+                    </p>
+                    <p style="margin: 0.2rem 0; color: #888; font-size: 0.9rem;">
                         Preço: {current_price:.5f} | 
-                        Confiança: {execution['confidence']}%
+                        Confiança: {confidence_level} | 
+                        Sinais +{signal_breakdown.get('positive', 0)}/-{signal_breakdown.get('negative', 0)}
                     </p>
                 </div>
                 <div style="text-align: right;">
