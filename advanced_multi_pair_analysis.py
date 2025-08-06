@@ -14,7 +14,7 @@ warnings.filterwarnings('ignore')
 from services.advanced_liquidity_service import AdvancedLiquidityService
 from services.advanced_technical_service import AdvancedTechnicalService
 from services.advanced_sentiment_service import AdvancedSentimentService
-from services.advanced_lstm_service import AdvancedLSTMService
+from services.advanced_lstm_pytorch import AdvancedLSTMService
 from services.data_service import DataService
 
 class AdvancedMultiPairAnalysisSystem:
