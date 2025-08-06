@@ -2248,47 +2248,75 @@ def display_execution_positions(results):
         
         with st.expander(f"{direction_icon} **{pair}** - {execution['direction']} {execution['strength']} (Score: {result['opportunity_score']:.1f})"):
             
-            # Profile-specific information - movido para o topo
-            st.markdown("**🎯 Configuração do Perfil:**")
-            profile_col1, profile_col2 = st.columns(2)
-            
-            with profile_col1:
-                st.info(f"**Perfil:** {execution.get('trading_profile', 'N/A')}")
-                st.info(f"**Timing:** {execution['market_timing']}")
+            # === BLOCO 1: CONFIGURAÇÃO DO PERFIL ===
+            with st.container():
+                st.markdown("### 🎯 Configuração do Perfil")
+                profile_col1, profile_col2 = st.columns(2)
                 
-            with profile_col2:
-                risk_color = "🟢" if execution['risk_level'] == 'Baixo' else "🟡" if execution['risk_level'] == 'Moderado' else "🔴"
-                st.info(f"**Risco:** {risk_color} {execution['risk_level']}")
-                sentiment_color = "🟢" if execution['sentiment_bias'] == 'Positivo' else "🔴" if execution['sentiment_bias'] == 'Negativo' else "🟡"
-                st.info(f"**Sentimento:** {sentiment_color} {execution['sentiment_bias']}")
+                with profile_col1:
+                    st.info(f"**Perfil:** {execution.get('trading_profile', 'N/A')}")
+                    st.info(f"**Timing:** {execution['market_timing']}")
+                    
+                with profile_col2:
+                    risk_color = "🟢" if execution['risk_level'] == 'Baixo' else "🟡" if execution['risk_level'] == 'Moderado' else "🔴"
+                    st.info(f"**Risco:** {risk_color} {execution['risk_level']}")
+                    sentiment_color = "🟢" if execution['sentiment_bias'] == 'Positivo' else "🔴" if execution['sentiment_bias'] == 'Negativo' else "🟡"
+                    st.info(f"**Sentimento:** {sentiment_color} {execution['sentiment_bias']}")
             
-            col1, col2 = st.columns(2)
+            st.divider()
             
-            with col1:
-                st.markdown("**📊 Parâmetros de Entrada:**")
-                st.write(f"• **Direção:** {execution['direction']} {execution['strength']}")
-                st.write(f"• **Preço de Entrada:** {execution['entry_price']:.5f}")
-                st.write(f"• **Stop Loss:** {execution['stop_loss']:.5f}")
-                st.write(f"• **Take Profit:** {execution['take_profit']:.5f}")
-                st.write(f"• **Tamanho da Posição:** {execution['position_size']:.2f} lotes")
-                
-                # Profile-specific characteristics - movido para cá
+            # === BLOCO 2: PARÂMETROS & ANÁLISE PROBABILÍSTICA ===
+            main_col1, main_col2 = st.columns(2)
+            
+            with main_col1:
+                with st.container():
+                    st.markdown("### 📊 Parâmetros de Entrada")
+                    entry_data = [
+                        f"**Direção:** {execution['direction']} {execution['strength']}",
+                        f"**Preço de Entrada:** {execution['entry_price']:.5f}",
+                        f"**Stop Loss:** {execution['stop_loss']:.5f}",
+                        f"**Take Profit:** {execution['take_profit']:.5f}",
+                        f"**Tamanho da Posição:** {execution['position_size']:.2f} lotes"
+                    ]
+                    for item in entry_data:
+                        st.write(f"• {item}")
+            
+            with main_col2:
+                with st.container():
+                    st.markdown("### 💰 Análise Probabilística Alpha Vantage")
+                    probability_data = [
+                        f"**Taxa de Sucesso:** {execution['expected_success_rate']:.1f}%",
+                        f"**Stop Loss:** {execution.get('stop_pct', 0):.3f}% ({execution['stop_distance_pips']:.1f} pips)",
+                        f"**Take Profit:** {execution.get('tp_pct', 0):.3f}% ({execution['tp_distance_pips']:.1f} pips)",
+                        f"**R/R REAL:** 1:{execution['risk_reward_ratio']:.2f}",
+                        f"**Risco da Banca:** {execution.get('actual_risk_pct', 0):.1f}%"
+                    ]
+                    for item in probability_data:
+                        st.write(f"• {item}")
+            
+            st.divider()
+            
+            # === BLOCO 3: CARACTERÍSTICAS DO PERFIL ===
+            with st.container():
+                st.markdown("### 🔧 Características do Perfil")
                 if 'profile_characteristics' in execution:
                     characteristics = execution['profile_characteristics']
-                    st.markdown("**🔧 Características do Perfil:**")
-                    st.write(f"• **Stops:** {characteristics['stop_behavior']}")
-                    st.write(f"• **Takes:** {characteristics['take_behavior']}")
-                    st.write(f"• **Risco:** {characteristics['risk_approach']}")
-                    st.write(f"• **Timing:** {characteristics['timing']}")
-                    st.write(f"• **Foco:** {characteristics['focus']}")
+                    char_col1, char_col2 = st.columns(2)
+                    
+                    with char_col1:
+                        st.write(f"• **Stops:** {characteristics['stop_behavior']}")
+                        st.write(f"• **Takes:** {characteristics['take_behavior']}")
+                        st.write(f"• **Risco:** {characteristics['risk_approach']}")
+                        
+                    with char_col2:
+                        st.write(f"• **Timing:** {characteristics['timing']}")
+                        st.write(f"• **Foco:** {characteristics['focus']}")
             
-            with col2:
-                st.markdown("**💰 Análise Probabilística Alpha Vantage:**")
-                st.write(f"• **Taxa de Sucesso:** {execution['expected_success_rate']:.1f}%")
-                st.write(f"• **Stop Loss:** {execution.get('stop_pct', 0):.3f}% ({execution['stop_distance_pips']:.1f} pips)")
-                st.write(f"• **Take Profit:** {execution.get('tp_pct', 0):.3f}% ({execution['tp_distance_pips']:.1f} pips)")
-                st.write(f"• **R/R REAL:** 1:{execution['risk_reward_ratio']:.2f}")
-                st.write(f"• **Risco da Banca:** {execution.get('actual_risk_pct', 0):.1f}%")
+            st.divider()
+            
+            # === BLOCO 4: CALCULADORA DE LOTE INTEGRADA ===
+            with st.container():
+                st.markdown("### 💵 Calculadora de Lote Integrada")
                 
                 # Calcular valores em dólares baseados na calculadora de lote
                 bank_value = st.session_state.get('bank_value', 5000.0)
@@ -2308,11 +2336,15 @@ def display_execution_positions(results):
                 stop_pct_bank = (stop_usd / bank_value) * 100
                 take_pct_bank = (take_usd / bank_value) * 100
                 
-                st.markdown("**💵 Calculadora de Lote Integrada:**")
-                st.write(f"• **Stop Loss:** ${stop_usd:.2f} ({stop_pct_bank:.2f}% da banca)")
-                st.write(f"• **Take Profit:** ${take_usd:.2f} ({take_pct_bank:.2f}% da banca)")
-                st.write(f"• **Lote Usado:** {lot_size} | **Banca:** ${bank_value:,.0f}")
-                st.write(f"• **Valor do Pip:** ${pip_value_per_lot:.1f} por lote")
+                calc_col1, calc_col2 = st.columns(2)
+                
+                with calc_col1:
+                    st.write(f"• **Stop Loss:** ${stop_usd:.2f} ({stop_pct_bank:.2f}% da banca)")
+                    st.write(f"• **Take Profit:** ${take_usd:.2f} ({take_pct_bank:.2f}% da banca)")
+                    
+                with calc_col2:
+                    st.write(f"• **Lote Usado:** {lot_size} | **Banca:** ${bank_value:,.0f}")
+                    st.write(f"• **Valor do Pip:** ${pip_value_per_lot:.1f} por lote")
                 
                 # Análise Alpha Vantage específica do perfil
                 if execution.get('movement_direction'):
