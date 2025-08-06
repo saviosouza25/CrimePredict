@@ -30,21 +30,10 @@ try:
         'ai_unified_service': AIUnifiedService()
     }
 except ImportError as e:
-    print(f"Import warning: {e}")
-    # Create placeholder services for basic functionality
-    class MockService:
-        def fetch_forex_data(self, *args, **kwargs):
-            return None
-        def validate_data(self, *args, **kwargs):
-            return False
-        def fetch_news_sentiment(self, *args, **kwargs):
-            return 0.0
-    
-    services = {
-        'data_service': MockService(),
-        'sentiment_service': MockService(),
-        'ai_unified_service': MockService()
-    }
+    st.error(f"❌ ERRO CRÍTICO: Falha ao carregar serviços essenciais: {e}")
+    st.error("🔑 Verifique se a chave API Alpha Vantage está configurada corretamente")
+    st.error("📡 Sistema requer conexão real com Alpha Vantage API - dados simulados não são permitidos")
+    st.stop()  # Stop execution - no mock services allowed
 
 # FUNÇÃO GLOBAL: Calcular probabilidades REAIS de mercado
 def calculate_realistic_drawdown_and_extensions(current_price, pair_name, horizon, risk_level, sentiment_score, lstm_confidence):
@@ -715,15 +704,25 @@ def main():
     
     # Main content area - header controlled by display logic
     
-    # Initialize services if not already done
+    # Initialize services if not already done - ONLY REAL DATA ALLOWED
     global services
     if 'services' not in globals() or services is None:
-        from services.data_service import DataService
-        from services.sentiment_service import SentimentService
-        services = {
-            'data_service': DataService(),
-            'sentiment_service': SentimentService()
-        }
+        try:
+            from services.data_service import DataService
+            from services.sentiment_service import SentimentService
+            services = {
+                'data_service': DataService(),
+                'sentiment_service': SentimentService()
+            }
+            # Verify Alpha Vantage API key is present
+            from config.settings import API_KEY
+            if not API_KEY or API_KEY == 'your_alpha_vantage_api_key_here':
+                st.error("❌ CHAVE API ALPHA VANTAGE NÃO CONFIGURADA")
+                st.error("🔑 Configure ALPHA_VANTAGE_API_KEY nas variáveis de ambiente")
+                st.stop()
+        except Exception as e:
+            st.error(f"❌ ERRO: Falha ao inicializar serviços: {e}")
+            st.stop()
     
     # Sidebar lateral simples como era antes
     with st.sidebar:
@@ -1049,7 +1048,7 @@ def display_main_header():
             📊 Plataforma Avançada de Análise Forex
         </h1>
         <p style="color: rgba(255,255,255,0.9); font-size: 1.2em; margin: 0;">
-            Previsões Forex com IA e Análise em Tempo Real
+            Análises com Dados Reais Alpha Vantage - 100% Autênticos
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -2166,7 +2165,9 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
             
             if not services['data_service'].validate_data(df):
                 progress_container.empty()
-                st.error("❌ Dados insuficientes ou inválidos recebidos")
+                st.error("❌ DADOS INSUFICIENTES: Alpha Vantage retornou dados insuficientes ou inválidos")
+                st.error("🔑 Verifique sua chave API Alpha Vantage ou tente outro par de moedas")
+                st.info("ℹ️ Sistema configurado para usar APENAS dados reais - nenhum dado simulado será usado")
                 return
             
             # Step 3: Technical indicators
@@ -2183,7 +2184,9 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
             
             if current_price is None:
                 progress_container.empty()
-                st.error(f"❌ Não foi possível obter o preço atual para {pair}. Verifique a conexão com Alpha Vantage.")
+                st.error(f"❌ DADOS REAIS INDISPONÍVEIS: Alpha Vantage não retornou preço atual válido para {pair}")
+                st.error("🔑 Verifique: 1) Chave API válida 2) Conexão internet 3) Limite de requisições Alpha Vantage")
+                st.info("ℹ️ Sistema bloqueado - usar apenas dados autênticos Alpha Vantage")
                 return
             # Step 5: Enhanced Sentiment analysis with future prediction
             status_text.text("📰 Analisando sentimento e prevendo futuro do mercado...")
