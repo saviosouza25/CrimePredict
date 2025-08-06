@@ -609,68 +609,67 @@ def apply_theme_css():
             border: 1px solid rgba(58,175,169,0.5) !important;
         }
         
-        /* SIDEBAR COMPACTO E MODERNO */
+        /* Enhanced Sidebar AI Design */
         .css-1d391kg, .st-emotion-cache-1d391kg, section[data-testid="stSidebar"] {
-            background: linear-gradient(145deg, #f8f9fa 0%, #ffffff 100%) !important;
-            border-right: 3px solid #4CAF50 !important;
-            padding: 15px !important;
-            min-width: 300px !important;
-            max-width: 320px !important;
+            background: linear-gradient(180deg, #1a1a3e 0%, #0a0a23 100%) !important;
+            border-right: 2px solid rgba(0,245,255,0.4) !important;
         }
         
-        /* SOLUÇÃO DEFINITIVA - Labels Pretos em Fundo Branco */
-        section[data-testid="stSidebar"] label,
+        /* Sidebar content visibility */
+        .css-1d391kg .stMarkdown, 
+        .css-1d391kg label, 
+        .css-1d391kg .stSelectbox label,
+        .css-1d391kg .stNumberInput label,
+        .css-1d391kg .stSlider label,
+        .css-1d391kg p,
+        .css-1d391kg span,
         section[data-testid="stSidebar"] .stMarkdown,
+        section[data-testid="stSidebar"] label,
         section[data-testid="stSidebar"] p,
-        section[data-testid="stSidebar"] h1,
-        section[data-testid="stSidebar"] h2,
-        section[data-testid="stSidebar"] h3 {
+        section[data-testid="stSidebar"] span {
+            color: rgba(255,255,255,0.95) !important;
+            font-weight: 500 !important;
+            text-shadow: 0 0 8px rgba(0,245,255,0.3) !important;
+        }
+        
+        /* Sidebar selectbox styling - main field */
+        section[data-testid="stSidebar"] .stSelectbox > div > div,
+        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] {
+            background: rgba(255,255,255,0.95) !important;
             color: #000000 !important;
-            background: #ffffff !important;
-            font-weight: 700 !important;
-            font-size: 16px !important;
-            padding: 8px 0 !important;
-            margin: 8px 0 !important;
-            text-shadow: none !important;
-            border: none !important;
+            border: 2px solid rgba(0,245,255,0.6) !important;
+            border-radius: 8px !important;
+            font-size: 0.9rem !important;
+            font-weight: 600 !important;
         }
         
-        /* CAMPOS COMPACTOS E ELEGANTES */
-        section[data-testid="stSidebar"] .stSelectbox {
-            margin: 8px 0 !important;
+        /* Sidebar selectbox text visibility - comprehensive override */
+        section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] > div,
+        section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] span,
+        section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] div,
+        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] *,
+        section[data-testid="stSidebar"] .stSelectbox [role="button"] *,
+        section[data-testid="stSidebar"] .stSelectbox [role="combobox"] * {
+            color: #000000 !important;
+            background: rgba(255,255,255,0.95) !important;
+            font-weight: 600 !important;
+            font-size: 0.9rem !important;
         }
         
-        section[data-testid="stSidebar"] .stSelectbox > div > div {
-            background: #ffffff !important;
-            color: #2d3748 !important;
-            border: 1px solid #e2e8f0 !important;
-            border-radius: 6px !important;
-            padding: 8px 12px !important;
-            font-weight: 500 !important;
-            font-size: 14px !important;
-            min-height: 38px !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+        /* Ensure dropdown arrows and icons are visible */
+        section[data-testid="stSidebar"] .stSelectbox svg {
+            color: #000000 !important;
+            fill: #000000 !important;
         }
         
-        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span,
-        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] div {
-            color: #2d3748 !important;
-            font-weight: 500 !important;
-            font-size: 14px !important;
-        }
-        
-        /* INPUTS COMPACTOS E MODERNOS */
+        /* Sidebar number input and slider styling */
         section[data-testid="stSidebar"] .stNumberInput input,
-        section[data-testid="stSidebar"] .stTextInput input {
-            background: #ffffff !important;
-            color: #2d3748 !important;
-            border: 1px solid #e2e8f0 !important;
-            border-radius: 6px !important;
-            padding: 8px 12px !important;
-            font-weight: 500 !important;
-            font-size: 14px !important;
-            min-height: 38px !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+        section[data-testid="stSidebar"] .stSlider [role="slider"] {
+            background: rgba(255,255,255,0.95) !important;
+            color: #000000 !important;
+            border: 2px solid rgba(0,245,255,0.6) !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
         }
         
         /* Selectbox dropdown options - force visibility */
@@ -738,31 +737,22 @@ def apply_theme_css():
             color: #000000 !important;
         }
         
-        /* SOLUÇÃO DEFINITIVA - Dropdown Simples e Claro */
-        .stSelectbox [data-baseweb="popover"] {
-            background: #f0f0f0 !important;
-            border: 2px solid #4CAF50 !important;
-            border-radius: 4px !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-        }
-        
+        /* Universal selectbox option override */
+        .stSelectbox option,
         .stSelectbox [role="option"],
         .stSelectbox [data-baseweb="menu-item"],
-        .stSelectbox [data-baseweb="list-item"],
-        .stSelectbox li {
-            background: #f0f0f0 !important;
+        .stSelectbox [data-baseweb="list-item"] {
+            background: rgba(255,255,255,0.98) !important;
             color: #000000 !important;
             font-weight: 600 !important;
-            font-size: 15px !important;
-            padding: 12px 16px !important;
-            border-bottom: 1px solid #ddd !important;
+            font-size: 0.9rem !important;
         }
         
+        /* Hover states for options */
         .stSelectbox [role="option"]:hover,
         .stSelectbox [data-baseweb="menu-item"]:hover,
-        .stSelectbox [data-baseweb="list-item"]:hover,
-        .stSelectbox li:hover {
-            background: #4CAF50 !important;
+        .stSelectbox [data-baseweb="list-item"]:hover {
+            background: rgba(0,245,255,0.8) !important;
             color: #ffffff !important;
         }
         
@@ -1095,26 +1085,24 @@ def apply_theme_css():
             font-weight: 600 !important;
         }
         
-        /* BOTÕES COMPACTOS E ELEGANTES */
-        section[data-testid="stSidebar"] .stButton > button {
+        /* Quick analysis button - full width and readable */
+        section[data-testid="stSidebar"] button[key="quick_analysis_btn"] {
             width: 100% !important;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-            color: #ffffff !important;
-            border: none !important;
-            border-radius: 6px !important;
-            padding: 8px 12px !important;
+            padding: 0.7rem 1rem !important;
+            font-size: 0.85rem !important;
+            margin: 0.5rem 0 !important;
             font-weight: 600 !important;
-            font-size: 13px !important;
-            min-height: 36px !important;
-            margin: 4px 0 !important;
-            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3) !important;
-            transition: all 0.2s ease !important;
+            min-height: 3rem !important;
+            background: linear-gradient(135deg, rgba(0,245,255,0.8), rgba(255,0,245,0.8)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(0,245,255,0.6) !important;
+            border-radius: 8px !important;
         }
         
-        section[data-testid="stSidebar"] .stButton > button:hover {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
-            transform: translateY(-1px) !important;
-            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4) !important;
+        /* Quick analysis button hover */
+        section[data-testid="stSidebar"] button[key="quick_analysis_btn"]:hover {
+            background: linear-gradient(135deg, rgba(0,245,255,1), rgba(255,0,245,1)) !important;
+            box-shadow: 0 0 15px rgba(0,245,255,0.5) !important;
         }
         
         /* Slider styling */
@@ -1420,111 +1408,134 @@ def main():
         
         st.markdown("---")
         
-        # PAINEL COMPACTO E MODERNO
+        # Header da sidebar
         st.markdown("""
-        <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
-                    padding: 15px; border-radius: 12px; margin-bottom: 15px;
-                    border: 2px solid #4CAF50;">
-            <h3 style="color: #2d3748; margin: 0 0 10px 0; font-size: 18px;">⚙️ Configurações de Trading</h3>
+        <div style="text-align: center; padding: 1rem 0; margin-bottom: 1.5rem; 
+                    background: linear-gradient(135deg, #667eea, #764ba2); 
+                    border-radius: 12px; color: white;">
+            <h2 style="margin: 0; font-size: 1.3rem; font-weight: 600;">⚙️ Configurações</h2>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">Ajuste sua análise</p>
         </div>
         """, unsafe_allow_html=True)
         
-        # Grid compacto para configurações principais
-        col1, col2 = st.columns(2)
+        # Trading Configuration Section
+        st.markdown("### 💱 Configuração de Trading")
         
-        with col1:
-            pair = st.selectbox("💱 Par", PAIRS, label_visibility="collapsed")
-            st.caption("💱 Par de Moedas")
-            
-        with col2:
-            # Presets simplificados
-            temporal_presets = {
-                "Intraday": {"interval": "15min", "horizon": "1 Hora", "style": "intraday"},
-                "Swing": {"interval": "60min", "horizon": "4 Horas", "style": "swing"},
-                "Position": {"interval": "daily", "horizon": "1 Dia", "style": "position"}
-            }
-            
-            preset_choice = st.selectbox("Estratégia", list(temporal_presets.keys()), 
-                                       index=1, label_visibility="collapsed")
-            st.caption("⏰ Estratégia Temporal")
+        # Currency pair selection
+        pair = st.selectbox(
+            "Par de Moedas",
+            PAIRS,
+            help="Selecione o par de moedas para análise"
+        )
         
-        # Configurar variáveis baseadas na seleção
-        selected_preset = temporal_presets[preset_choice]
-        interval = selected_preset["interval"]
-        horizon = selected_preset["horizon"]
-        trading_style = selected_preset["style"]
-        st.session_state['trading_style'] = trading_style
-        risk_level_en = "Moderate"
+        # Time interval
+        interval = st.selectbox(
+            "Intervalo de Tempo",
+            list(INTERVALS.keys()),
+            index=4,  # Default to 60min
+            help="Intervalo de tempo para coleta de dados"
+        )
         
-        # Trading config em grid
-        col1, col2 = st.columns(2)
-        with col1:
-            bank_value = st.number_input("Banca", min_value=100.0, max_value=1000000.0, 
-                                       value=5000.0, step=500.0, label_visibility="collapsed")
-            st.caption("💳 Valor da Banca (USD)")
+        # Prediction horizon
+        horizon = st.selectbox(
+            "Horizonte de Previsão",
+            HORIZONS,
+            help="Período de previsão desejado"
+        )
         
-        with col2:
-            lot_size = st.number_input("Lote", min_value=0.01, max_value=100.0, 
-                                     value=0.1, step=0.01, format="%.2f", label_visibility="collapsed")
-            st.caption("📊 Tamanho do Lote")
+        st.markdown("---")
         
-        # Armazenar valores
-        st.session_state['bank_value'] = bank_value
-        st.session_state['lot_size'] = lot_size
+        # Risk Management Section
+        st.markdown("### ⚖️ Gestão de Risco")
         
-        # Configurações avançadas em acordeão compacto
-        with st.expander("🔧 Avançado", expanded=False):
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                lookback_period = st.number_input("Histórico", 30, 120, LOOKBACK_PERIOD, label_visibility="collapsed")
-            with col2:
-                epochs = st.number_input("Épocas", 5, 20, EPOCHS, label_visibility="collapsed")
-            with col3:
-                mc_samples = st.number_input("Amostras", 10, 50, MC_SAMPLES, label_visibility="collapsed")
+        risk_level = st.selectbox(
+            "Nível de Risco",
+            ["Conservativo", "Moderado", "Agressivo"],
+            index=1,  # Default to Moderate
+            help="Nível de tolerância ao risco"
+        )
         
-        # SEÇÃO DE ANÁLISES COMPACTA E MODERNA
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                    padding: 15px; border-radius: 12px; margin: 15px 0;
-                    border: 2px solid #4CAF50;">
-            <h3 style="color: white; margin: 0; font-size: 18px; text-align: center;">🎯 Central de Análises</h3>
-        </div>
-        """, unsafe_allow_html=True)
+        # Map Portuguese to English
+        risk_level_en = {"Conservativo": "Conservative", "Moderado": "Moderate", "Agressivo": "Aggressive"}[risk_level]
         
-        # Botão principal destacado
-        unified_analysis = st.button("🧠 ANÁLISE UNIFICADA IA", type="primary", 
-                                   use_container_width=True, key="unified_analysis_btn")
-        
-        # Grid de análises individuais - layout 3x2 mais compacto
-        st.markdown("**Análises Especializadas:**")
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            technical_analysis = st.button("📊 Técnica", use_container_width=True, key="tech_analysis_btn")
-            ai_analysis = st.button("🤖 IA/LSTM", use_container_width=True, key="ai_analysis_btn")
-        with col2:
-            sentiment_analysis = st.button("📰 Sentimento", use_container_width=True, key="sentiment_analysis_btn")
-            volume_analysis = st.button("📈 Volume", use_container_width=True, key="volume_analysis_btn")
-        with col3:
-            risk_analysis = st.button("⚖️ Risco", use_container_width=True, key="risk_analysis_btn")
-            trend_analysis = st.button("📉 Tendência", use_container_width=True, key="trend_analysis_btn")
-        
-        # Análise rápida
-        quick_analysis = st.button("⚡ VERIFICAÇÃO RÁPIDA", use_container_width=True, 
-                                 help="Análise completa em segundos", key="quick_analysis_btn")
-        
-        # Cache e utilidades em linha única
+        # Configuration status
         cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
         if cache_count > 0:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.caption(f"💾 Cache: {cache_count} itens")
-            with col2:
-                if st.button("🗑️", help="Limpar", key="clear_cache_btn"):
-                    for key in list(st.session_state.keys()):
-                        if isinstance(st.session_state.get(key), tuple):
-                            del st.session_state[key]
-                    st.rerun()
+            st.info(f"💾 {cache_count} análises em cache disponíveis")
+        
+        st.markdown("---")
+        
+        # AI Configuration Section
+        st.markdown("### 🤖 Configuração de IA")
+        
+        lookback_period = st.slider(
+            "Histórico de Dados",
+            min_value=30,
+            max_value=120,
+            value=LOOKBACK_PERIOD,
+            help="Número de períodos históricos para treinamento"
+        )
+        
+        epochs = st.slider(
+            "Épocas de Treinamento",
+            min_value=5,
+            max_value=20,
+            value=EPOCHS,
+            help="Número de épocas para treinamento do modelo"
+        )
+        
+        mc_samples = st.slider(
+            "Amostras Monte Carlo",
+            min_value=10,
+            max_value=50,
+            value=MC_SAMPLES,
+            help="Número de amostras para simulação Monte Carlo"
+        )
+        
+        # Set trading_style and bank values
+        trading_style = "swing"
+        st.session_state['trading_style'] = trading_style
+        st.session_state['bank_value'] = 5000.0
+        st.session_state['lot_size'] = 0.1
+        
+        st.markdown("---")
+        
+        # Cache Management Section
+        st.markdown("### 🗂️ Gerenciamento de Cache")
+        
+        if cache_count > 0:
+            st.success(f"💾 {cache_count} análises em cache")
+            if st.button("🗑️ Limpar Cache", help="Remove todas as análises do cache"):
+                CacheManager.clear_cache()
+                st.success("Cache limpo com sucesso!")
+                st.rerun()
+        else:
+            st.info("📂 Nenhuma análise em cache")
+        
+        st.markdown("---")
+        
+        # Seção de análises especializadas
+        st.markdown("**🎯 Análises Especializadas**")
+        
+        # Análise unificada principal
+        unified_analysis = st.button("🧠 Análise Unificada Inteligente →", type="primary", use_container_width=True, 
+                                   help="Combina todas as análises para a melhor previsão do mercado", key="unified_analysis_btn")
+        
+        st.markdown("**Análises Individuais:**")
+        
+        # Análises técnicas em formato compacto mas legível
+        col1, col2 = st.columns(2)
+        with col1:
+            technical_analysis = st.button("📊 Técnica", use_container_width=True, key="tech_analysis_btn")
+            sentiment_analysis = st.button("📰 Sentimento", use_container_width=True, key="sentiment_analysis_btn")
+            risk_analysis = st.button("⚖️ Risco", use_container_width=True, key="risk_analysis_btn")
+        with col2:
+            ai_analysis = st.button("🤖 IA/LSTM", use_container_width=True, key="ai_analysis_btn")
+            volume_analysis = st.button("📈 Volume", use_container_width=True, key="volume_analysis_btn")
+            trend_analysis = st.button("📉 Tendência", use_container_width=True, key="trend_analysis_btn")
+        
+        # Análise rápida com tamanho adequado
+        quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, help="Análise completa rápida", key="quick_analysis_btn")
         
         # Processamento dos diferentes tipos de análise
         analyze_button = False
@@ -1551,24 +1562,17 @@ def main():
             st.session_state['analysis_mode'] = 'trend'
             analyze_button = True
         
-        # Rodapé compacto
-        st.markdown("""
-        <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; 
-                    margin-top: 15px; text-align: center; border: 1px solid #dee2e6;">
-            <small style="color: #6c757d;">🔒 Artecinvesting • Trading Platform Pro</small>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("---")
         
-        # Botões de utilidade em linha
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📚 Tutorial", key="tutorial_btn", use_container_width=True):
-                st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
-        with col2:
-            if st.button("🚪 Sair", key="exit_btn", use_container_width=True):
-                for key in list(st.session_state.keys()):
-                    del st.session_state[key]
-                st.rerun()
+        # Tutorial button
+        if st.button("📚 Tutorial Completo", help="Abrir guia detalhado de todas as funções"):
+            st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
+        
+        # Add logout button
+        if st.button("🚪 Sair", help="Sair da plataforma"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
 
     # Analysis buttons are now in sidebar - this section removed
     
