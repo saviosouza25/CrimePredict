@@ -1577,29 +1577,35 @@ def display_comprehensive_tutorial():
     
     st.success("🎯 **Sucesso no Trading**: Consistência + Disciplina + Gestão de Risco = Lucros Sustentáveis!")
 
-def add_ema_indicators(df):
-    """Add EMA 20 and EMA 200 indicators specifically for trend analysis"""
-    if df.empty or len(df) < 200:
+def add_default_indicators(df):
+    """Add default technical indicators for trend analysis"""
+    if df.empty or len(df) < 50:
         return df
     
     try:
-        # Calculate EMA 20 and EMA 200
-        df['EMA_20'] = df['Close'].ewm(span=20).mean()
-        df['EMA_200'] = df['Close'].ewm(span=200).mean()
+        from services.indicators import TechnicalIndicators
         
-        # Add other essential indicators
-        df = add_technical_indicators(df)
+        # Normalize column names for TechnicalIndicators
+        df_normalized = df.copy()
+        df_normalized.columns = [col.lower() for col in df_normalized.columns]
         
-        return df
-    except Exception:
-        return df
+        # Add all technical indicators using the platform's default system
+        df_with_indicators = TechnicalIndicators.add_all_indicators(df_normalized)
+        
+        # Restore original column case
+        df_with_indicators.columns = [col.title() if col.lower() in ['open', 'high', 'low', 'close', 'volume'] else col for col in df_with_indicators.columns]
+        
+        return df_with_indicators
+    except Exception as e:
+        # Fallback to basic indicators if the full system fails
+        return add_technical_indicators(df)
 
 def create_empty_timeframe_analysis():
     """Create empty analysis structure for failed timeframes"""
     return {
         'trend_direction': 'NEUTRO',
         'trend_strength': 'Indefinida',
-        'ema_signal': 'NEUTRO',
+        'trend_signal': 'NEUTRO',
         'volume_trend': 'NEUTRO',
         'ai_prediction': None,
         'sentiment_bias': 'NEUTRO',
@@ -1620,35 +1626,82 @@ def analyze_timeframe_trend(df, pair, timeframe, market_type):
         current = df.iloc[-1]
         previous = df.iloc[-2] if len(df) > 1 else current
         
-        # EMA 20/200 Analysis
-        ema_20 = current.get('EMA_20', current['Close'])
-        ema_200 = current.get('EMA_200', current['Close'])
+        # Default Technical Indicators Analysis
         price = current['Close']
         
-        # Determine EMA trend
-        if price > ema_20 > ema_200:
-            ema_signal = 'COMPRA FORTE'
+        # RSI Analysis
+        rsi = current.get('RSI', 50)
+        rsi_signal = 'NEUTRO'
+        if rsi < 30:
+            rsi_signal = 'COMPRA'  # Oversold
+        elif rsi > 70:
+            rsi_signal = 'VENDA'   # Overbought
+        
+        # MACD Analysis
+        macd = current.get('MACD', 0)
+        macd_signal_line = current.get('MACD_Signal', 0)
+        macd_signal = 'NEUTRO'
+        if macd > macd_signal_line:
+            macd_signal = 'COMPRA'
+        elif macd < macd_signal_line:
+            macd_signal = 'VENDA'
+        
+        # SMA Analysis
+        sma_20 = current.get('SMA_20', price)
+        sma_50 = current.get('SMA_50', price)
+        sma_signal = 'NEUTRO'
+        if price > sma_20 > sma_50:
+            sma_signal = 'COMPRA FORTE'
+        elif price > sma_20:
+            sma_signal = 'COMPRA'
+        elif price < sma_20 < sma_50:
+            sma_signal = 'VENDA FORTE'
+        elif price < sma_20:
+            sma_signal = 'VENDA'
+        
+        # Bollinger Bands Analysis
+        bb_upper = current.get('BB_Upper', price)
+        bb_lower = current.get('BB_Lower', price)
+        bb_signal = 'NEUTRO'
+        if price > bb_upper:
+            bb_signal = 'VENDA'  # Overbought
+        elif price < bb_lower:
+            bb_signal = 'COMPRA' # Oversold
+        
+        # Combine signals for overall trend
+        buy_signals = sum([
+            1 for signal in [rsi_signal, macd_signal, sma_signal, bb_signal] 
+            if 'COMPRA' in signal
+        ])
+        sell_signals = sum([
+            1 for signal in [rsi_signal, macd_signal, sma_signal, bb_signal] 
+            if 'VENDA' in signal
+        ])
+        
+        # Determine overall signal
+        if buy_signals >= 3:
+            trend_signal = 'COMPRA FORTE'
             trend_direction = 'ALTA FORTE'
-        elif price > ema_20 and ema_20 < ema_200:
-            ema_signal = 'COMPRA'
+        elif buy_signals >= 2:
+            trend_signal = 'COMPRA'
             trend_direction = 'ALTA'
-        elif price < ema_20 < ema_200:
-            ema_signal = 'VENDA FORTE'
+        elif sell_signals >= 3:
+            trend_signal = 'VENDA FORTE'
             trend_direction = 'BAIXA FORTE'
-        elif price < ema_20 and ema_20 > ema_200:
-            ema_signal = 'VENDA'
+        elif sell_signals >= 2:
+            trend_signal = 'VENDA'
             trend_direction = 'BAIXA'
         else:
-            ema_signal = 'LATERAL'
+            trend_signal = 'LATERAL'
             trend_direction = 'LATERAL'
         
-        # Trend strength calculation
-        ema_distance = abs(ema_20 - ema_200) / price * 100
-        if ema_distance > 2:
+        # Trend strength based on signal consensus
+        signal_strength = max(buy_signals, sell_signals)
+        if signal_strength >= 3:
             trend_strength = 'Muito Forte'
-        elif ema_distance > 1:
+        elif signal_strength >= 2:
             trend_strength = 'Forte'
-        elif ema_distance > 0.5:
+        elif signal_strength >= 1:
             trend_strength = 'Moderada'
         else:
             trend_strength = 'Fraca'
@@ -1670,7 +1723,7 @@ def analyze_timeframe_trend(df, pair, timeframe, market_type):
         
         # Calculate probability based on confluence
         probability = calculate_timeframe_probability(
-            ema_signal, volume_trend, sentiment_bias, ai_prediction
+            trend_signal, volume_trend, sentiment_bias, ai_prediction
         )
         
         # Confidence level
@@ -1683,21 +1736,21 @@ def analyze_timeframe_trend(df, pair, timeframe, market_type):
         else:
             confidence = 'Baixa'
         
-        # Price targets using EMA levels
-        if 'COMPRA' in ema_signal:
-            price_target = ema_20 + (ema_20 - ema_200) * 0.5
-        elif 'VENDA' in ema_signal:
-            price_target = ema_20 - (ema_200 - ema_20) * 0.5
+        # Price targets using technical levels
+        if 'COMPRA' in trend_signal:
+            price_target = sma_20 + (price - sma_50) * 0.5
+        elif 'VENDA' in trend_signal:
+            price_target = sma_20 - (sma_50 - price) * 0.5
         else:
             price_target = None
         
-        # Support and resistance levels
-        support_resistance = calculate_support_resistance(df, ema_20, ema_200)
+        # Support and resistance levels using technical indicators
+        support_resistance = calculate_support_resistance_technical(df, sma_20, bb_lower, bb_upper)
         
         return {
             'trend_direction': trend_direction,
             'trend_strength': trend_strength,
-            'ema_signal': ema_signal,
+            'trend_signal': trend_signal,  # Changed from ema_signal
             'volume_trend': volume_trend,
             'ai_prediction': ai_prediction,
             'sentiment_bias': sentiment_bias,
@@ -1705,10 +1758,11 @@ def analyze_timeframe_trend(df, pair, timeframe, market_type):
             'confidence': confidence,
             'price_target': round(price_target, 5) if price_target else None,
             'support_resistance': support_resistance,
-            'ema_20': round(ema_20, 5),
-            'ema_200': round(ema_200, 5),
+            'rsi': round(rsi, 1),
+            'macd': round(macd, 5),
+            'sma_20': round(sma_20, 5),
             'current_price': round(price, 5),
-            'ema_distance': round(ema_distance, 2)
+            'signal_consensus': f"{buy_signals}B/{sell_signals}S"
         }
         
     except Exception as e:
@@ -1753,18 +1807,18 @@ def get_ai_timeframe_prediction(df, pair, timeframe):
     except:
         return None
 
-def calculate_timeframe_probability(ema_signal, volume_trend, sentiment_bias, ai_prediction):
+def calculate_timeframe_probability(trend_signal, volume_trend, sentiment_bias, ai_prediction):
     """Calculate probability based on timeframe confluence"""
     
     score = 0
     total_factors = 0
     
-    # EMA signal weight (40%)
-    if 'FORTE' in ema_signal:
-        score += 0.4 * (0.8 if 'COMPRA' in ema_signal else -0.8)
-    elif 'COMPRA' in ema_signal:
+    # Technical signal weight (40%)
+    if 'FORTE' in trend_signal:
+        score += 0.4 * (0.8 if 'COMPRA' in trend_signal else -0.8)
+    elif 'COMPRA' in trend_signal:
         score += 0.4 * 0.6
-    elif 'VENDA' in ema_signal:
+    elif 'VENDA' in trend_signal:
         score += 0.4 * -0.6
     total_factors += 0.4
     
@@ -1799,19 +1853,20 @@ def calculate_timeframe_probability(ema_signal, volume_trend, sentiment_bias, ai
     else:
         return 50.0
 
-def calculate_support_resistance(df, ema_20, ema_200):
-    """Calculate support and resistance levels"""
+def calculate_support_resistance_technical(df, sma_20, bb_lower, bb_upper):
+    """Calculate support and resistance levels using technical indicators"""
     try:
         recent_highs = df['High'].iloc[-20:].max()
         recent_lows = df['Low'].iloc[-20:].min()
+        current_price = df['Close'].iloc[-1]
         
-        # Use EMA levels as dynamic support/resistance
-        if ema_20 > ema_200:
-            support = min(ema_200, recent_lows)
-            resistance = max(ema_20, recent_highs)
+        # Use SMA and Bollinger Bands for dynamic support/resistance
+        if current_price > sma_20:
+            support = max(sma_20, bb_lower, recent_lows)
+            resistance = min(bb_upper, recent_highs)
         else:
-            support = min(ema_20, recent_lows)
-            resistance = max(ema_200, recent_highs)
+            support = min(bb_lower, recent_lows)
+            resistance = max(sma_20, bb_upper, recent_highs)
         
         return {
             'support': round(support, 5),
@@ -1819,6 +1874,10 @@ def calculate_support_resistance(df, ema_20, ema_200):
         }
     except:
         return {'support': None, 'resistance': None}
+
+def calculate_support_resistance(df, ema_20, ema_200):
+    """Legacy function - kept for backwards compatibility"""
+    return calculate_support_resistance_technical(df, ema_20, ema_200, ema_200)
 
 def calculate_multi_timeframe_consensus(timeframe_analysis):
     """Calculate overall consensus from multiple timeframes"""
@@ -1840,9 +1899,9 @@ def calculate_multi_timeframe_consensus(timeframe_analysis):
             valid_timeframes += 1
             
             # Count directional signals
-            if tf_data.get('ema_signal', '') in ['COMPRA', 'COMPRA FORTE']:
+            if tf_data.get('trend_signal', '') in ['COMPRA', 'COMPRA FORTE']:
                 buy_signals += 1
-            elif tf_data.get('ema_signal', '') in ['VENDA', 'VENDA FORTE']:
+            elif tf_data.get('trend_signal', '') in ['VENDA', 'VENDA FORTE']:
                 sell_signals += 1
             
             # Accumulate probability and confidence
@@ -1852,7 +1911,7 @@ def calculate_multi_timeframe_consensus(timeframe_analysis):
             total_confidence += confidence_map.get(tf_data.get('confidence', 'Baixa'), 1)
             
             consensus_details[tf_name] = {
-                'signal': tf_data.get('ema_signal', 'NEUTRO'),
+                'signal': tf_data.get('trend_signal', 'NEUTRO'),
                 'probability': tf_data.get('probability', 50),
                 'trend_strength': tf_data.get('trend_strength', 'Indefinida')
             }
@@ -2189,14 +2248,14 @@ def calculate_scenario_probability(analysis_components, pair, trading_style):
     }
 
 def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs):
-    """Análise avançada de tendências futuras multi-timeframe com EMA 20/200"""
+    """Análise avançada de tendências futuras multi-timeframe com indicadores técnicos padrão"""
     
     # Progress container
     progress_container = st.container()
     
     with progress_container:
         st.markdown("## 🌍 Análise Avançada Multi-Pares - Tendências Futuras")
-        st.markdown("**Análise baseada em:** Tendência (EMA 20/200) + AI/LSTM + Volume + Sentimento")
+        st.markdown("**Análise baseada em:** Indicadores Técnicos (RSI + MACD + SMA + Bollinger) + AI/LSTM + Volume + Sentimento")
         
         progress_bar = st.progress(0)
         status_text = st.empty()
@@ -2262,11 +2321,11 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                             st.warning(f"⚠️ {pair} - {tf_name}: Dados insuficientes ou inválidos")
                             continue
                         
-                        # Add EMA 20/200 indicators specifically
-                        df_with_ema = add_ema_indicators(df)
+                        # Add default technical indicators
+                        df_with_indicators = add_default_indicators(df)
                         
                         # Analyze this timeframe
-                        tf_result = analyze_timeframe_trend(df_with_ema, pair, tf_name, market_type)
+                        tf_result = analyze_timeframe_trend(df_with_indicators, pair, tf_name, market_type)
                         timeframe_analysis[tf_name] = tf_result
                         
                     except Exception as e:

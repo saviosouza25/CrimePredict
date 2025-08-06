@@ -66,11 +66,16 @@ Preferred communication style: Simple, everyday language.
 - **Temporal Strategy**: Market-realistic parameters for each timeframe (5min to 1 month) based on actual trading statistics
 - **Environment**: Environment variable support for sensitive data
 
-## Recent Bug Fixes (August 2025)
-- **Volume Analysis Consistency**: Fixed critical inconsistency where individual volume analysis showed "COMPRA" but unified analysis showed "VENDA" for same data
-- **Root Cause**: Different calculation methods between analyses (volatility-based vs range-based)
-- **Solution**: Standardized both to use identical volatility-based calculation with threshold 0.020
-- **Prevention**: Added debug_volume_consistency.py tool for future validation
+## Recent Changes (August 2025)
+- **Trend System Migration**: Changed from EMA 20/200 system to platform's default technical indicators system
+  - **Previous**: EMA-based trend analysis using moving average crossovers
+  - **Current**: Multi-indicator consensus using RSI + MACD + SMA + Bollinger Bands
+  - **Benefits**: More robust signal generation, reduced false signals, better market condition adaptation
+  - **Implementation**: August 6, 2025 - User requested return to original platform design
+- **Cryptocurrency Data Processing**: Fixed API column mapping issues for crypto pairs
+  - **Fixed**: BTC/USD, ETH/USD, ADA/USD, SOL/USD now process correctly
+  - **Removed**: Problematic pairs like BNB/USD due to Alpha Vantage limitations
+- **Error Handling Enhancement**: Added specific error messages for API issues and pair compatibility
 
 # External Dependencies
 
