@@ -2442,46 +2442,46 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
 def calculate_opportunity_score(analysis_result, pair, trading_style):
     """Calcula score de oportunidade baseado em múltiplos fatores"""
     
-    # Base score from model confidence
-    base_score = analysis_result.get('model_confidence', 0.5) * 100
+    # Base score from model confidence - aumentado para dar scores mais altos
+    base_score = analysis_result.get('model_confidence', 0.5) * 150  # Aumentado de 100 para 150
     
-    # Direction strength bonus
+    # Direction strength bonus - aumentado
     direction = analysis_result.get('market_direction', '')
     if 'FORTE' in str(direction):
-        direction_bonus = 25
+        direction_bonus = 40  # Aumentado de 25 para 40
     elif 'COMPRA' in str(direction) or 'VENDA' in str(direction):
-        direction_bonus = 15
+        direction_bonus = 25  # Aumentado de 15 para 25
     else:
-        direction_bonus = 0
+        direction_bonus = 10  # Base mínima para neutros
     
-    # Components agreement bonus
+    # Components agreement bonus - aumentado
     agreement_score = analysis_result.get('agreement_score', 0)
-    agreement_bonus = agreement_score * 5  # 0-20 points
+    agreement_bonus = agreement_score * 10  # Aumentado de 5 para 10
     
-    # Confluence strength bonus
+    # Confluence strength bonus - aumentado
     confluence = analysis_result.get('confluence_strength', 0)
-    confluence_bonus = confluence * 3  # 0-15 points
+    confluence_bonus = confluence * 8  # Aumentado de 3 para 8
     
-    # Success probability bonus
+    # Success probability bonus - melhorado
     success_prob = analysis_result.get('success_probability', 50)
-    prob_bonus = (success_prob - 50) * 0.5  # Bonus for >50% probability
+    prob_bonus = max(0, (success_prob - 40) * 0.8)  # Melhor scaling
     
     # Pair volatility adjustment
     pair_adjustment = PAIR_AI_ADJUSTMENTS.get(pair, {})
     volatility_mult = pair_adjustment.get('volatility_multiplier', 1.0)
     confidence_boost = pair_adjustment.get('prediction_confidence_boost', 1.0)
     
-    # Calculate final score
-    total_score = (base_score + direction_bonus + agreement_bonus + 
-                   confluence_bonus + prob_bonus) * confidence_boost
+    # Calculate final score com base mínima mais alta
+    total_score = max(15, (base_score + direction_bonus + agreement_bonus + 
+                          confluence_bonus + prob_bonus) * confidence_boost)
     
     # Adjust for volatility (higher volatility = higher potential but more risk)
     if volatility_mult > 1.5:  # High volatility pairs
-        total_score *= 1.1  # 10% bonus for risk-takers
+        total_score *= 1.15  # Aumentado de 1.1 para 1.15
     elif volatility_mult < 0.9:  # Low volatility pairs
-        total_score *= 1.05  # 5% bonus for stability
+        total_score *= 1.08  # Aumentado de 1.05 para 1.08
     
-    return min(100, max(0, total_score))
+    return min(100, max(20, total_score))  # Score mínimo 20, máximo 100
 
 def calculate_technical_strength(timeframe_analysis):
     """Calcula força técnica baseada nos sinais de múltiplos timeframes"""
@@ -2794,7 +2794,7 @@ def display_multi_pair_results():
     
     # Debug: mostrar quantos resultados foram encontrados
     results = results_data.get('results', [])
-    st.info(f"Debug: {len(results)} resultados encontrados na sessão")
+    st.success(f"✅ {len(results)} resultados encontrados na sessão")
     
     if not results:
         st.warning("Lista de resultados está vazia.")
@@ -2813,7 +2813,7 @@ def display_multi_pair_results():
     with col2:
         st.metric("Estratégia Base", trading_style.title())
     with col3:
-        valid_results = [r for r in results if r['opportunity_score'] > 60]
+        valid_results = [r for r in results if r['opportunity_score'] > 25]
         st.metric("Oportunidades Válidas", len(valid_results))
     
     st.caption(f"Última atualização: {timestamp.strftime('%d/%m/%Y %H:%M:%S')}")
@@ -2823,7 +2823,7 @@ def display_multi_pair_results():
     filter_col1, filter_col2, filter_col3 = st.columns(3)
     
     with filter_col1:
-        min_score = st.slider("Score Mínimo", 0, 100, 50, 5)
+        min_score = st.slider("Score Mínimo", 0, 100, 15, 5)
     with filter_col2:
         direction_filter = st.selectbox("Direção", ["Todas", "COMPRA", "VENDA"])
     with filter_col3:
