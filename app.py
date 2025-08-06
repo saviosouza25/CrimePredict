@@ -1952,20 +1952,37 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     # Obter thresholds do perfil atual
     thresholds = profile_thresholds.get(profile, profile_thresholds['intraday'])
     
-    # DECISÃO ADAPTATIVA baseada no perfil específico
-    if timing_score >= thresholds['execute_now']:
-        if timing_score >= 85:  # Setup excepcionalmente bom
-            market_timing = f"🟢 EXECUTAR AGORA (Setup Perfeito - Score {timing_score:.0f})"
+    # EXCEÇÕES INTELIGENTES: Setups excepcionais podem override o timing
+    # Calcular Score de Oportunidade baseado na confiança e força do sinal
+    opportunity_score = confidence * 100  # Score de 0-100 baseado na confluência técnica
+    
+    # SISTEMA HÍBRIDO: Exceções para setups excepcionais + Thresholds normais preservados
+    override_applied = False
+    
+    if opportunity_score >= 95:
+        # EXCEÇÃO TOTAL: Setup perfeito (95+) executa sempre
+        market_timing = f"🟢 EXECUTAR AGORA (Override: Setup Excepcional {opportunity_score:.1f} - Timing {timing_score:.0f})"
+        override_applied = True
+    elif opportunity_score >= 90 and timing_score >= 20:
+        # EXCEÇÃO PARCIAL: Setup muito bom (90-94) + timing mínimo aceitável (20+)
+        market_timing = f"🟢 EXECUTAR AGORA (Override: Setup Muito Bom {opportunity_score:.1f} - Timing {timing_score:.0f})"
+        override_applied = True
+    
+    # DECISÃO NORMAL: Usar thresholds adaptativos (sistema original preservado)
+    if not override_applied:
+        if timing_score >= thresholds['execute_now']:
+            if timing_score >= 85:  # Setup excepcionalmente bom
+                market_timing = f"🟢 EXECUTAR AGORA (Setup Perfeito - Score {timing_score:.0f})"
+            else:
+                market_timing = f"🟢 EXECUTAR AGORA ({thresholds['philosophy']} - Score {timing_score:.0f})"
+        elif timing_score >= thresholds.get('wait_5_15min', 999):
+            market_timing = f"🟡 Aguardar 5-15min (Confirmação - Score {timing_score:.0f})"
+        elif timing_score >= thresholds.get('wait_30_60min', 999):
+            market_timing = f"🟠 Aguardar 30-60min (Melhor Setup - Score {timing_score:.0f})"
+        elif timing_score >= thresholds.get('wait_2_4h', 999):
+            market_timing = f"🔴 Aguardar 2-4h (Condições Inadequadas - Score {timing_score:.0f})"
         else:
-            market_timing = f"🟢 EXECUTAR AGORA ({thresholds['philosophy']} - Score {timing_score:.0f})"
-    elif timing_score >= thresholds.get('wait_5_15min', 999):
-        market_timing = f"🟡 Aguardar 5-15min (Confirmação - Score {timing_score:.0f})"
-    elif timing_score >= thresholds.get('wait_30_60min', 999):
-        market_timing = f"🟠 Aguardar 30-60min (Melhor Setup - Score {timing_score:.0f})"
-    elif timing_score >= thresholds.get('wait_2_4h', 999):
-        market_timing = f"🔴 Aguardar 2-4h (Condições Inadequadas - Score {timing_score:.0f})"
-    else:
-        market_timing = f"⚫ Evitar - Aguardar Novo Ciclo 24h+ (Score {timing_score:.0f})"
+            market_timing = f"⚫ Evitar - Aguardar Novo Ciclo 24h+ (Score {timing_score:.0f})"
     
     # Adicionar contexto específico do perfil
     profile_contexts = {
