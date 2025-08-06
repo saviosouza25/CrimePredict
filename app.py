@@ -986,8 +986,7 @@ def main():
         # Análise rápida
         quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, key="quick_analysis_btn")
         
-        # Análise multi-pares
-        multi_pair_analysis = st.button("🌍 Análise Multi-Pares", use_container_width=True, key="multi_pair_btn")
+
         
         # Processamento dos diferentes tipos de análise
         analyze_button = False
@@ -1035,8 +1034,7 @@ def main():
             pair, interval, horizon, lookback_period, 
             mc_samples, epochs, quick_analysis
         )
-    elif multi_pair_analysis:
-        st.info("🚧 Função multi-pares foi removida conforme solicitado")
+
     
     # Always show main header
     display_main_header()
