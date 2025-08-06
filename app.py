@@ -1634,15 +1634,20 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
                 progress_container.empty()
                 st.error(f"❌ Não foi possível obter o preço atual para {pair}. Verifique a conexão com Alpha Vantage.")
                 return
-            # Step 5: Sentiment analysis
-            status_text.text("📰 Analisando sentimento do mercado...")
+            # Step 5: Enhanced Sentiment analysis with future prediction
+            status_text.text("📰 Analisando sentimento e prevendo futuro do mercado...")
             progress_bar.progress(70)
             
+            # Get basic sentiment score
             sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
+            
+            # Get comprehensive sentiment trend analysis with predictions
+            sentiment_analysis_results = services['sentiment_service'].analyze_sentiment_trend(pair)
             
             # Debug: Verificar se sentimento está funcionando
             if st.session_state.get('debug_sentiment', False):
                 st.info(f"🔍 DEBUG - Sentimento obtido para {pair}: {sentiment_score:.4f}")
+                st.info(f"🔍 DEBUG - Sentimento previsto: {sentiment_analysis_results['predicted_sentiment']:.4f}")
                 if sentiment_score == 0.0:
                     st.warning("⚠️ Sentimento neutro (0.0) - pode indicar erro na API ou falta de notícias")
                 else:
@@ -1682,7 +1687,7 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
             elif analysis_mode == 'trend':
                 results.update(run_trend_analysis(current_price, df_with_indicators))
             else:
-                results.update(run_basic_analysis(current_price, is_quick, sentiment_score, interval, horizon))
+                results.update(run_basic_analysis(current_price, df_with_indicators, sentiment_score))
             
             # Step 7: Finalizing
             status_text.text("✅ Finalizando análise...")
@@ -1700,7 +1705,8 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
             # Clear progress after a moment
             import time
             time.sleep(1)
-            progress_container.empty()
+            if 'progress_container' in locals():
+                progress_container.empty()
             
             # Remover loader personalizado
             st.markdown("""
@@ -2486,7 +2492,18 @@ def run_technical_analysis(current_price, df_with_indicators):
     }
 
 def run_sentiment_analysis(current_price, pair, sentiment_score):
-    """Análise de sentimento especializada com fatores de mercado e perfil de risco"""
+    """Análise de sentimento especializada com previsão futura do mercado"""
+    sentiment_service = services['sentiment_service']
+    
+    # Get comprehensive sentiment trend analysis with predictions
+    sentiment_analysis = sentiment_service.analyze_sentiment_trend(pair)
+    
+    # Extract key components
+    current_sentiment = sentiment_analysis['current_sentiment']
+    predicted_sentiment = sentiment_analysis['predicted_sentiment']
+    sentiment_momentum = sentiment_analysis['sentiment_momentum']
+    market_psychology = sentiment_analysis['market_psychology']
+    future_signal = sentiment_analysis['future_signal']
     
     # Ajustes baseados no perfil de risco do investidor
     risk_adjustments = {
@@ -2498,45 +2515,53 @@ def run_sentiment_analysis(current_price, pair, sentiment_score):
     # Usar configuração padrão (moderada)
     risk_params = risk_adjustments['Moderate']
     
-    # USAR EXATAMENTE O MESMO CÁLCULO DA ANÁLISE UNIFICADA
-    if sentiment_score > 0.05:  # Sentimento positivo forte
-        sentiment_impact = sentiment_score * 0.8
-    elif sentiment_score < -0.05:  # Sentimento negativo forte
-        sentiment_impact = sentiment_score * 0.6
-    else:  # Sentimento neutro
-        sentiment_impact = sentiment_score * 0.2
+    # Enhanced sentiment calculation using predictive model
+    if predicted_sentiment > 0.05:  # Sentimento futuro positivo forte
+        sentiment_impact = predicted_sentiment * 0.8 * risk_params['signal_factor']
+    elif predicted_sentiment < -0.05:  # Sentimento futuro negativo forte
+        sentiment_impact = predicted_sentiment * 0.6 * risk_params['signal_factor']
+    else:  # Sentimento futuro neutro
+        sentiment_impact = predicted_sentiment * 0.2 * risk_params['signal_factor']
     
-    predicted_price = current_price * (1 + sentiment_impact)
+    # Add momentum factor for enhanced prediction
+    momentum_factor = sentiment_momentum * 0.3
+    total_impact = sentiment_impact + momentum_factor
+    
+    predicted_price = current_price * (1 + total_impact)
     price_change = predicted_price - current_price
     
-    # Classificação de sentimento mais detalhada com ajuste de confiança por risco
-    if sentiment_score > 0.2:
-        sentiment_label = "Muito Positivo"
-        base_confidence = 0.75
-    elif sentiment_score > 0.05:
-        sentiment_label = "Positivo"
-        base_confidence = 0.70
-    elif sentiment_score < -0.2:
-        sentiment_label = "Muito Negativo"
-        base_confidence = 0.75
-    elif sentiment_score < -0.05:
-        sentiment_label = "Negativo"
-        base_confidence = 0.70
-    else:
-        sentiment_label = "Neutro"
-        base_confidence = 0.60
-    
-    # Ajustar confiança baseada no perfil de risco
+    # Enhanced confidence calculation
+    base_confidence = sentiment_analysis['confidence']
     confidence = max(0.50, min(0.90, base_confidence - risk_params['confidence_penalty']))
+    
+    # Enhanced recommendation based on future signal
+    recommendation = f"📰 {future_signal['direction']}"
+    if future_signal['strength'] == 'Forte':
+        recommendation += " FORTE"
     
     return {
         'predicted_price': predicted_price,
         'price_change': price_change,
         'price_change_pct': (price_change / current_price) * 100,
         'model_confidence': confidence,
-        'sentiment_score': sentiment_score,
-        'sentiment_impact': sentiment_impact,  # RETORNAR O MESMO VALOR DA UNIFICADA
-        'analysis_focus': f'Sentimento de Mercado: {sentiment_label} (Score: {sentiment_score:.3f}, Impacto: {sentiment_impact:.3f})'
+        'final_recommendation': recommendation,
+        
+        # Current sentiment data
+        'sentiment_score': current_sentiment,
+        'sentiment_impact': sentiment_impact,
+        
+        # Future prediction data
+        'predicted_sentiment': predicted_sentiment,
+        'sentiment_momentum': sentiment_momentum,
+        'trend_direction': sentiment_analysis['trend_direction'],
+        'time_horizon': sentiment_analysis['time_horizon'],
+        'risk_factors': sentiment_analysis['risk_factors'],
+        
+        # Market psychology
+        'market_psychology': market_psychology,
+        'future_signal': future_signal,
+        
+        'analysis_focus': f'Previsão de Sentimento: {future_signal["direction"]} ({future_signal["timing"]}) - {market_psychology["market_phase"]}'
     }
 
 def run_risk_analysis(current_price, df_with_indicators=None):
@@ -4459,7 +4484,4 @@ def display_metrics_tab(results):
         st.write(f"**Tipo:** {mode_names.get(analysis_mode, 'Padrão')}")
 
 if __name__ == "__main__":
-    main()
-
-if __name__ == '__main__':
     main()
