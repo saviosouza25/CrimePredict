@@ -1577,6 +1577,395 @@ def display_comprehensive_tutorial():
     
     st.success("🎯 **Sucesso no Trading**: Consistência + Disciplina + Gestão de Risco = Lucros Sustentáveis!")
 
+def add_ema_indicators(df):
+    """Add EMA 20 and EMA 200 indicators specifically for trend analysis"""
+    if df.empty or len(df) < 200:
+        return df
+    
+    try:
+        # Calculate EMA 20 and EMA 200
+        df['EMA_20'] = df['Close'].ewm(span=20).mean()
+        df['EMA_200'] = df['Close'].ewm(span=200).mean()
+        
+        # Add other essential indicators
+        df = add_technical_indicators(df)
+        
+        return df
+    except Exception:
+        return df
+
+def create_empty_timeframe_analysis():
+    """Create empty analysis structure for failed timeframes"""
+    return {
+        'trend_direction': 'NEUTRO',
+        'trend_strength': 'Indefinida',
+        'ema_signal': 'NEUTRO',
+        'volume_trend': 'NEUTRO',
+        'ai_prediction': None,
+        'sentiment_bias': 'NEUTRO',
+        'probability': 50.0,
+        'confidence': 'Baixa',
+        'price_target': None,
+        'support_resistance': {'support': None, 'resistance': None}
+    }
+
+def analyze_timeframe_trend(df, pair, timeframe, market_type):
+    """Análise completa de tendência para um timeframe específico"""
+    
+    if df.empty or len(df) < 50:
+        return create_empty_timeframe_analysis()
+    
+    try:
+        # Current values
+        current = df.iloc[-1]
+        previous = df.iloc[-2] if len(df) > 1 else current
+        
+        # EMA 20/200 Analysis
+        ema_20 = current.get('EMA_20', current['Close'])
+        ema_200 = current.get('EMA_200', current['Close'])
+        price = current['Close']
+        
+        # Determine EMA trend
+        if price > ema_20 > ema_200:
+            ema_signal = 'COMPRA FORTE'
+            trend_direction = 'ALTA FORTE'
+        elif price > ema_20 and ema_20 < ema_200:
+            ema_signal = 'COMPRA'
+            trend_direction = 'ALTA'
+        elif price < ema_20 < ema_200:
+            ema_signal = 'VENDA FORTE'
+            trend_direction = 'BAIXA FORTE'
+        elif price < ema_20 and ema_20 > ema_200:
+            ema_signal = 'VENDA'
+            trend_direction = 'BAIXA'
+        else:
+            ema_signal = 'LATERAL'
+            trend_direction = 'LATERAL'
+        
+        # Trend strength calculation
+        ema_distance = abs(ema_20 - ema_200) / price * 100
+        if ema_distance > 2:
+            trend_strength = 'Muito Forte'
+        elif ema_distance > 1:
+            trend_strength = 'Forte'
+        elif ema_distance > 0.5:
+            trend_strength = 'Moderada'
+        else:
+            trend_strength = 'Fraca'
+        
+        # Volume analysis
+        volume_trend = analyze_volume_direction(df)
+        
+        # AI/LSTM prediction for this timeframe
+        ai_prediction = get_ai_timeframe_prediction(df, pair, timeframe)
+        
+        # Sentiment analysis
+        sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
+        if sentiment_score > 0.1:
+            sentiment_bias = 'POSITIVO'
+        elif sentiment_score < -0.1:
+            sentiment_bias = 'NEGATIVO'
+        else:
+            sentiment_bias = 'NEUTRO'
+        
+        # Calculate probability based on confluence
+        probability = calculate_timeframe_probability(
+            ema_signal, volume_trend, sentiment_bias, ai_prediction
+        )
+        
+        # Confidence level
+        if probability > 80:
+            confidence = 'Muito Alta'
+        elif probability > 70:
+            confidence = 'Alta'
+        elif probability > 60:
+            confidence = 'Moderada'
+        else:
+            confidence = 'Baixa'
+        
+        # Price targets using EMA levels
+        if 'COMPRA' in ema_signal:
+            price_target = ema_20 + (ema_20 - ema_200) * 0.5
+        elif 'VENDA' in ema_signal:
+            price_target = ema_20 - (ema_200 - ema_20) * 0.5
+        else:
+            price_target = None
+        
+        # Support and resistance levels
+        support_resistance = calculate_support_resistance(df, ema_20, ema_200)
+        
+        return {
+            'trend_direction': trend_direction,
+            'trend_strength': trend_strength,
+            'ema_signal': ema_signal,
+            'volume_trend': volume_trend,
+            'ai_prediction': ai_prediction,
+            'sentiment_bias': sentiment_bias,
+            'probability': round(probability, 1),
+            'confidence': confidence,
+            'price_target': round(price_target, 5) if price_target else None,
+            'support_resistance': support_resistance,
+            'ema_20': round(ema_20, 5),
+            'ema_200': round(ema_200, 5),
+            'current_price': round(price, 5),
+            'ema_distance': round(ema_distance, 2)
+        }
+        
+    except Exception as e:
+        return create_empty_timeframe_analysis()
+
+def analyze_volume_direction(df):
+    """Analyze volume trend direction"""
+    if df.empty or 'Volume' not in df.columns:
+        return 'NEUTRO'
+    
+    try:
+        recent_volume = df['Volume'].iloc[-5:].mean()
+        previous_volume = df['Volume'].iloc[-10:-5].mean()
+        
+        if recent_volume > previous_volume * 1.2:
+            return 'ALTA'
+        elif recent_volume < previous_volume * 0.8:
+            return 'BAIXA'
+        else:
+            return 'ESTÁVEL'
+    except:
+        return 'NEUTRO'
+
+def get_ai_timeframe_prediction(df, pair, timeframe):
+    """Get AI prediction for specific timeframe"""
+    try:
+        from services.ai_unified_service import AIUnifiedService
+        ai_service = AIUnifiedService()
+        
+        # Adjust prediction horizon based on timeframe
+        if timeframe == 'M5':
+            horizon = 12  # 1 hour prediction
+        elif timeframe == 'M15':
+            horizon = 8   # 2 hours prediction
+        elif timeframe == 'H1':
+            horizon = 24  # 1 day prediction
+        else:  # D1
+            horizon = 7   # 1 week prediction
+        
+        prediction = ai_service.get_enhanced_prediction(df, pair, 0, 'swing')
+        return prediction
+    except:
+        return None
+
+def calculate_timeframe_probability(ema_signal, volume_trend, sentiment_bias, ai_prediction):
+    """Calculate probability based on timeframe confluence"""
+    
+    score = 0
+    total_factors = 0
+    
+    # EMA signal weight (40%)
+    if 'FORTE' in ema_signal:
+        score += 0.4 * (0.8 if 'COMPRA' in ema_signal else -0.8)
+    elif 'COMPRA' in ema_signal:
+        score += 0.4 * 0.6
+    elif 'VENDA' in ema_signal:
+        score += 0.4 * -0.6
+    total_factors += 0.4
+    
+    # Volume trend weight (20%)
+    if volume_trend == 'ALTA':
+        score += 0.2 * 0.7
+    elif volume_trend == 'BAIXA':
+        score += 0.2 * -0.3
+    total_factors += 0.2
+    
+    # Sentiment weight (20%)
+    if sentiment_bias == 'POSITIVO':
+        score += 0.2 * 0.5
+    elif sentiment_bias == 'NEGATIVO':
+        score += 0.2 * -0.5
+    total_factors += 0.2
+    
+    # AI prediction weight (20%)
+    if ai_prediction and ai_prediction.get('direction'):
+        ai_confidence = ai_prediction.get('confidence', 0.5)
+        if 'COMPRA' in ai_prediction['direction']:
+            score += 0.2 * ai_confidence
+        elif 'VENDA' in ai_prediction['direction']:
+            score += 0.2 * -ai_confidence
+    total_factors += 0.2
+    
+    # Normalize to probability percentage
+    if total_factors > 0:
+        normalized_score = score / total_factors
+        probability = 50 + (normalized_score * 50)
+        return max(0, min(100, probability))
+    else:
+        return 50.0
+
+def calculate_support_resistance(df, ema_20, ema_200):
+    """Calculate support and resistance levels"""
+    try:
+        recent_highs = df['High'].iloc[-20:].max()
+        recent_lows = df['Low'].iloc[-20:].min()
+        
+        # Use EMA levels as dynamic support/resistance
+        if ema_20 > ema_200:
+            support = min(ema_200, recent_lows)
+            resistance = max(ema_20, recent_highs)
+        else:
+            support = min(ema_20, recent_lows)
+            resistance = max(ema_200, recent_highs)
+        
+        return {
+            'support': round(support, 5),
+            'resistance': round(resistance, 5)
+        }
+    except:
+        return {'support': None, 'resistance': None}
+
+def calculate_multi_timeframe_consensus(timeframe_analysis):
+    """Calculate overall consensus from multiple timeframes"""
+    
+    if not timeframe_analysis:
+        return create_empty_consensus()
+    
+    # Collect signals from all timeframes
+    buy_signals = 0
+    sell_signals = 0
+    total_probability = 0
+    total_confidence = 0
+    valid_timeframes = 0
+    
+    consensus_details = {}
+    
+    for tf_name, tf_data in timeframe_analysis.items():
+        if tf_data and tf_data.get('probability', 0) > 0:
+            valid_timeframes += 1
+            
+            # Count directional signals
+            if tf_data.get('ema_signal', '') in ['COMPRA', 'COMPRA FORTE']:
+                buy_signals += 1
+            elif tf_data.get('ema_signal', '') in ['VENDA', 'VENDA FORTE']:
+                sell_signals += 1
+            
+            # Accumulate probability and confidence
+            total_probability += tf_data.get('probability', 50)
+            
+            confidence_map = {'Muito Alta': 4, 'Alta': 3, 'Moderada': 2, 'Baixa': 1}
+            total_confidence += confidence_map.get(tf_data.get('confidence', 'Baixa'), 1)
+            
+            consensus_details[tf_name] = {
+                'signal': tf_data.get('ema_signal', 'NEUTRO'),
+                'probability': tf_data.get('probability', 50),
+                'trend_strength': tf_data.get('trend_strength', 'Indefinida')
+            }
+    
+    if valid_timeframes == 0:
+        return create_empty_consensus()
+    
+    # Calculate overall direction
+    if buy_signals > sell_signals:
+        if buy_signals >= valid_timeframes * 0.75:
+            overall_direction = 'COMPRA FORTE'
+        else:
+            overall_direction = 'COMPRA'
+    elif sell_signals > buy_signals:
+        if sell_signals >= valid_timeframes * 0.75:
+            overall_direction = 'VENDA FORTE'
+        else:
+            overall_direction = 'VENDA'
+    else:
+        overall_direction = 'LATERAL'
+    
+    # Calculate average probability and confidence
+    avg_probability = total_probability / valid_timeframes
+    avg_confidence_score = total_confidence / valid_timeframes
+    
+    if avg_confidence_score >= 3.5:
+        avg_confidence = 'Muito Alta'
+    elif avg_confidence_score >= 2.5:
+        avg_confidence = 'Alta'
+    elif avg_confidence_score >= 1.5:
+        avg_confidence = 'Moderada'
+    else:
+        avg_confidence = 'Baixa'
+    
+    return {
+        'overall_direction': overall_direction,
+        'consensus_probability': round(avg_probability, 1),
+        'consensus_confidence': avg_confidence,
+        'timeframe_alignment': f"{max(buy_signals, sell_signals)}/{valid_timeframes}",
+        'valid_timeframes': valid_timeframes,
+        'consensus_details': consensus_details,
+        'buy_signals': buy_signals,
+        'sell_signals': sell_signals
+    }
+
+def create_empty_consensus():
+    """Create empty consensus structure"""
+    return {
+        'overall_direction': 'NEUTRO',
+        'consensus_probability': 50.0,
+        'consensus_confidence': 'Baixa',
+        'timeframe_alignment': '0/0',
+        'valid_timeframes': 0,
+        'consensus_details': {},
+        'buy_signals': 0,
+        'sell_signals': 0
+    }
+
+def calculate_multi_timeframe_opportunity_score(timeframe_analysis, sentiment_score):
+    """Calculate opportunity score based on multi-timeframe analysis"""
+    
+    if not timeframe_analysis:
+        return 0
+    
+    total_score = 0
+    weight_sum = 0
+    
+    # Timeframe weights (higher timeframes have more weight)
+    timeframe_weights = {
+        'D1': 0.4,   # Daily - highest weight
+        'H1': 0.3,   # Hourly
+        'M15': 0.2,  # 15min
+        'M5': 0.1    # 5min - lowest weight
+    }
+    
+    for tf_name, tf_data in timeframe_analysis.items():
+        if tf_data and tf_data.get('probability', 0) > 0:
+            weight = timeframe_weights.get(tf_name, 0.1)
+            probability = tf_data.get('probability', 50)
+            
+            # Score based on how far from neutral (50%)
+            tf_score = abs(probability - 50) * 2  # Convert to 0-100 scale
+            
+            # Bonus for strong trends
+            if 'FORTE' in tf_data.get('ema_signal', ''):
+                tf_score *= 1.2
+            
+            # Bonus for high confidence
+            confidence = tf_data.get('confidence', 'Baixa')
+            if confidence == 'Muito Alta':
+                tf_score *= 1.3
+            elif confidence == 'Alta':
+                tf_score *= 1.15
+            elif confidence == 'Moderada':
+                tf_score *= 1.05
+            
+            total_score += tf_score * weight
+            weight_sum += weight
+    
+    # Normalize score
+    if weight_sum > 0:
+        base_score = total_score / weight_sum
+    else:
+        base_score = 0
+    
+    # Sentiment adjustment
+    if abs(sentiment_score) > 0.1:
+        sentiment_bonus = abs(sentiment_score) * 10  # Up to 10 point bonus
+        base_score += sentiment_bonus
+    
+    # Cap at 100
+    return min(100, max(0, round(base_score, 1)))
+
 def get_technical_analysis_summary(df):
     """Get technical analysis summary from indicators"""
     if df.empty or len(df) < 20:
@@ -1800,19 +2189,28 @@ def calculate_scenario_probability(analysis_components, pair, trading_style):
     }
 
 def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs):
-    """Análise completa de todos os pares de moedas com recomendações de execução"""
+    """Análise avançada de tendências futuras multi-timeframe com EMA 20/200"""
     
     # Progress container
     progress_container = st.container()
     
     with progress_container:
-        st.markdown("## 🌍 Análise Multi-Pares - Scanner Completo")
+        st.markdown("## 🌍 Análise Avançada Multi-Pares - Tendências Futuras")
+        st.markdown("**Análise baseada em:** Tendência (EMA 20/200) + AI/LSTM + Volume + Sentimento")
         
         progress_bar = st.progress(0)
         status_text = st.empty()
         
-        status_text.text("🔍 Iniciando análise de todos os pares disponíveis...")
-        progress_bar.progress(10)
+        status_text.text("🔍 Iniciando análise multi-timeframe de todos os pares...")
+        progress_bar.progress(5)
+        
+        # Multi-timeframe analysis setup
+        timeframes = {
+            'M5': '5min',
+            'M15': '15min', 
+            'H1': '60min',
+            'D1': 'daily'
+        }
         
         # Get trading style for consistent analysis
         trading_style = st.session_state.get('trading_style', 'swing')
@@ -1829,113 +2227,73 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
         # Results storage
         all_results = []
         total_pairs = len(analysis_pairs)
+        total_operations = total_pairs * len(timeframes)
         
-        status_text.text(f"📊 Analisando {total_pairs} {analysis_label}...")
+        status_text.text(f"📊 Analisando {total_pairs} {analysis_label} em {len(timeframes)} timeframes...")
+        
+        operation_count = 0
         
         for i, pair in enumerate(analysis_pairs):
             try:
-                # Update progress
-                progress = 10 + int((i / total_pairs) * 80)
-                progress_bar.progress(progress)
-                status_text.text(f"🔄 Analisando {pair} ({i+1}/{total_pairs})...")
+                # Update progress for this pair
+                pair_progress = 5 + int((i / total_pairs) * 85)
+                progress_bar.progress(pair_progress)
+                status_text.text(f"🔄 Analisando {pair} - Tendências Multi-Timeframe ({i+1}/{total_pairs})...")
                 
                 # Determine market type based on selected market
                 market_type = 'crypto' if market_type_selected == 'Criptomoedas' else 'forex'
                 
-                # Fetch data for current pair
-                df = services['data_service'].fetch_forex_data(pair, INTERVALS[interval], 'compact', market_type)
+                # Multi-timeframe analysis for this pair
+                timeframe_analysis = {}
                 
-                if not services['data_service'].validate_data(df):
-                    continue
+                for tf_name, tf_interval in timeframes.items():
+                    try:
+                        operation_count += 1
+                        sub_progress = 5 + int((operation_count / total_operations) * 85)
+                        progress_bar.progress(sub_progress)
+                        status_text.text(f"🔄 {pair} - {tf_name} ({operation_count}/{total_operations})...")
+                        
+                        # Fetch data for this timeframe
+                        df = services['data_service'].fetch_forex_data(pair, tf_interval, 'compact', market_type)
+                        
+                        if not services['data_service'].validate_data(df):
+                            timeframe_analysis[tf_name] = create_empty_timeframe_analysis()
+                            continue
+                        
+                        # Add EMA 20/200 indicators specifically
+                        df_with_ema = add_ema_indicators(df)
+                        
+                        # Analyze this timeframe
+                        tf_result = analyze_timeframe_trend(df_with_ema, pair, tf_name, market_type)
+                        timeframe_analysis[tf_name] = tf_result
+                        
+                    except Exception as e:
+                        timeframe_analysis[tf_name] = create_empty_timeframe_analysis()
+                        continue
                 
-                # Add technical indicators
-                df_with_indicators = add_technical_indicators(df)
-                
-                # Get current price
+                # Get current price (using daily data)
                 current_price = services['data_service'].get_latest_price(pair, market_type)
                 if current_price is None:
                     continue
                 
-                # Get sentiment score
+                # Get overall sentiment for this pair
                 sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
                 
-                # Run COMPLETE analysis for this pair (all criteria)
-                analysis_result = run_unified_analysis(
-                    current_price, pair, sentiment_score, df_with_indicators, trading_style
-                )
+                # Calculate overall trend consensus across timeframes
+                overall_analysis = calculate_multi_timeframe_consensus(timeframe_analysis)
                 
-                # Calculate individual analysis components with error handling
-                try:
-                    technical_analysis = get_technical_analysis_summary(df_with_indicators)
-                except Exception as e:
-                    technical_analysis = {'recommendation': 'NEUTRO', 'signals': []}
+                # Calculate comprehensive opportunity score based on multi-timeframe confluence
+                opportunity_score = calculate_multi_timeframe_opportunity_score(timeframe_analysis, sentiment_score)
                 
-                try:
-                    volume_analysis = analyze_volume_trend(df_with_indicators)
-                except Exception as e:
-                    volume_analysis = {'direction': 'NEUTRO', 'volume_trend': 0}
-                
-                try:
-                    trend_analysis = get_trend_analysis_summary(df_with_indicators)
-                except Exception as e:
-                    trend_analysis = {'direction': 'LATERAL', 'strength': 'Fraca'}
-                
-                risk_analysis = {'risk_level': 'Moderado'}  # Simplified for now
-                
-                # Calculate AI/LSTM prediction if available
-                ai_prediction = None
-                try:
-                    from services.ai_unified_service import AIUnifiedService
-                    ai_service = AIUnifiedService()
-                    ai_prediction = ai_service.get_enhanced_prediction(
-                        df_with_indicators, pair, sentiment_score, trading_style
-                    )
-                except:
-                    ai_prediction = None
-                
-                # Calculate comprehensive probability based on all criteria
-                try:
-                    probability_analysis = calculate_scenario_probability({
-                        'unified': analysis_result,
-                        'technical': technical_analysis,
-                        'volume': volume_analysis,
-                        'trend': trend_analysis,
-                        'risk': risk_analysis,
-                        'sentiment': {'score': sentiment_score},
-                        'ai_prediction': ai_prediction
-                    }, pair, trading_style)
-                except Exception as e:
-                    # Fallback probability analysis
-                    probability_analysis = {
-                        'scenario': analysis_result.get('direction', 'NEUTRO'),
-                        'probability': analysis_result.get('model_confidence', 0.5) * 100,
-                        'confidence_level': 'Média',
-                        'signal_breakdown': {'positive': 1, 'negative': 0, 'neutral': 1, 'total': 2}
-                    }
-                
-                # Calculate trading opportunity score
-                opportunity_score = calculate_opportunity_score(analysis_result, pair, trading_style)
-                
-                # Generate execution position
-                execution_position = generate_execution_position(
-                    analysis_result, pair, current_price, trading_style, sentiment_score
-                )
-                
-                # Store comprehensive result with probability analysis
+                # Store comprehensive multi-timeframe result
                 pair_result = {
                     'pair': pair,
                     'current_price': current_price,
+                    'timeframe_analysis': timeframe_analysis,
+                    'overall_analysis': overall_analysis,
                     'opportunity_score': opportunity_score,
-                    'execution_position': execution_position,
-                    'analysis_result': analysis_result,
                     'sentiment_score': sentiment_score,
-                    'trading_style': trading_style,
-                    'probability_analysis': probability_analysis,
-                    'technical_analysis': technical_analysis,
-                    'volume_analysis': volume_analysis,
-                    'trend_analysis': trend_analysis,
-                    'risk_analysis': risk_analysis,
-                    'ai_prediction': ai_prediction
+                    'trading_style': trading_style
                 }
                 
                 all_results.append(pair_result)
@@ -2150,16 +2508,23 @@ def display_multi_pair_results():
     with filter_col3:
         strength_filter = st.selectbox("Força", ["Todas", "FORTE", "NORMAL"])
     
-    # Filter results
+    # Filter results for multi-timeframe analysis
     filtered_results = []
     for result in results:
         if result['opportunity_score'] < min_score:
             continue
         
-        execution = result['execution_position']
-        if direction_filter != "Todas" and execution['direction'] != direction_filter:
+        overall_analysis = result.get('overall_analysis', {})
+        overall_direction = overall_analysis.get('overall_direction', 'NEUTRO')
+        
+        if direction_filter != "Todas" and direction_filter not in overall_direction:
             continue
-        if strength_filter != "Todas" and execution['strength'] != strength_filter:
+        
+        # For strength filter, use consensus confidence
+        consensus_confidence = overall_analysis.get('consensus_confidence', 'Baixa')
+        if strength_filter == "FORTE" and consensus_confidence not in ['Alta', 'Muito Alta']:
+            continue
+        elif strength_filter == "NORMAL" and consensus_confidence not in ['Baixa', 'Moderada']:
             continue
         
         filtered_results.append(result)
@@ -2197,20 +2562,20 @@ def display_multi_pair_results():
             st.info("Funcionalidade de exportação em desenvolvimento")
 
 def display_opportunity_ranking(results):
-    """Exibir ranking de oportunidades com análise de probabilidade"""
+    """Exibir ranking de oportunidades com análise multi-timeframe"""
     
     if not results:
         st.warning("Nenhuma oportunidade encontrada com os filtros aplicados.")
         return
     
-    st.markdown("#### 🎯 Ranking por Score de Oportunidade com Probabilidades")
+    st.markdown("#### 🎯 Ranking Multi-Timeframe - Tendências Futuras (EMA 20/200)")
     
     for i, result in enumerate(results[:15]):  # Top 15
         pair = result['pair']
         score = result['opportunity_score']
-        execution = result['execution_position']
         current_price = result['current_price']
-        probability_analysis = result.get('probability_analysis', {})
+        overall_analysis = result.get('overall_analysis', {})
+        timeframe_analysis = result.get('timeframe_analysis', {})
         
         # Color coding
         if score >= 80:
@@ -2226,14 +2591,45 @@ def display_opportunity_ranking(results):
             color = "#F44336"  # Red
             badge = "🔴 BAIXA"
         
-        direction_icon = "📈" if execution['direction'] == 'COMPRA' else "📉"
-        strength_text = execution['strength']
+        # Remove execution references since we're using multi-timeframe analysis now
         
-        # Get probability information
-        scenario = probability_analysis.get('scenario', execution['direction'])
-        probability = probability_analysis.get('probability', execution['confidence'])
-        confidence_level = probability_analysis.get('confidence_level', 'Média')
-        signal_breakdown = probability_analysis.get('signal_breakdown', {})
+        # Get consensus information
+        overall_direction = overall_analysis.get('overall_direction', 'NEUTRO')
+        consensus_probability = overall_analysis.get('consensus_probability', 50)
+        consensus_confidence = overall_analysis.get('consensus_confidence', 'Baixa')
+        timeframe_alignment = overall_analysis.get('timeframe_alignment', '0/0')
+        
+        # Direction icon and color based on consensus
+        if 'COMPRA' in overall_direction:
+            direction_icon = "📈"
+            trend_color = "#00C851"
+        elif 'VENDA' in overall_direction:
+            direction_icon = "📉" 
+            trend_color = "#F44336"
+        else:
+            direction_icon = "➡️"
+            trend_color = "#FF9800"
+        
+        # Create timeframe summary
+        tf_summary = []
+        for tf_name in ['M5', 'M15', 'H1', 'D1']:
+            if tf_name in timeframe_analysis:
+                tf_data = timeframe_analysis[tf_name]
+                signal = tf_data.get('ema_signal', 'NEUTRO')
+                prob = tf_data.get('probability', 50)
+                
+                if 'COMPRA' in signal:
+                    tf_icon = "🟢" if 'FORTE' in signal else "🟡"
+                elif 'VENDA' in signal:
+                    tf_icon = "🔴" if 'FORTE' in signal else "🟠"
+                else:
+                    tf_icon = "⚫"
+                
+                tf_summary.append(f"{tf_name}: {tf_icon}{prob:.0f}%")
+            else:
+                tf_summary.append(f"{tf_name}: ❌")
+        
+        timeframe_display = " | ".join(tf_summary)
         
         st.markdown(f"""
         <div style="
@@ -2247,13 +2643,15 @@ def display_opportunity_ranking(results):
                 <div style="flex: 1;">
                     <h4 style="margin: 0; color: {color};">#{i+1} {pair} {direction_icon}</h4>
                     <p style="margin: 0.2rem 0; color: #666;">
-                        <strong>Cenário: {scenario}</strong> | 
-                        Probabilidade: <strong>{probability:.1f}%</strong>
+                        <strong>Consenso: {overall_direction}</strong> | 
+                        Probabilidade: <strong>{consensus_probability:.1f}%</strong> | 
+                        Alinhamento: {timeframe_alignment}
+                    </p>
+                    <p style="margin: 0.2rem 0; color: #888; font-size: 0.85rem;">
+                        {timeframe_display}
                     </p>
                     <p style="margin: 0.2rem 0; color: #888; font-size: 0.9rem;">
-                        Preço: {current_price:.5f} | 
-                        Confiança: {confidence_level} | 
-                        Sinais +{signal_breakdown.get('positive', 0)}/-{signal_breakdown.get('negative', 0)}
+                        Preço: {current_price:.5f} | Confiança: {consensus_confidence}
                     </p>
                 </div>
                 <div style="text-align: right;">
