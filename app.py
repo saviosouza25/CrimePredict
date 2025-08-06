@@ -1901,7 +1901,9 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         'stop_reasoning': prob_params.get('stop_reasoning', ''),
         'take_reasoning': prob_params.get('take_reasoning', ''),
         'movement_direction': prob_params.get('movement_direction', ''),
-        'base_movement_pct': prob_params.get('base_movement_pct', 0)
+        'base_movement_pct': prob_params.get('base_movement_pct', 0),
+        'opposite_movement_pct': prob_params.get('opposite_movement_pct', 0),
+        'profile_analysis_window': prob_params.get('profile_analysis_window', '')
     }
 
 def display_multi_pair_results():
@@ -2122,13 +2124,16 @@ def display_execution_positions(results):
                 st.write(f"• **R/R REAL:** 1:{execution['risk_reward_ratio']:.2f}")
                 st.write(f"• **Risco da Banca:** {execution.get('actual_risk_pct', 0):.1f}%")
                 
-                # Dados da análise Alpha Vantage
+                # Análise Alpha Vantage específica do perfil
                 if execution.get('movement_direction'):
-                    st.write(f"• **Movimento Provável:** {execution['movement_direction']} {execution.get('base_movement_pct', 0):.2f}%")
-                if execution.get('volatility_analyzed'):
-                    st.write(f"• **Volatilidade:** {execution['volatility_analyzed']:.3f}%")
+                    st.write(f"• **Movimento {execution['movement_direction']}:** {execution.get('base_movement_pct', 0):.3f}%")
+                    if execution.get('opposite_movement_pct'):
+                        direction_opp = "Baixa" if execution['movement_direction'] == "Alta" else "Alta"
+                        st.write(f"• **Movimento {direction_opp}:** {execution.get('opposite_movement_pct', 0):.3f}%")
+                if execution.get('profile_analysis_window'):
+                    st.write(f"• **Janela Análise:** {execution['profile_analysis_window']}")
                 if execution.get('data_points_used'):
-                    st.write(f"• **Dados Alpha:** {execution['data_points_used']} períodos")
+                    st.write(f"• **Total Dados:** {execution['data_points_used']} períodos Alpha")
             
             # Profile-specific information
             st.markdown("**🎯 Configuração do Perfil:**")
@@ -5385,175 +5390,193 @@ def calculate_ai_analysis_simple(df_with_indicators, current_price):
         return {'signal': 0.0, 'confidence': 0.3, 'method': 'fallback'}
 
 def calculate_success_probability_parameters(df, confidence, profile, signal_strength):
-    """Calcula parâmetros otimizados para >75% taxa de sucesso baseado em dados reais Alpha Vantage"""
+    """Calcula movimento previsto por perfil baseado em análise Alpha Vantage específica"""
     
     try:
-        # Análise detalhada dos dados históricos Alpha Vantage
-        if len(df) >= 50:  # Mínimo de dados para análise confiável
-            # Análise de movimentos históricos por timeframe
+        # Análise Alpha Vantage específica por perfil operacional
+        if len(df) >= 50:  # Dados suficientes para análise robusta
             price_changes = df['close'].pct_change().dropna()
-            
-            # Calcular volatilidade real por período
             daily_vol = price_changes.std()
-            vol_20d = price_changes.tail(20).std()
-            vol_5d = price_changes.tail(5).std()
-            
-            # Análise de suporte/resistência com mais dados
-            highs = df['high'].tail(20)
-            lows = df['low'].tail(20)
-            closes = df['close'].tail(20)
             current_price = df['close'].iloc[-1]
             
-            # Calcular níveis de probabilidade baseados em dados reais
-            resistance_levels = []
-            support_levels = []
-            
-            # Identificar níveis testados múltiplas vezes
-            for i in range(len(highs)):
-                high_val = highs.iloc[i]
-                low_val = lows.iloc[i]
+            # Análise de movimentos históricos por janela temporal de cada perfil
+            if profile == 'scalping':
+                # Scalping: análise de movimentos intraday (1-5 períodos)
+                window = min(5, len(df))
+                recent_data = df.tail(window)
+                high_low_range = (recent_data['high'].max() - recent_data['low'].min()) / current_price
+                upside_movement = (recent_data['high'].max() - current_price) / current_price
+                downside_movement = (current_price - recent_data['low'].min()) / current_price
                 
-                # Contar quantas vezes o preço testou esses níveis
-                resistance_tests = sum(abs(h - high_val) / high_val < 0.001 for h in highs)
-                support_tests = sum(abs(l - low_val) / low_val < 0.001 for l in lows)
+            elif profile == 'intraday':
+                # Intraday: análise de movimentos do dia (5-15 períodos)
+                window = min(15, len(df))
+                recent_data = df.tail(window)
+                high_low_range = (recent_data['high'].max() - recent_data['low'].min()) / current_price
+                upside_movement = (recent_data['high'].max() - current_price) / current_price
+                downside_movement = (current_price - recent_data['low'].min()) / current_price
                 
-                if resistance_tests >= 2:
-                    resistance_levels.append(high_val)
-                if support_tests >= 2:
-                    support_levels.append(low_val)
+            elif profile == 'swing':
+                # Swing: análise de movimentos de médio prazo (15-50 períodos)
+                window = min(50, len(df))
+                recent_data = df.tail(window)
+                high_low_range = (recent_data['high'].max() - recent_data['low'].min()) / current_price
+                upside_movement = (recent_data['high'].max() - current_price) / current_price
+                downside_movement = (current_price - recent_data['low'].min()) / current_price
+                
+            else:  # position
+                # Position: análise de movimentos de longo prazo (todo o dataset)
+                high_low_range = (df['high'].max() - df['low'].min()) / current_price
+                upside_movement = (df['high'].max() - current_price) / current_price
+                downside_movement = (current_price - df['low'].min()) / current_price
             
-            # Calcular distâncias probabilísticas reais
-            if resistance_levels:
-                nearest_resistance = min(resistance_levels, key=lambda x: abs(x - current_price))
-                upside_range = abs(nearest_resistance - current_price) / current_price
+            # Calcular probabilidade de movimentos baseada em histórico Alpha Vantage
+            successful_ups = 0
+            successful_downs = 0
+            total_signals = 0
+            
+            # Analisar padrões históricos do perfil específico
+            for i in range(window, len(df)-1):
+                if profile == 'scalping':
+                    future_window = 1  # 1 período à frente
+                elif profile == 'intraday': 
+                    future_window = 3  # 3 períodos à frente
+                elif profile == 'swing':
+                    future_window = 10  # 10 períodos à frente
+                else:  # position
+                    future_window = 20  # 20 períodos à frente
+                
+                if i + future_window < len(df):
+                    entry_price = df['close'].iloc[i]
+                    future_high = df['high'].iloc[i+1:i+future_window+1].max()
+                    future_low = df['low'].iloc[i+1:i+future_window+1].min()
+                    
+                    up_move = (future_high - entry_price) / entry_price
+                    down_move = (entry_price - future_low) / entry_price
+                    
+                    # Contar movimentos que atingiram 50% da faixa esperada
+                    target_up = upside_movement * 0.5
+                    target_down = downside_movement * 0.5
+                    
+                    if up_move >= target_up:
+                        successful_ups += 1
+                    if down_move >= target_down:
+                        successful_downs += 1
+                    total_signals += 1
+            
+            # Calcular probabilidade real baseada no histórico
+            if total_signals > 0:
+                up_probability = successful_ups / total_signals
+                down_probability = successful_downs / total_signals
+                
+                # Ajustar movimentos baseado na probabilidade Alpha Vantage
+                upside_range = upside_movement * (0.5 + up_probability * 0.5)  # 50-100% baseado em probabilidade
+                downside_range = downside_movement * (0.5 + down_probability * 0.5)
             else:
-                upside_range = vol_20d * 2  # 2 desvios padrão
-                
-            if support_levels:
-                nearest_support = max(support_levels, key=lambda x: abs(x - current_price))
-                downside_range = abs(current_price - nearest_support) / current_price
-            else:
-                downside_range = vol_20d * 2
-                
-            # Análise de padrões de reversão históricos
-            successful_moves = []
-            for i in range(10, len(df)-5):
-                entry = df['close'].iloc[i]
-                future_high = df['high'].iloc[i+1:i+6].max()
-                future_low = df['low'].iloc[i+1:i+6].min()
-                
-                up_move = (future_high - entry) / entry
-                down_move = (entry - future_low) / entry
-                
-                successful_moves.append({
-                    'up_move': up_move,
-                    'down_move': down_move,
-                    'vol_at_time': abs(df['close'].iloc[i-5:i].pct_change().std())
-                })
-            
-            # Filtrar movimentos com alta probabilidade de sucesso
-            current_vol_context = vol_5d
-            similar_vol_moves = [m for m in successful_moves if abs(m['vol_at_time'] - current_vol_context) < current_vol_context * 0.5]
-            
-            if similar_vol_moves:
-                avg_up = sum(m['up_move'] for m in similar_vol_moves) / len(similar_vol_moves)
-                avg_down = sum(m['down_move'] for m in similar_vol_moves) / len(similar_vol_moves)
-                upside_range = min(upside_range, avg_up * 0.75)  # 75% do movimento médio
-                downside_range = min(downside_range, avg_down * 0.75)
+                upside_range = upside_movement * 0.75  # Fallback conservador
+                downside_range = downside_movement * 0.75
                 
         elif len(df) >= 20:
-            # Análise básica com dados limitados
+            # Análise básica para dados limitados
             price_changes = df['close'].pct_change().dropna()
             daily_vol = price_changes.std()
+            current_price = df['close'].iloc[-1]
             
             recent_high = df['high'].tail(10).max()
             recent_low = df['low'].tail(10).min()
-            current_price = df['close'].iloc[-1]
             
-            upside_range = (recent_high - current_price) / current_price * 0.7  # Mais conservador
-            downside_range = (current_price - recent_low) / current_price * 0.7
+            upside_range = (recent_high - current_price) / current_price * 0.6
+            downside_range = (current_price - recent_low) / current_price * 0.6
             
         else:
-            # Dados muito limitados - usar volatilidade mínima
-            daily_vol = 0.005  # 0.5% conservador
-            upside_range = 0.01
-            downside_range = 0.01
-            
+            # Dados insuficientes - valores mínimos por perfil
+            if profile == 'scalping':
+                daily_vol = 0.003
+                upside_range = 0.005
+                downside_range = 0.005
+            elif profile == 'intraday':
+                daily_vol = 0.008
+                upside_range = 0.012
+                downside_range = 0.012
+            elif profile == 'swing':
+                daily_vol = 0.015
+                upside_range = 0.025
+                downside_range = 0.025
+            else:  # position
+                daily_vol = 0.025
+                upside_range = 0.040
+                downside_range = 0.040
+                
     except Exception as e:
-        # Fallback seguro
-        daily_vol = 0.005
-        upside_range = 0.01
-        downside_range = 0.01
+        # Fallback por perfil
+        if profile == 'scalping':
+            daily_vol = 0.003
+            upside_range = 0.005
+            downside_range = 0.005
+        elif profile == 'intraday':
+            daily_vol = 0.008
+            upside_range = 0.012
+            downside_range = 0.012
+        elif profile == 'swing':
+            daily_vol = 0.015
+            upside_range = 0.025
+            downside_range = 0.025
+        else:  # position
+            daily_vol = 0.025
+            upside_range = 0.040
+            downside_range = 0.040
     
-    # Configurações de perfil baseadas em dados reais Alpha Vantage para >75% sucesso
+    # Configurações específicas: cada perfil tem sua previsão Alpha Vantage
     profile_base_configs = {
         'scalping': {
-            'base_success_rate': 0.80,    # 80% sucesso com dados reais
-            'stop_safety_factor': 0.7,    # 70% dos 50% (mais apertado)
-            'take_probability_factor': 0.8, # 80% dos 50% (mais conservador)
-            'risk_per_trade': 0.8,        # 0.8% risco por trade
-            'description': 'Scalping - Stop/Take em 50% do movimento ± ajustes precisos'
+            'base_success_rate': 0.80,    # 80% sucesso
+            'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
+            'risk_per_trade': 0.8,        # 0.8% risco
+            'description': 'Scalping - 50% do movimento intraday previsto (1-5 períodos Alpha Vantage)'
         },
         'intraday': {
-            'base_success_rate': 0.76,    # 76% sucesso equilibrado
-            'stop_safety_factor': 1.0,    # 100% dos 50% (padrão)
-            'take_probability_factor': 1.0, # 100% dos 50% (padrão)
-            'risk_per_trade': 1.2,        # 1.2% risco por trade
-            'description': 'Intraday - Stop/Take exatos em 50% do movimento provável'
+            'base_success_rate': 0.76,    # 76% sucesso
+            'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
+            'risk_per_trade': 1.2,        # 1.2% risco
+            'description': 'Intraday - 50% do movimento diário previsto (5-15 períodos Alpha Vantage)'
         },
         'swing': {
-            'base_success_rate': 0.78,    # 78% sucesso com paciência
-            'stop_safety_factor': 1.3,    # 130% dos 50% (mais espaço)
-            'take_probability_factor': 1.2, # 120% dos 50% (mais agressivo)
-            'risk_per_trade': 1.8,        # 1.8% risco por trade
-            'description': 'Swing - Stop/Take em 50% ± tolerância para volatilidade'
+            'base_success_rate': 0.78,    # 78% sucesso
+            'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
+            'risk_per_trade': 1.8,        # 1.8% risco
+            'description': 'Swing - 50% do movimento médio prazo previsto (15-50 períodos Alpha Vantage)'
         },
         'position': {
-            'base_success_rate': 0.82,    # 82% sucesso longo prazo
-            'stop_safety_factor': 1.8,    # 180% dos 50% (muito mais espaço)
-            'take_probability_factor': 1.5, # 150% dos 50% (muito agressivo)
-            'risk_per_trade': 2.2,        # 2.2% risco por trade
-            'description': 'Position - Stop/Take em 50% ± máxima tolerância trends'
+            'base_success_rate': 0.82,    # 82% sucesso
+            'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
+            'risk_per_trade': 2.2,        # 2.2% risco
+            'description': 'Position - 50% do movimento longo prazo previsto (histórico completo Alpha Vantage)'
         }
     }
     
     config = profile_base_configs.get(profile, profile_base_configs['intraday'])
     
-    # Calcular movimento provável baseado nos dados Alpha Vantage
+    # Determinar movimento previsto específico do perfil baseado em Alpha Vantage
     if signal_strength > 0:  # Sinal de Compra
-        probable_movement = upside_range
+        predicted_movement = upside_range * config['movement_factor']
+        opposite_movement = downside_range * config['movement_factor']
         movement_direction = "Alta"
     else:  # Sinal de Venda
-        probable_movement = downside_range  
+        predicted_movement = downside_range * config['movement_factor']
+        opposite_movement = upside_range * config['movement_factor']
         movement_direction = "Baixa"
     
-    # STOP LOSS: 50% do movimento provável (contra a direção do sinal)
-    # Para compra: stop baseado em 50% do movimento de baixa provável
-    # Para venda: stop baseado em 50% do movimento de alta provável
-    if signal_strength > 0:  # Compra - stop baseado no movimento de baixa
-        stop_base_movement = downside_range
-    else:  # Venda - stop baseado no movimento de alta
-        stop_base_movement = upside_range
+    # STOP LOSS: Exatamente 50% do movimento contrário previsto pelo perfil Alpha Vantage
+    stop_distance = opposite_movement * 0.5
     
-    # Stop Loss = 50% do movimento contrário provável
-    stop_distance_base = stop_base_movement * 0.5
+    # TAKE PROFIT: Exatamente 50% do movimento favorável previsto pelo perfil Alpha Vantage  
+    tp_distance = predicted_movement * 0.5
     
-    # Ajustes por perfil para diferenciar comportamentos
-    profile_stop_modifier = config['stop_safety_factor']
-    confidence_stop_adj = 0.8 + (confidence * 0.4)  # Mais confiança = stop mais apertado
+    # Ajuste mínimo por confiança (mantém proximidade aos 50%)
+    confidence_adjustment = 0.95 + (confidence * 0.1)  # 95% a 105%
     
-    stop_distance = stop_distance_base * profile_stop_modifier * confidence_stop_adj
-    
-    # TAKE PROFIT: 50% do movimento provável (na direção do sinal)
-    # Para compra: take baseado em 50% do movimento de alta provável
-    # Para venda: take baseado em 50% do movimento de baixa provável
-    tp_distance_base = probable_movement * 0.5
-    
-    # Ajustes por perfil para diferenciar comportamentos
-    profile_tp_modifier = config['take_probability_factor']
-    confidence_tp_adj = 0.9 + (confidence * 0.2)  # Mais confiança = take mais conservador
-    
-    tp_distance = tp_distance_base * profile_tp_modifier * confidence_tp_adj
+    stop_distance = stop_distance * confidence_adjustment
+    tp_distance = tp_distance * confidence_adjustment
     
     # Risk management baseado na taxa de sucesso real calculada
     success_rate = config['base_success_rate'] + (confidence - 0.5) * 0.1  # Ajuste menor
@@ -5585,43 +5608,45 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         'risk_reward_actual': real_rr,
         'volatility_analyzed': daily_vol * 100,  # Volatilidade real analisada
         'data_points_used': len(df),
-        'probability_calculation': f"Baseado em {len(df)} períodos Alpha Vantage",
-        'stop_reasoning': f"Stop: 50% do movimento contrário × {config['stop_safety_factor']:.1f} (perfil)",
-        'take_reasoning': f"Take: 50% do movimento favorável × {config['take_probability_factor']:.1f} (perfil)",
+        'probability_calculation': f"Análise {profile.title()} com {len(df)} períodos Alpha Vantage",
+        'stop_reasoning': f"Stop: 50% do movimento contrário {profile} = {stop_distance*100:.3f}%",
+        'take_reasoning': f"Take: 50% do movimento favorável {profile} = {tp_distance*100:.3f}%",
         'movement_direction': movement_direction,
-        'base_movement_pct': probable_movement * 100
+        'base_movement_pct': predicted_movement * 100,
+        'opposite_movement_pct': opposite_movement * 100,
+        'profile_analysis_window': f"{window if 'window' in locals() else 'completo'} períodos"
     }
 
 def get_profile_characteristics(profile):
     """Retorna características específicas do perfil para exibição"""
     characteristics = {
         'scalping': {
-            'stop_behavior': '50% × 0.7 = 35% movimento contrário',
-            'take_behavior': '50% × 0.8 = 40% movimento favorável',
+            'stop_behavior': '50% do movimento contrário (1-5 períodos)',
+            'take_behavior': '50% do movimento favorável (1-5 períodos)',
             'risk_approach': 'Risco 0.8% da banca',
-            'timing': 'Execução Imediata',
-            'focus': 'Máxima Precisão'
+            'timing': 'Análise Intraday Imediata',
+            'focus': 'Movimentos Curtos Alpha Vantage'
         },
         'intraday': {
-            'stop_behavior': '50% × 1.0 = 50% movimento contrário',
-            'take_behavior': '50% × 1.0 = 50% movimento favorável',
+            'stop_behavior': '50% do movimento contrário (5-15 períodos)',
+            'take_behavior': '50% do movimento favorável (5-15 períodos)',
             'risk_approach': 'Risco 1.2% da banca',
-            'timing': 'Execução Equilibrada',
-            'focus': 'Exato em 50%'
+            'timing': 'Análise Diária Balanceada',
+            'focus': 'Movimentos Diários Alpha Vantage'
         },
         'swing': {
-            'stop_behavior': '50% × 1.3 = 65% movimento contrário',
-            'take_behavior': '50% × 1.2 = 60% movimento favorável',
+            'stop_behavior': '50% do movimento contrário (15-50 períodos)',
+            'take_behavior': '50% do movimento favorável (15-50 períodos)',
             'risk_approach': 'Risco 1.8% da banca',
-            'timing': 'Paciência Estratégica',
-            'focus': 'Tolerância Volatilidade'
+            'timing': 'Análise Médio Prazo',
+            'focus': 'Movimentos Semanais Alpha Vantage'
         },
         'position': {
-            'stop_behavior': '50% × 1.8 = 90% movimento contrário',
-            'take_behavior': '50% × 1.5 = 75% movimento favorável', 
+            'stop_behavior': '50% do movimento contrário (histórico completo)',
+            'take_behavior': '50% do movimento favorável (histórico completo)', 
             'risk_approach': 'Risco 2.2% da banca',
-            'timing': 'Visão Longo Prazo',
-            'focus': 'Seguir Tendência Principal'
+            'timing': 'Análise Longo Prazo',
+            'focus': 'Tendências Principais Alpha Vantage'
         }
     }
     return characteristics.get(profile, characteristics['intraday'])
