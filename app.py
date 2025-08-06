@@ -750,25 +750,25 @@ def main():
         # Header da sidebar compacto
         st.markdown("## ⚙️ Configurações")
         
-        # Market selection - movido para o topo
-        st.markdown("### 📊 Mercado")
-        market_type = st.radio(
-            "Tipo de Mercado:",
-            ["Forex", "Criptomoedas"],
-            index=0,
-            key="market_type_select"
-        )
-        
-        # Pair selection based on market type
-        if market_type == "Forex":
-            available_pairs = PAIRS
-            pair_label = "💱 Par de Moedas"
-        else:  # Criptomoedas
-            available_pairs = CRYPTO_PAIRS
-            pair_label = "₿ Par Cripto"
-        
-        # Configurações básicas compactas
-        pair = st.selectbox(pair_label, available_pairs, key="pair_selectbox")
+        # Market selection em expander colapsável
+        with st.expander("📊 Mercado", expanded=True):
+            market_type = st.radio(
+                "Tipo de Mercado:",
+                ["Forex", "Criptomoedas"],
+                index=0,
+                key="market_type_select"
+            )
+            
+            # Pair selection based on market type
+            if market_type == "Forex":
+                available_pairs = PAIRS
+                pair_label = "💱 Par de Moedas"
+            else:  # Criptomoedas
+                available_pairs = CRYPTO_PAIRS
+                pair_label = "₿ Par Cripto"
+            
+            # Configurações básicas compactas
+            pair = st.selectbox(pair_label, available_pairs, key="pair_selectbox")
         
         st.markdown("---")
         
