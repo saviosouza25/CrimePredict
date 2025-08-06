@@ -2086,7 +2086,7 @@ def display_multi_pair_results():
     
     # Display analysis configuration used
     if analysis_config:
-        with st.expander("🎯 Configuração de Análise Utilizada", expanded=True):
+        with st.expander("🎯 Configuração de Análise Utilizada", expanded=False):
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown(f"**📋 Tipo:** {analysis_config.get('description', 'N/A')}")
