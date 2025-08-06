@@ -611,7 +611,6 @@ def apply_theme_css():
         .css-1d391kg .stSlider label,
         .css-1d391kg p,
         .css-1d391kg span,
-        .css-1d391kg div,
         section[data-testid="stSidebar"] .stMarkdown,
         section[data-testid="stSidebar"] label,
         section[data-testid="stSidebar"] p,
@@ -621,31 +620,42 @@ def apply_theme_css():
             text-shadow: 0 0 8px rgba(0,245,255,0.3) !important;
         }
         
-        /* Selectbox dropdown styling */
+        /* Sidebar selectbox text visibility - specific override */
+        section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] > div,
+        section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] span,
+        section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] div {
+            color: #000000 !important;
+            background: rgba(255,255,255,0.95) !important;
+            font-weight: 600 !important;
+            font-size: 0.9rem !important;
+        }
+        
+        /* Selectbox dropdown styling - main field */
         section[data-testid="stSidebar"] .stSelectbox > div > div,
-        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"],
-        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div {
-            background: rgba(26,26,62,0.9) !important;
-            color: rgba(255,255,255,0.95) !important;
-            border: 1px solid rgba(0,245,255,0.4) !important;
+        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] {
+            background: rgba(255,255,255,0.95) !important;
+            color: #000000 !important;
+            border: 2px solid rgba(0,245,255,0.6) !important;
             border-radius: 8px !important;
             font-size: 0.9rem !important;
-            font-weight: 500 !important;
+            font-weight: 600 !important;
         }
         
         /* Selectbox dropdown options */
         .stSelectbox [data-baseweb="popover"] ul,
         .stSelectbox [data-baseweb="popover"] li {
-            background: rgba(26,26,62,0.95) !important;
-            color: rgba(255,255,255,0.95) !important;
-            border: 1px solid rgba(0,245,255,0.3) !important;
+            background: rgba(255,255,255,0.98) !important;
+            color: #000000 !important;
+            border: 1px solid rgba(0,245,255,0.4) !important;
             font-size: 0.9rem !important;
+            font-weight: 600 !important;
         }
         
         /* Selectbox option hover */
         .stSelectbox [data-baseweb="popover"] li:hover {
-            background: rgba(0,245,255,0.2) !important;
+            background: rgba(0,245,255,0.8) !important;
             color: #ffffff !important;
+            font-weight: 700 !important;
         }
         
         /* Additional selectbox styling for better visibility */
@@ -986,13 +996,23 @@ def apply_theme_css():
         }
         
         /* Quick analysis button - full width and readable */
-        button[key="quick_analysis_btn"] {
+        section[data-testid="stSidebar"] button[key="quick_analysis_btn"] {
             width: 100% !important;
             padding: 0.7rem 1rem !important;
             font-size: 0.85rem !important;
             margin: 0.5rem 0 !important;
             font-weight: 600 !important;
             min-height: 3rem !important;
+            background: linear-gradient(135deg, rgba(0,245,255,0.8), rgba(255,0,245,0.8)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(0,245,255,0.6) !important;
+            border-radius: 8px !important;
+        }
+        
+        /* Quick analysis button hover */
+        section[data-testid="stSidebar"] button[key="quick_analysis_btn"]:hover {
+            background: linear-gradient(135deg, rgba(0,245,255,1), rgba(255,0,245,1)) !important;
+            box-shadow: 0 0 15px rgba(0,245,255,0.5) !important;
         }
         
         /* Slider styling */
