@@ -810,33 +810,63 @@ def main():
         st.success(f"🎯 **Estratégia Ativa:** {trading_style.upper()}")
         
         st.markdown("---")
-        st.markdown("### 📊 Parâmetros de Movimento")
-        movement_percentage = st.slider(
-            "% do Movimento Previsto (Stop/Take)",
-            min_value=10,
-            max_value=100,
-            value=50,
-            step=5,
-            help="Ajuste a porcentagem do movimento previsto usado para calcular stop e take profit",
-            key="movement_percentage_slider"
-        )
+        st.markdown("### 📊 Parâmetros de Risco Separados")
+        
+        # Controles separados para Stop Loss e Take Profit
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**🛡️ Stop Loss**")
+            stop_percentage = st.slider(
+                "% do Movimento Contrário",
+                min_value=10,
+                max_value=100,
+                value=50,
+                step=5,
+                help="Porcentagem do movimento contrário previsto para Stop Loss",
+                key="stop_percentage_slider"
+            )
+            
+        with col2:
+            st.markdown("**🎯 Take Profit**")
+            take_percentage = st.slider(
+                "% do Movimento Favorável",
+                min_value=10,
+                max_value=100,
+                value=50,
+                step=5,
+                help="Porcentagem do movimento favorável previsto para Take Profit",
+                key="take_percentage_slider"
+            )
         
         # Armazenar no session state
-        st.session_state['movement_percentage'] = movement_percentage
+        st.session_state['stop_percentage'] = stop_percentage
+        st.session_state['take_percentage'] = take_percentage
         
-        # Mostrar explicação dinâmica
+        # Mostrar configuração atual
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("Stop Loss", f"{movement_percentage}% movimento contrário", help="Baseado na análise Alpha Vantage")
+            st.metric("Stop Loss", f"{stop_percentage}% movimento contrário", help="Baseado na análise Alpha Vantage")
         with col2:
-            st.metric("Take Profit", f"{movement_percentage}% movimento favorável", help="Baseado na análise Alpha Vantage")
+            st.metric("Take Profit", f"{take_percentage}% movimento favorável", help="Baseado na análise Alpha Vantage")
         
-        if movement_percentage < 40:
-            st.warning("⚠️ **Conservador**: Stops/Takes muito próximos - maior chance de acerto, menor R/R")
-        elif movement_percentage > 70:
-            st.warning("🚀 **Agressivo**: Stops/Takes distantes - menor chance de acerto, maior R/R")
+        # Calcular Risk/Reward ratio
+        rr_ratio = take_percentage / stop_percentage if stop_percentage > 0 else 1.0
+        
+        # Feedback visual baseado na configuração
+        if stop_percentage < 30 and take_percentage < 30:
+            st.warning("⚠️ **Ultra Conservador**: Ambos muito próximos - alta chance de acerto, baixo R/R")
+        elif stop_percentage > 80 or take_percentage > 80:
+            st.warning("🚀 **Ultra Agressivo**: Targets muito distantes - baixa chance de acerto, alto R/R")
+        elif rr_ratio > 2.0:
+            st.success(f"✅ **Favor Take**: R/R = {rr_ratio:.1f} - Risco menor que recompensa")
+        elif rr_ratio < 0.5:
+            st.error(f"❌ **Favor Stop**: R/R = {rr_ratio:.1f} - Risco maior que recompensa")
         else:
-            st.success("✅ **Equilibrado**: Configuração padrão com bom balanço risco/retorno")
+            st.success(f"✅ **Equilibrado**: R/R = {rr_ratio:.1f} - Configuração balanceada")
+        
+        # Mostrar Risk/Reward como métrica
+        st.metric("Risk/Reward Ratio", f"{rr_ratio:.2f}", help="Take % ÷ Stop % = Relação Risco/Recompensa")
         
         # Opção avançada para configuração manual (colapsável)
         with st.expander("⚙️ Configuração Manual Avançada"):
@@ -1823,11 +1853,12 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         })
     
     # Calculate probability-optimized parameters for >75% success rate
-    # Get user-defined movement percentage from session state
-    movement_percentage = st.session_state.get('movement_percentage', 50)
+    # Get user-defined percentages from session state
+    stop_percentage = st.session_state.get('stop_percentage', 50)
+    take_percentage = st.session_state.get('take_percentage', 50)
     
     prob_params = calculate_success_probability_parameters(
-        df, confidence, profile, signal_strength, movement_percentage
+        df, confidence, profile, signal_strength, stop_percentage, take_percentage
     )
     
     # Get basic bank value
@@ -2199,11 +2230,12 @@ def display_execution_positions(results):
             if 'optimization_method' in execution:
                 st.success(f"**🎯 {execution['optimization_method']}**")
                 
-            # Detalhes dos cálculos Alpha Vantage baseados na porcentagem configurada
+            # Detalhes dos cálculos Alpha Vantage baseados nas porcentagens configuradas
             if execution.get('stop_reasoning') or execution.get('take_reasoning'):
-                movement_pct = st.session_state.get('movement_percentage', 50)
-                st.markdown(f"**📊 Cálculo: Stop e Take em {movement_pct}% do Movimento Provável:**")
-                st.info(f"**Metodologia:** Stop = {movement_pct}% movimento contrário | Take = {movement_pct}% movimento favorável")
+                stop_pct = st.session_state.get('stop_percentage', 50)
+                take_pct = st.session_state.get('take_percentage', 50)
+                st.markdown(f"**📊 Cálculo: Stop em {stop_pct}% | Take em {take_pct}% do Movimento Provável:**")
+                st.info(f"**Metodologia:** Stop = {stop_pct}% movimento contrário | Take = {take_pct}% movimento favorável")
                 if execution.get('stop_reasoning'):
                     st.write(f"• {execution['stop_reasoning']}")
                 if execution.get('take_reasoning'):
@@ -5422,7 +5454,7 @@ def calculate_ai_analysis_simple(df_with_indicators, current_price):
     except:
         return {'signal': 0.0, 'confidence': 0.3, 'method': 'fallback'}
 
-def calculate_success_probability_parameters(df, confidence, profile, signal_strength, movement_percentage=50):
+def calculate_success_probability_parameters(df, confidence, profile, signal_strength, stop_percentage=50, take_percentage=50):
     """Calcula movimento previsto por perfil baseado em análise Alpha Vantage específica"""
     
     try:
@@ -5600,10 +5632,10 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         movement_direction = "Baixa"
     
     # STOP LOSS: Porcentagem configurável do movimento contrário previsto pelo perfil Alpha Vantage
-    stop_distance = opposite_movement * (movement_percentage / 100.0)
+    stop_distance = opposite_movement * (stop_percentage / 100.0)
     
     # TAKE PROFIT: Porcentagem configurável do movimento favorável previsto pelo perfil Alpha Vantage  
-    tp_distance = predicted_movement * (movement_percentage / 100.0)
+    tp_distance = predicted_movement * (take_percentage / 100.0)
     
     # Ajuste mínimo por confiança (mantém proximidade aos 50%)
     confidence_adjustment = 0.95 + (confidence * 0.1)  # 95% a 105%
@@ -5642,8 +5674,8 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         'volatility_analyzed': daily_vol * 100,  # Volatilidade real analisada
         'data_points_used': len(df),
         'probability_calculation': f"Análise {profile.title()} com {len(df)} períodos Alpha Vantage",
-        'stop_reasoning': f"Stop: {movement_percentage}% do movimento contrário {profile} = {stop_distance*100:.3f}%",
-        'take_reasoning': f"Take: {movement_percentage}% do movimento favorável {profile} = {tp_distance*100:.3f}%",
+        'stop_reasoning': f"Stop: {stop_percentage}% do movimento contrário {profile} = {stop_distance*100:.3f}%",
+        'take_reasoning': f"Take: {take_percentage}% do movimento favorável {profile} = {tp_distance*100:.3f}%",
         'movement_direction': movement_direction,
         'base_movement_pct': predicted_movement * 100,
         'opposite_movement_pct': opposite_movement * 100,
