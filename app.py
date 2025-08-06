@@ -788,6 +788,7 @@ def main():
         
         # Parâmetros de risco em expander colapsável
         with st.expander("📊 Parâmetros de Risco Separados", expanded=False):
+            st.info("🎯 **Sistema 100% Dinâmico**: Stop/Take baseados apenas em análises Alpha Vantage reais + seus % personalizáveis")
             # Controles separados para Stop Loss e Take Profit
             col1, col2 = st.columns(2)
             
@@ -799,7 +800,7 @@ def main():
                     max_value=100,
                     value=50,
                     step=5,
-                    help="Porcentagem do movimento contrário previsto para Stop Loss",
+                    help="% do movimento contrário calculado pelo Alpha Vantage para Stop Loss (Sistema 100% Dinâmico)",
                     key="stop_percentage_slider"
                 )
                 
@@ -811,7 +812,7 @@ def main():
                     max_value=100,
                     value=50,
                     step=5,
-                    help="Porcentagem do movimento favorável previsto para Take Profit",
+                    help="% do movimento favorável calculado pelo Alpha Vantage para Take Profit (Sistema 100% Dinâmico)",
                     key="take_percentage_slider"
                 )
             
@@ -1902,22 +1903,21 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     else:
         market_timing = "Médio Prazo"
     
-    # Risk level assessment based on profile expectations
-    profile_expected_stops = {
-        'scalping': 15,    # Scalping expects tight stops
-        'intraday': 30,    # Intraday moderate stops
-        'swing': 60,       # Swing wider stops
-        'position': 120    # Position very wide stops
-    }
+    # Risk level assessment based on Alpha Vantage calculated stops (dinâmico)
+    # Remove valores fixos - usa apenas análise real dos dados Alpha Vantage
     
-    expected_stop = profile_expected_stops.get(profile, 40)
+    # Avaliação dinâmica baseada na volatilidade real do par analisado
+    volatility_factor = df['close'].pct_change().std() * 10000 if len(df) > 1 else 0.001  # Em pips
     
-    if stop_distance_pips < expected_stop * 0.7:
-        risk_level = "Baixo"
-    elif stop_distance_pips < expected_stop * 1.3:
-        risk_level = "Moderado"
+    # Categorização baseada na relação stop vs volatilidade real
+    volatility_ratio = stop_distance_pips / max(volatility_factor, 1)  # Evitar divisão por zero
+    
+    if volatility_ratio < 1.5:
+        risk_level = "Alto"  # Stop muito apertado vs volatilidade
+    elif volatility_ratio < 3.0:
+        risk_level = "Moderado"  # Stop proporcional à volatilidade  
     else:
-        risk_level = "Alto"
+        risk_level = "Baixo"  # Stop conservador vs volatilidade
     
     return {
         'direction': 'COMPRA' if is_buy else 'VENDA',
@@ -1942,7 +1942,7 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         'stop_pct': round(prob_params['stop_distance_pct'] * 100, 2),
         'tp_pct': round(prob_params['tp_distance_pct'] * 100, 2),
         'optimization_method': 'Probabilidade de Sucesso >75%',
-        'profile_characteristics': get_profile_characteristics(profile),
+        'profile_characteristics': get_profile_characteristics(profile, stop_percentage, take_percentage),
         'actual_risk_pct': round(prob_params['banca_risk'], 2),
         'volatility_analyzed': prob_params.get('volatility_analyzed', 0),
         'data_points_used': prob_params.get('data_points_used', 0),
@@ -5531,9 +5531,10 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
                     up_move = (future_high - entry_price) / entry_price
                     down_move = (entry_price - future_low) / entry_price
                     
-                    # Contar movimentos que atingiram 50% da faixa esperada
-                    target_up = upside_movement * 0.5
-                    target_down = downside_movement * 0.5
+                    # Sistema dinâmico: usar % configurados na sidebar ao invés de 50% fixo
+                    # Remove percentual fixo de 50% - usa configuração do usuário
+                    target_up = upside_movement * (take_percentage / 100.0)
+                    target_down = downside_movement * (stop_percentage / 100.0)
                     
                     if up_move >= target_up:
                         successful_ups += 1
@@ -5609,25 +5610,25 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
             'base_success_rate': 0.80,    # 80% sucesso
             'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
             'risk_per_trade': 0.8,        # 0.8% risco
-            'description': 'Scalping - 50% do movimento intraday previsto (1-5 períodos Alpha Vantage)'
+            'description': 'Scalping - Movimento dinâmico Alpha Vantage (1-5 períodos) + % configurável sidebar'
         },
         'intraday': {
             'base_success_rate': 0.76,    # 76% sucesso
             'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
             'risk_per_trade': 1.2,        # 1.2% risco
-            'description': 'Intraday - 50% do movimento diário previsto (5-15 períodos Alpha Vantage)'
+            'description': 'Intraday - Movimento dinâmico Alpha Vantage (5-15 períodos) + % configurável sidebar'
         },
         'swing': {
             'base_success_rate': 0.78,    # 78% sucesso
             'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
             'risk_per_trade': 1.8,        # 1.8% risco
-            'description': 'Swing - 50% do movimento médio prazo previsto (15-50 períodos Alpha Vantage)'
+            'description': 'Swing - Movimento dinâmico Alpha Vantage (15-50 períodos) + % configurável sidebar'
         },
         'position': {
             'base_success_rate': 0.82,    # 82% sucesso
             'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
             'risk_per_trade': 2.2,        # 2.2% risco
-            'description': 'Position - 50% do movimento longo prazo previsto (histórico completo Alpha Vantage)'
+            'description': 'Position - Movimento dinâmico Alpha Vantage (histórico completo) + % configurável sidebar'
         }
     }
     
@@ -5643,17 +5644,16 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         opposite_movement = upside_range * config['movement_factor']
         movement_direction = "Baixa"
     
-    # STOP LOSS: Porcentagem configurável do movimento contrário previsto pelo perfil Alpha Vantage
+    # SISTEMA 100% DINÂMICO: Apenas Alpha Vantage + controles % da sidebar
+    # Remove sistema fixo de 50% - usa apenas análise real do Alpha Vantage
+    
+    # STOP LOSS: Porcentagem configurável do movimento contrário real calculado pelo Alpha Vantage
     stop_distance = opposite_movement * (stop_percentage / 100.0)
     
-    # TAKE PROFIT: Porcentagem configurável do movimento favorável previsto pelo perfil Alpha Vantage  
+    # TAKE PROFIT: Porcentagem configurável do movimento favorável real calculado pelo Alpha Vantage  
     tp_distance = predicted_movement * (take_percentage / 100.0)
     
-    # Ajuste mínimo por confiança (mantém proximidade aos 50%)
-    confidence_adjustment = 0.95 + (confidence * 0.1)  # 95% a 105%
-    
-    stop_distance = stop_distance * confidence_adjustment
-    tp_distance = tp_distance * confidence_adjustment
+    # Sem ajustes artificiais - apenas dados Alpha Vantage puros com seus controles %
     
     # Risk management baseado na taxa de sucesso real calculada
     success_rate = config['base_success_rate'] + (confidence - 0.5) * 0.1  # Ajuste menor
@@ -5694,33 +5694,33 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         'profile_analysis_window': f"{window if 'window' in locals() else 'completo'} períodos"
     }
 
-def get_profile_characteristics(profile):
+def get_profile_characteristics(profile, stop_percentage=50, take_percentage=50):
     """Retorna características específicas do perfil para exibição"""
     characteristics = {
         'scalping': {
-            'stop_behavior': '50% do movimento contrário (1-5 períodos)',
-            'take_behavior': '50% do movimento favorável (1-5 períodos)',
+            'stop_behavior': f'{stop_percentage}% do movimento contrário Alpha Vantage (1-5 períodos)',
+            'take_behavior': f'{take_percentage}% do movimento favorável Alpha Vantage (1-5 períodos)',
             'risk_approach': 'Risco 0.8% da banca',
             'timing': 'Análise Intraday Imediata',
             'focus': 'Movimentos Curtos Alpha Vantage'
         },
         'intraday': {
-            'stop_behavior': '50% do movimento contrário (5-15 períodos)',
-            'take_behavior': '50% do movimento favorável (5-15 períodos)',
+            'stop_behavior': f'{stop_percentage}% do movimento contrário Alpha Vantage (5-15 períodos)',
+            'take_behavior': f'{take_percentage}% do movimento favorável Alpha Vantage (5-15 períodos)',
             'risk_approach': 'Risco 1.2% da banca',
             'timing': 'Análise Diária Balanceada',
             'focus': 'Movimentos Diários Alpha Vantage'
         },
         'swing': {
-            'stop_behavior': '50% do movimento contrário (15-50 períodos)',
-            'take_behavior': '50% do movimento favorável (15-50 períodos)',
+            'stop_behavior': f'{stop_percentage}% do movimento contrário Alpha Vantage (15-50 períodos)',
+            'take_behavior': f'{take_percentage}% do movimento favorável Alpha Vantage (15-50 períodos)',
             'risk_approach': 'Risco 1.8% da banca',
             'timing': 'Análise Médio Prazo',
             'focus': 'Movimentos Semanais Alpha Vantage'
         },
         'position': {
-            'stop_behavior': '50% do movimento contrário (histórico completo)',
-            'take_behavior': '50% do movimento favorável (histórico completo)', 
+            'stop_behavior': f'{stop_percentage}% do movimento contrário Alpha Vantage (histórico completo)',
+            'take_behavior': f'{take_percentage}% do movimento favorável Alpha Vantage (histórico completo)', 
             'risk_approach': 'Risco 2.2% da banca',
             'timing': 'Análise Longo Prazo',
             'focus': 'Tendências Principais Alpha Vantage'
