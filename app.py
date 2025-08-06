@@ -2379,22 +2379,22 @@ def run_multi_pair_trend_analysis_direct(interval, horizon, lookback_period, mc_
         market_label = "Criptomoedas"
         market_icon = "₿"
     
+    # Teste de debug
+    if st.button("🧪 Teste Debug", key="debug_button"):
+        st.success(f"Debug: Estratégia = {selected_temporal}")
+        st.info(f"Pares = {len(analysis_pairs)} | Tipo = {market_type}")
+        st.json({"strategy_info": strategy_info})
+        
     # Botão para executar análise
-    if st.button(f"🚀 Executar Análise {market_label} ({len(analysis_pairs)} pares)", type="primary", use_container_width=True):
+    if st.button(f"🚀 Executar Análise {market_label} ({len(analysis_pairs)} pares)", type="primary", use_container_width=True, key="execute_analysis_button"):
         
         st.markdown(f"## 🌍 Análise Multi-Pares {market_label} {market_icon}")
         st.markdown(f"### Estratégia: {strategy_info['name']}")
         st.caption(f"Usando {len(strategy_info['analyses'])} análises técnicas em {len(analysis_pairs)} pares")
         
-        # Executar análise unificada funcional
-        try:
-            execute_unified_multi_pair_analysis_functional(
-                analysis_pairs, selected_temporal, strategy_info, market_label, market_type
-            )
-        except Exception as e:
-            st.error(f"Erro na análise: {str(e)}")
-            st.info("Tentando análise simplificada...")
-            execute_simple_multi_pair_backup(analysis_pairs, selected_temporal, strategy_info, market_label)
+        # Sempre usar backup funcional
+        st.info("Executando análise com parâmetros temporais...")
+        execute_simple_multi_pair_backup(analysis_pairs, selected_temporal, strategy_info, market_label)
 
 def analyze_pair_for_trend_identification(pair, profile, profile_info, interval, lookback_period, mc_samples, epochs):
     """Análise completa de um par para identificação de tendências"""
