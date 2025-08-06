@@ -727,6 +727,36 @@ def apply_theme_css():
             font-weight: 500 !important;
         }
         
+        /* Password input field - dark background with white text */
+        .stTextInput input[type="password"] {
+            background: rgba(0,0,0,0.8) !important;
+            color: #ffffff !important;
+            border: 2px solid rgba(0,245,255,0.6) !important;
+            border-radius: 8px !important;
+            font-size: 1rem !important;
+            font-weight: 600 !important;
+            padding: 0.8rem !important;
+            text-shadow: none !important;
+        }
+        
+        /* Password input focus state */
+        .stTextInput input[type="password"]:focus {
+            background: rgba(0,0,0,0.9) !important;
+            color: #ffffff !important;
+            border: 2px solid #00f5ff !important;
+            box-shadow: 0 0 15px rgba(0,245,255,0.5) !important;
+        }
+        
+        /* General text input styling for better visibility */
+        .stTextInput input {
+            background: rgba(0,0,0,0.7) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(0,245,255,0.4) !important;
+            border-radius: 8px !important;
+            font-size: 0.95rem !important;
+            font-weight: 500 !important;
+        }
+        
         /* Number input styling */
         .stNumberInput input {
             font-size: 1rem !important;
