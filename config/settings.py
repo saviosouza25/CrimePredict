@@ -4,18 +4,17 @@ from typing import Dict, List
 # API Configuration
 API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
 
-# Trading Pairs - User specified list only
+# Trading Pairs - User specified list only (excluding XAU/USD due to API limitations)
 PAIRS: List[str] = [
     'AUD/CAD', 'AUD/CHF', 'AUD/JPY', 'AUD/NZD', 'AUD/USD',
     'CAD/CHF', 'CAD/JPY', 'CHF/JPY',
     'EUR/AUD', 'EUR/CAD', 'EUR/CHF', 'EUR/GBP', 'EUR/JPY', 'EUR/NZD', 'EUR/USD',
     'GBP/AUD', 'GBP/CAD', 'GBP/CHF', 'GBP/JPY', 'GBP/USD',
-    'NZD/USD', 'USD/CAD', 'USD/CHF', 'USD/JPY',
-    'XAU/USD'  # Gold - limited support
+    'NZD/USD', 'USD/CAD', 'USD/CHF', 'USD/JPY'
 ]
 
-# Special handling pairs with limited API support
-LIMITED_SUPPORT_PAIRS = ['XAU/USD']  # Gold has limited support in Alpha Vantage
+# Note: XAU/USD (Gold) removed due to Alpha Vantage API limitations
+# User can add it back when proper API access is available
 
 # Cryptocurrency Pairs - Alpha Vantage Compatible
 CRYPTO_PAIRS: List[str] = [
