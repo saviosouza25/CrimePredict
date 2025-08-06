@@ -609,71 +609,84 @@ def apply_theme_css():
             border: 1px solid rgba(58,175,169,0.5) !important;
         }
         
-        /* Modern Sidebar Design */
+        /* FORÇA BRUTAL - Sidebar Background */
         .css-1d391kg, .st-emotion-cache-1d391kg, section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #161b22 0%, #0d1117 100%) !important;
-            border-right: 2px solid rgba(58,175,169,0.4) !important;
-            padding: 1.5rem 1rem !important;
+            background: linear-gradient(180deg, #1a202c 0%, #2d3748 100%) !important;
+            border-right: 4px solid #48bb78 !important;
+            padding: 20px !important;
+            min-width: 300px !important;
         }
         
-        /* Sidebar content - high visibility */
-        section[data-testid="stSidebar"] .stMarkdown,
+        /* FORÇA BRUTAL - Labels e Textos */
         section[data-testid="stSidebar"] label,
-        section[data-testid="stSidebar"] p,
-        section[data-testid="stSidebar"] span,
-        section[data-testid="stSidebar"] h1,
-        section[data-testid="stSidebar"] h2,
-        section[data-testid="stSidebar"] h3,
-        section[data-testid="stSidebar"] div {
+        section[data-testid="stSidebar"] .stMarkdown,
+        section[data-testid="stSidebar"] p {
             color: #ffffff !important;
-            font-weight: 600 !important;
-            font-size: 0.95rem !important;
-            text-shadow: none !important;
-            background: transparent !important;
+            background: #2d3748 !important;
+            font-weight: 900 !important;
+            font-size: 18px !important;
+            padding: 8px 12px !important;
+            border-radius: 6px !important;
+            margin: 4px 0 !important;
+            border: 2px solid #48bb78 !important;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8) !important;
         }
         
-        /* Sidebar Dropdown Fields - Maximum Visibility */
+        /* FORÇA BRUTAL - Sidebar Campos Visíveis */
+        section[data-testid="stSidebar"] * {
+            font-family: 'Arial', sans-serif !important;
+        }
+        
         section[data-testid="stSidebar"] .stSelectbox {
-            margin-bottom: 1rem !important;
+            background: #2d3748 !important;
+            border: 3px solid #48bb78 !important;
+            border-radius: 10px !important;
+            padding: 8px !important;
+            margin: 8px 0 !important;
         }
         
-        section[data-testid="stSidebar"] .stSelectbox > div > div {
-            background: #ffffff !important;
-            color: #000000 !important;
-            border: 2px solid #3afa9 !important;
-            border-radius: 8px !important;
-            padding: 0.75rem !important;
-            font-weight: 700 !important;
-            font-size: 1rem !important;
-            min-height: 48px !important;
+        section[data-testid="stSidebar"] .stSelectbox > div,
+        section[data-testid="stSidebar"] .stSelectbox > div > div,
+        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] {
+            background: #f7fafc !important;
+            color: #1a202c !important;
+            border: 2px solid #48bb78 !important;
+            border-radius: 6px !important;
+            padding: 12px 16px !important;
+            font-weight: 900 !important;
+            font-size: 16px !important;
+            min-height: 50px !important;
+            line-height: 1.5 !important;
         }
         
-        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span,
-        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] div {
-            color: #000000 !important;
-            background: transparent !important;
-            font-weight: 700 !important;
-            font-size: 1rem !important;
+        section[data-testid="stSidebar"] .stSelectbox span,
+        section[data-testid="stSidebar"] .stSelectbox div {
+            color: #1a202c !important;
+            font-weight: 900 !important;
+            font-size: 16px !important;
         }
         
-        section[data-testid="stSidebar"] .stSelectbox svg {
-            color: #000000 !important;
-            fill: #000000 !important;
-            width: 20px !important;
-            height: 20px !important;
+        /* FORÇA BRUTAL - Campos de Input */
+        section[data-testid="stSidebar"] .stNumberInput,
+        section[data-testid="stSidebar"] .stTextInput {
+            background: #2d3748 !important;
+            border: 3px solid #48bb78 !important;
+            border-radius: 10px !important;
+            padding: 8px !important;
+            margin: 8px 0 !important;
         }
         
-        /* Input Fields Styling */
         section[data-testid="stSidebar"] .stNumberInput input,
         section[data-testid="stSidebar"] .stTextInput input {
-            background: #ffffff !important;
-            color: #000000 !important;
-            border: 2px solid #3afa9 !important;
-            border-radius: 8px !important;
-            padding: 0.75rem !important;
-            font-weight: 600 !important;
-            font-size: 1rem !important;
-            min-height: 48px !important;
+            background: #f7fafc !important;
+            color: #1a202c !important;
+            border: 2px solid #48bb78 !important;
+            border-radius: 6px !important;
+            padding: 12px 16px !important;
+            font-weight: 900 !important;
+            font-size: 16px !important;
+            min-height: 50px !important;
+            line-height: 1.5 !important;
         }
         
         /* Selectbox dropdown options - force visibility */
@@ -741,33 +754,36 @@ def apply_theme_css():
             color: #000000 !important;
         }
         
-        /* Dropdown Options - Maximum Contrast */
-        .stSelectbox [data-baseweb="popover"] {
-            background: #ffffff !important;
-            border: 2px solid #3afa9 !important;
-            border-radius: 8px !important;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.4) !important;
+        /* FORÇA BRUTAL - Dropdown Options */
+        .stSelectbox [data-baseweb="popover"],
+        .stSelectbox [data-baseweb="popover-content"] {
+            background: #f7fafc !important;
+            border: 4px solid #48bb78 !important;
+            border-radius: 10px !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important;
         }
         
         .stSelectbox [role="option"],
         .stSelectbox [data-baseweb="menu-item"],
         .stSelectbox [data-baseweb="list-item"],
-        .stSelectbox li {
-            background: #ffffff !important;
-            color: #000000 !important;
-            font-weight: 700 !important;
-            font-size: 1rem !important;
-            padding: 12px 16px !important;
-            border-bottom: 1px solid #e1e5e9 !important;
+        .stSelectbox li,
+        .stSelectbox [data-baseweb="popover"] * {
+            background: #f7fafc !important;
+            color: #1a202c !important;
+            font-weight: 900 !important;
+            font-size: 16px !important;
+            padding: 16px 20px !important;
+            border-bottom: 2px solid #48bb78 !important;
+            line-height: 1.6 !important;
         }
         
         .stSelectbox [role="option"]:hover,
         .stSelectbox [data-baseweb="menu-item"]:hover,
         .stSelectbox [data-baseweb="list-item"]:hover,
         .stSelectbox li:hover {
-            background: #3afa9 !important;
-            color: #000000 !important;
-            font-weight: 800 !important;
+            background: #48bb78 !important;
+            color: #ffffff !important;
+            font-weight: 900 !important;
         }
         
         /* Selectbox option text visibility */
