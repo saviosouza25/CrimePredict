@@ -1179,7 +1179,7 @@ def main():
             with col1:
                 st.caption(f"💾 {cache_count} em cache")
             with col2:
-                if st.button("🗑️", help="Limpar Cache"):
+                if st.button("🗑️", help="Limpar Cache", key="clear_cache_btn"):
                     # Limpar cache do session state
                     for key in list(st.session_state.keys()):
                         if isinstance(st.session_state.get(key), tuple):
@@ -1201,8 +1201,8 @@ def main():
         st.markdown("**🎯 Análises Especializadas**")
         
         # Análise unificada principal
-        unified_analysis = st.button("🧠 Análise Unificada Inteligente", type="primary", use_container_width=True, 
-                                   help="Combina todas as análises para a melhor previsão do mercado")
+        unified_analysis = st.button("🧠 Análise Unificada Inteligente →", type="primary", use_container_width=True, 
+                                   help="Combina todas as análises para a melhor previsão do mercado", key="unified_analysis_btn")
         
 
         
@@ -1211,16 +1211,16 @@ def main():
         # Análises técnicas em colunas
         col1, col2 = st.columns(2)
         with col1:
-            technical_analysis = st.button("📊 Técnica", use_container_width=True)
-            sentiment_analysis = st.button("📰 Sentimento", use_container_width=True)
-            risk_analysis = st.button("⚖️ Risco", use_container_width=True)
+            technical_analysis = st.button("📊 Técnica →", use_container_width=True, key="tech_analysis_btn")
+            sentiment_analysis = st.button("📰 Sentimento →", use_container_width=True, key="sentiment_analysis_btn")
+            risk_analysis = st.button("⚖️ Risco →", use_container_width=True, key="risk_analysis_btn")
         with col2:
-            ai_analysis = st.button("🤖 IA/LSTM", use_container_width=True)
-            volume_analysis = st.button("📈 Volume", use_container_width=True)
-            trend_analysis = st.button("📉 Tendência", use_container_width=True)
+            ai_analysis = st.button("🤖 IA/LSTM →", use_container_width=True, key="ai_analysis_btn")
+            volume_analysis = st.button("📈 Volume →", use_container_width=True, key="volume_analysis_btn")
+            trend_analysis = st.button("📉 Tendência →", use_container_width=True, key="trend_analysis_btn")
         
         # Análise rápida
-        quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True)
+        quick_analysis = st.button("⚡ Verificação Rápida →", use_container_width=True, key="quick_analysis_btn")
         
         # Processamento dos diferentes tipos de análise
         analyze_button = False
