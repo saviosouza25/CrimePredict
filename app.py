@@ -2257,8 +2257,9 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                         # Fetch data for this timeframe
                         df = services['data_service'].fetch_forex_data(pair, tf_interval, 'compact', market_type)
                         
-                        if not services['data_service'].validate_data(df):
+                        if df is None or df.empty or not services['data_service'].validate_data(df):
                             timeframe_analysis[tf_name] = create_empty_timeframe_analysis()
+                            st.warning(f"⚠️ {pair} - {tf_name}: Dados insuficientes ou inválidos")
                             continue
                         
                         # Add EMA 20/200 indicators specifically
@@ -2270,11 +2271,17 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                         
                     except Exception as e:
                         timeframe_analysis[tf_name] = create_empty_timeframe_analysis()
+                        # Log specific timeframe errors for debugging
+                        if "API Error" in str(e):
+                            st.warning(f"⚠️ {pair} - {tf_name}: API não suporta este par")
+                        elif "API Limit" in str(e):
+                            st.warning(f"⚠️ {pair} - {tf_name}: Limite de API atingido")
                         continue
                 
                 # Get current price (using daily data)
                 current_price = services['data_service'].get_latest_price(pair, market_type)
                 if current_price is None:
+                    st.warning(f"⚠️ {pair}: Não foi possível obter preço atual")
                     continue
                 
                 # Get overall sentiment for this pair
@@ -2331,8 +2338,12 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
         status_text.text(f"✅ Análise concluída! {successful_pairs} de {total_pairs} pares analisados com sucesso.")
         progress_bar.progress(100)
         
-        # Show summary
-        st.info(f"📊 Resumo: {len(all_results)} pares com dados válidos encontrados de {total_pairs} analisados.")
+        # Show detailed summary
+        if len(all_results) > 0:
+            st.success(f"📊 Resumo: {len(all_results)} pares analisados com sucesso de {total_pairs} total.")
+            st.info(f"💡 Taxa de sucesso: {len(all_results)/total_pairs*100:.1f}%")
+        else:
+            st.error("❌ Nenhum par foi analisado com sucesso. Verifique a conexão com a API.")
         
         # Clear progress after moment
         import time

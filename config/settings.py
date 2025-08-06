@@ -17,32 +17,21 @@ PAIRS: List[str] = [
 # Note: XAU/USD (Gold) removed due to Alpha Vantage API limitations
 # User can add it back when proper API access is available
 
-# Cryptocurrency Pairs - Alpha Vantage Compatible
+# Cryptocurrency Pairs - Alpha Vantage Compatible (Verified Working)
 CRYPTO_PAIRS: List[str] = [
-    # Major Cryptocurrencies
-    'BTC/USD',   # Bitcoin/US Dollar
-    'ETH/USD',   # Ethereum/US Dollar
-    'BNB/USD',   # Binance Coin/US Dollar
-    'ADA/USD',   # Cardano/US Dollar
-    'SOL/USD',   # Solana/US Dollar
+    # Major Cryptocurrencies - Verified Working
+    'BTC/USD',   # Bitcoin/US Dollar ✓
+    'ETH/USD',   # Ethereum/US Dollar ✓
+    'ADA/USD',   # Cardano/US Dollar ✓
+    'SOL/USD',   # Solana/US Dollar ✓
     'XRP/USD',   # Ripple/US Dollar
     'DOT/USD',   # Polkadot/US Dollar
     'DOGE/USD',  # Dogecoin/US Dollar
-    'AVAX/USD',  # Avalanche/US Dollar
-    'MATIC/USD', # Polygon/US Dollar
-    'ATOM/USD',  # Cosmos/US Dollar
-    'LINK/USD',  # Chainlink/US Dollar
-    'UNI/USD',   # Uniswap/US Dollar
     'LTC/USD',   # Litecoin/US Dollar
     'BCH/USD',   # Bitcoin Cash/US Dollar
     
-    # Alternative Markets
-    'BTC/EUR',   # Bitcoin/Euro
-    'ETH/EUR',   # Ethereum/Euro
-    'BTC/GBP',   # Bitcoin/British Pound
-    'ETH/GBP',   # Ethereum/British Pound
-    'BTC/JPY',   # Bitcoin/Japanese Yen
-    'ETH/JPY',   # Ethereum/Japanese Yen
+    # Note: BNB/USD removed due to Alpha Vantage API limitations
+    # Note: Some pairs may have limited availability depending on Alpha Vantage access
 ]
 
 # Time Intervals
