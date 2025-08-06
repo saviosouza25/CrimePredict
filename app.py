@@ -751,7 +751,7 @@ def main():
         st.markdown("## ⚙️ Configurações")
         
         # Market selection em expander colapsável
-        with st.expander("📊 Mercado", expanded=True):
+        with st.expander("📊 Mercado", expanded=False):
             market_type = st.radio(
                 "Tipo de Mercado:",
                 ["Forex", "Criptomoedas"],
@@ -846,7 +846,7 @@ def main():
             st.metric("Risk/Reward Ratio", f"{rr_ratio:.2f}", help="Take % ÷ Stop % = Relação Risco/Recompensa")
         
         # Sistema unificado de Intervalo e Horizonte em expander colapsável
-        with st.expander("⏰ Configuração Temporal Unificada", expanded=True):
+        with st.expander("⏰ Configuração Temporal Unificada", expanded=False):
             # Presets integrados para máxima coerência (usando valores exatos de HORIZONS)
             temporal_presets = {
 
