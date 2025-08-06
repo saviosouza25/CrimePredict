@@ -5261,13 +5261,35 @@ def run_profile_specific_analysis(current_price, pair, sentiment_score, df_with_
     
     # Calculate confidence based on agreement between components
     signals = [comp.get('signal', 0) for comp in analysis_result['components'].values()]
+    confidences = [comp.get('confidence', 0.5) for comp in analysis_result['components'].values()]
+    
     if signals:
         # Calculate agreement (how much components agree on direction)
         avg_signal = sum(signals) / len(signals)
         agreement = 1 - (sum(abs(s - avg_signal) for s in signals) / len(signals)) / 2
-        analysis_result['unified_confidence'] = max(0.1, min(1.0, agreement))
+        
+        # Weight confidence by individual component confidences and agreement
+        avg_component_confidence = sum(confidences) / len(confidences) if confidences else 0.5
+        final_confidence = (agreement * 0.6) + (avg_component_confidence * 0.4)
+        
+        analysis_result['unified_confidence'] = max(0.1, min(1.0, final_confidence))
+        analysis_result['model_confidence'] = max(0.1, min(1.0, final_confidence))  # For compatibility
     else:
         analysis_result['unified_confidence'] = 0.5
+        analysis_result['model_confidence'] = 0.5
+    
+    # Add market direction based on signal strength
+    signal_strength = abs(analysis_result['unified_signal'])
+    confidence_level = analysis_result['unified_confidence']
+    
+    if signal_strength > 0.6 and confidence_level > 0.75:
+        direction = 'COMPRA FORTE' if analysis_result['unified_signal'] > 0 else 'VENDA FORTE'
+    elif signal_strength > 0.3 and confidence_level > 0.6:
+        direction = 'COMPRA' if analysis_result['unified_signal'] > 0 else 'VENDA'
+    else:
+        direction = 'NEUTRO'
+    
+    analysis_result['market_direction'] = direction
         
     return analysis_result
 
