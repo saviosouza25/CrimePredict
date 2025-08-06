@@ -2831,14 +2831,21 @@ def display_multi_pair_results():
     
     # Filter and enhance results
     enhanced_results = []
-    for result in results:
+    st.info(f"Debug: Processando {len(results)} resultados com filtros - Score mín: {min_score}, Direção: {direction_filter}, Risco: {risk_filter}")
+    
+    for i, result in enumerate(results):
+        st.write(f"Debug {i+1}: Par {result['pair']} - Score: {result['opportunity_score']:.1f}")
+        
         if result['opportunity_score'] < min_score:
+            st.write(f"  ❌ Filtrado por score baixo: {result['opportunity_score']:.1f} < {min_score}")
             continue
         
         overall_analysis = result.get('overall_analysis', {})
         overall_direction = overall_analysis.get('overall_direction', 'NEUTRO')
+        st.write(f"  ✓ Score OK: {result['opportunity_score']:.1f} - Direção: {overall_direction}")
         
         if direction_filter != "Todas" and direction_filter not in overall_direction:
+            st.write(f"  ❌ Filtrado por direção: {overall_direction} não contém {direction_filter}")
             continue
         
         # Get recommended trading style for this pair
@@ -2847,6 +2854,8 @@ def display_multi_pair_results():
         
         # Calculate trading parameters
         current_price = result.get('current_price', 0)
+        st.write(f"  ⚡ Preço atual: {current_price}")
+        
         if current_price > 0:
             trading_params = calculate_trading_parameters(
                 result['pair'], overall_analysis, current_price, recommended_style
@@ -2858,14 +2867,26 @@ def display_multi_pair_results():
                 
                 # Risk level filter
                 risk_level = 'Baixo' if trading_params['stop_pips'] < 30 else 'Moderado' if trading_params['stop_pips'] < 60 else 'Alto'
+                st.write(f"  ⚖️ Risco calculado: {risk_level} (Stop: {trading_params['stop_pips']:.1f} pips)")
+                
                 if risk_filter != "Todos" and risk_filter != risk_level:
+                    st.write(f"  ❌ Filtrado por risco: {risk_level} != {risk_filter}")
                     continue
                 
                 result['risk_level'] = risk_level
                 enhanced_results.append(result)
+                st.write(f"  ✅ Adicionado aos resultados finais!")
+            else:
+                st.write(f"  ❌ Falha ao calcular parâmetros de trading")
+        else:
+            st.write(f"  ❌ Preço atual inválido: {current_price}")
+    
+    st.info(f"Debug final: {len(enhanced_results)} resultados após filtragem")
     
     if not enhanced_results:
-        st.warning("Nenhuma oportunidade encontrada com os filtros aplicados.")
+        st.error(f"❌ Nenhuma oportunidade encontrada com os filtros aplicados!")
+        st.warning(f"Foram processados {len(results)} resultados originais, mas {len(enhanced_results)} passaram pelos filtros.")
+        st.info("Tente diminuir o score mínimo ou mudar os filtros de direção/risco.")
         return
         
     # Sort by opportunity score
