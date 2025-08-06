@@ -2302,7 +2302,7 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
             progress_bar.progress(progress)
             status_text.text(f"Analisando {pair} ({i+1}/{len(all_pairs)})...")
             
-            # Executar análise completa para o par
+            # Executar análise completa para o par com debug
             pair_analysis = analyze_single_pair_for_multi(
                 pair, interval, horizon, lookback_period, mc_samples, epochs
             )
@@ -2310,9 +2310,12 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
             if pair_analysis:
                 results.append(pair_analysis)
                 completed += 1
+                st.success(f"✓ {pair} analisado com sucesso")
+            else:
+                st.warning(f"⚠️ {pair}: Dados insuficientes ou erro na análise")
                 
         except Exception as e:
-            st.warning(f"Erro ao analisar {pair}: {str(e)}")
+            st.error(f"❌ Erro ao analisar {pair}: {str(e)}")
             continue
     
     progress_bar.progress(1.0)
@@ -2340,27 +2343,37 @@ def analyze_single_pair_for_multi(pair, interval, horizon, lookback_period, mc_s
     try:
         # 1. Obter dados usando o DataService existente
         try:
+            # Debug: mostrar qual par está sendo processado
+            st.write(f"🔍 Debug: Processando {pair}")
+            
             # Determinar se é crypto ou forex
             if any(crypto in pair for crypto in ['BTC', 'ETH', 'ADA', 'SOL']):
                 # Para crypto
                 price_data = services['data_service'].fetch_forex_data(pair, interval, 'compact', 'crypto')
+                st.write(f"📊 Crypto data obtido para {pair}: {len(price_data) if price_data is not None else 0} registros")
             else:
                 # Para forex - converter formato do par
                 pair_symbol = pair.replace('/', '')  # EUR/USD -> EURUSD
                 price_data = services['data_service'].fetch_forex_data(pair_symbol, interval, 'compact', 'forex')
+                st.write(f"💱 Forex data obtido para {pair_symbol}: {len(price_data) if price_data is not None else 0} registros")
             
             if price_data is None or len(price_data) < 30:
+                st.warning(f"⚠️ Dados insuficientes para {pair}: {len(price_data) if price_data is not None else 0} registros")
                 return None
                 
         except Exception as e:
+            st.error(f"❌ Erro ao obter dados para {pair}: {str(e)}")
             # Fallback com dados básicos se serviço não funcionar
             try:
                 # Tentar formato alternativo
                 alt_pair = pair.replace('/', '') if '/' in pair else pair
                 price_data = get_basic_forex_data(alt_pair, interval)
                 if price_data is None or len(price_data) < 30:
+                    st.error(f"❌ Fallback também falhou para {pair}")
                     return None
-            except:
+                st.info(f"✓ Fallback funcionou para {pair}")
+            except Exception as fallback_error:
+                st.error(f"❌ Fallback error para {pair}: {str(fallback_error)}")
                 return None
         
         # Obter preço atual - adaptar à estrutura de dados real
