@@ -907,67 +907,161 @@ def check_authentication():
         st.session_state.authenticated = False
     
     if not st.session_state.authenticated:
+        # Header futurístico mais slim
         st.markdown("""
         <div style="
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 3rem;
-            border-radius: 15px;
+            background: linear-gradient(135deg, rgba(0,245,255,0.1), rgba(255,0,245,0.1));
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(0,245,255,0.3);
+            border-radius: 20px;
+            padding: 2rem;
             text-align: center;
             color: white;
-            margin: 2rem auto;
-            max-width: 500px;
+            margin: 1rem auto 2rem auto;
+            max-width: 800px;
+            position: relative;
+            overflow: hidden;
         ">
-            <h1 style="color: white; margin-bottom: 1rem;">🔐 Acesso Restrito</h1>
-            <h2 style="color: white; margin-bottom: 2rem;">Plataforma Avançada de Análise Forex</h2>
-            <p style="color: rgba(255,255,255,0.9); margin-bottom: 2rem;">
-                Sistema profissional de trading com IA e análise em tempo real
-            </p>
+            <div style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 2px;
+                background: linear-gradient(90deg, #00f5ff, #ff00f5, #f5ff00);
+                animation: glow 3s ease-in-out infinite alternate;
+            "></div>
+            <h1 style="
+                background: linear-gradient(135deg, #00f5ff, #ff00f5);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                font-size: 2.2rem;
+                font-weight: 700;
+                margin-bottom: 0.5rem;
+                text-shadow: 0 0 20px rgba(0,245,255,0.6);
+            ">🔐 FOREX AI ACCESS PORTAL</h1>
+            <p style="
+                color: rgba(255,255,255,0.8);
+                font-size: 1rem;
+                margin: 0;
+                text-shadow: 0 0 10px rgba(0,245,255,0.3);
+            ">Advanced Neural Trading Platform • Secure Authentication Required</p>
         </div>
         """, unsafe_allow_html=True)
         
-        # Formulário de login centralizado
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.markdown("### 🔑 Digite a Senha de Acesso")
-            password = st.text_input("Senha:", type="password", placeholder="Digite sua senha...")
+        # Formulário de login horizontal slim
+        st.markdown("""
+        <div style="
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(0,245,255,0.3);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 0 auto 2rem auto;
+            max-width: 700px;
+        ">
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Layout horizontal para o formulário
+        col_space1, col_form, col_space2 = st.columns([0.5, 3, 0.5])
+        with col_form:
+            col_label, col_input, col_button = st.columns([1, 2, 1])
             
-            col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-            with col_btn2:
-                if st.button("🚀 Entrar na Plataforma", type="primary", use_container_width=True):
+            with col_label:
+                st.markdown("""
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    height: 100%;
+                    padding-top: 1.5rem;
+                ">
+                    <p style="
+                        color: #00f5ff;
+                        font-weight: 600;
+                        font-size: 1.1rem;
+                        margin: 0;
+                        text-shadow: 0 0 8px rgba(0,245,255,0.5);
+                    ">🔑 Access Key:</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_input:
+                password = st.text_input(
+                    "senha_access", 
+                    type="password", 
+                    placeholder="Enter your access key...",
+                    label_visibility="collapsed"
+                )
+            
+            with col_button:
+                if st.button("🚀 ENTER", type="primary", use_container_width=True):
                     if password == "artec2025":
                         st.session_state.authenticated = True
-                        st.success("✅ Acesso autorizado! Redirecionando...")
+                        st.success("✅ Access granted! Initializing platform...")
                         st.rerun()
                     else:
-                        st.error("❌ Senha incorreta. Tente novamente.")
+                        st.error("❌ Invalid access key. Please try again.")
         
-        # Informações da plataforma
-        st.markdown("---")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.markdown("""
-            ### 🧠 Inteligência Artificial
-            - Rede neural LSTM avançada
-            - Análise de sentimento em tempo real
-            - Predições com alta precisão
-            """)
-        
-        with col2:
-            st.markdown("""
-            ### 📊 Análise Técnica
-            - 15+ indicadores técnicos
-            - Sinais automáticos de trading
-            - Múltiplos timeframes
-            """)
-        
-        with col3:
-            st.markdown("""
-            ### 💰 Gestão de Risco
-            - Cálculos MT4/MT5 reais
-            - Stop loss inteligente
-            - Múltiplos perfis de risco
-            """)
+        # Informações da plataforma em formato horizontal slim
+        st.markdown("""
+        <div style="
+            background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0,245,255,0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        ">
+            <div style="
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 2rem;
+                text-align: center;
+            ">
+                <div>
+                    <h4 style="
+                        color: #00f5ff;
+                        margin-bottom: 0.5rem;
+                        text-shadow: 0 0 10px rgba(0,245,255,0.5);
+                    ">🧠 AI Neural Engine</h4>
+                    <p style="
+                        color: rgba(255,255,255,0.8);
+                        font-size: 0.9rem;
+                        margin: 0;
+                        line-height: 1.4;
+                    ">LSTM Deep Learning • Real-time Sentiment • High Precision Predictions</p>
+                </div>
+                <div>
+                    <h4 style="
+                        color: #00f5ff;
+                        margin-bottom: 0.5rem;
+                        text-shadow: 0 0 10px rgba(0,245,255,0.5);
+                    ">📊 Technical Analysis</h4>
+                    <p style="
+                        color: rgba(255,255,255,0.8);
+                        font-size: 0.9rem;
+                        margin: 0;
+                        line-height: 1.4;
+                    ">15+ Technical Indicators • Auto Trading Signals • Multi-Timeframe</p>
+                </div>
+                <div>
+                    <h4 style="
+                        color: #00f5ff;
+                        margin-bottom: 0.5rem;
+                        text-shadow: 0 0 10px rgba(0,245,255,0.5);
+                    ">💰 Risk Management</h4>
+                    <p style="
+                        color: rgba(255,255,255,0.8);
+                        font-size: 0.9rem;
+                        margin: 0;
+                        line-height: 1.4;
+                    ">MT4/MT5 Real Calculations • Smart Stop Loss • Multiple Risk Profiles</p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.markdown("""
         <div style="text-align: center; color: #666; padding: 2rem; margin-top: 2rem;">
