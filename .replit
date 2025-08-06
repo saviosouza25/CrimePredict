@@ -38,4 +38,4 @@ localPort = 5001
 externalPort = 3000
 
 [agent]
-integrations = ["python_openai==1.0.0"]
+integrations = ["web_scraper==1.0.0", "python_openai==1.0.0"]

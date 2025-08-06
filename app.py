@@ -29,6 +29,18 @@ try:
         'sentiment_service': SentimentService(),
         'ai_unified_service': AIUnifiedService()
     }
+    
+    # Try advanced services separately
+    try:
+        from services.advanced_liquidity_service import AdvancedLiquidityService
+        from services.advanced_technical_service import AdvancedTechnicalService
+        from services.advanced_sentiment_service import AdvancedSentimentService
+        from services.advanced_lstm_service import AdvancedLSTMService
+        advanced_services_available = True
+    except ImportError as e:
+        print(f"Advanced services not available: {e}")
+        advanced_services_available = False
+        
 except ImportError as e:
     print(f"Import warning: {e}")
     # Create placeholder services for basic functionality
@@ -45,6 +57,7 @@ except ImportError as e:
         'sentiment_service': MockService(),
         'ai_unified_service': MockService()
     }
+    advanced_services_available = False
 
 # FUNÇÃO GLOBAL: Calcular probabilidades REAIS de mercado
 def calculate_realistic_drawdown_and_extensions(current_price, pair_name, horizon, risk_level, sentiment_score, lstm_confidence):

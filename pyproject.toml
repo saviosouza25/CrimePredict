@@ -5,6 +5,7 @@ description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
     "matplotlib>=3.10.5",
+    "nltk>=3.9.1",
     "numpy>=2.3.2",
     "openai>=1.98.0",
     "pandas>=2.3.1",
@@ -13,8 +14,12 @@ dependencies = [
     "scikit-learn>=1.7.1",
     "scipy>=1.16.1",
     "streamlit>=1.47.1",
+    "tensorflow>=2.14.0",
+    "textblob>=0.19.0",
     "torch>=2.7.1",
+    "trafilatura>=2.0.0",
     "vadersentiment>=3.3.2",
+    "yfinance>=0.2.65",
 ]
 
 [[tool.uv.index]]
