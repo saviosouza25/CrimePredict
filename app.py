@@ -892,12 +892,14 @@ def apply_theme_css():
             font-weight: 600 !important;
         }
         
-        /* Quick analysis button - slightly larger */
+        /* Quick analysis button - full width and readable */
         button[key="quick_analysis_btn"] {
-            padding: 0.6rem 1rem !important;
-            font-size: 0.8rem !important;
+            width: 100% !important;
+            padding: 0.7rem 1rem !important;
+            font-size: 0.85rem !important;
             margin: 0.5rem 0 !important;
             font-weight: 600 !important;
+            min-height: 3rem !important;
         }
         
         /* Slider styling */
@@ -1365,8 +1367,8 @@ def main():
             volume_analysis = st.button("📈 Volume", use_container_width=True, key="volume_analysis_btn")
             trend_analysis = st.button("📉 Tendência", use_container_width=True, key="trend_analysis_btn")
         
-        # Análise rápida compacta
-        quick_analysis = st.button("⚡ Verificação Rápida", help="Análise completa rápida", key="quick_analysis_btn")
+        # Análise rápida com tamanho adequado
+        quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, help="Análise completa rápida", key="quick_analysis_btn")
         
         # Processamento dos diferentes tipos de análise
         analyze_button = False
