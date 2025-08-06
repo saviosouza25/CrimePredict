@@ -2789,6 +2789,15 @@ def display_multi_pair_results():
     
     results_data = st.session_state.get('multi_pair_results', {})
     if not results_data:
+        st.warning("Nenhum resultado de análise multi-pares encontrado na sessão.")
+        return
+    
+    # Debug: mostrar quantos resultados foram encontrados
+    results = results_data.get('results', [])
+    st.info(f"Debug: {len(results)} resultados encontrados na sessão")
+    
+    if not results:
+        st.warning("Lista de resultados está vazia.")
         return
     
     results = results_data['results']
