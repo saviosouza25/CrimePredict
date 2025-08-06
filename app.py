@@ -2699,27 +2699,28 @@ def calculate_trading_parameters(pair, overall_analysis, current_price, trading_
     probability = overall_analysis.get('consensus_probability', 50)
     confidence = overall_analysis.get('consensus_confidence', 'Baixa')
     
-    # Trading style parameters
+    # Trading style parameters com valores mais conservadores
     style_params = {
-        'scalping': {'stop_pct': 0.3, 'take_pct': 0.6, 'dd_multiplier': 1.5, 'ext_multiplier': 2.0},
-        'intraday': {'stop_pct': 0.8, 'take_pct': 1.6, 'dd_multiplier': 2.0, 'ext_multiplier': 3.0},
-        'swing': {'stop_pct': 2.0, 'take_pct': 4.0, 'dd_multiplier': 3.0, 'ext_multiplier': 5.0},
-        'position': {'stop_pct': 4.0, 'take_pct': 8.0, 'dd_multiplier': 5.0, 'ext_multiplier': 8.0}
+        'scalping': {'stop_pct': 0.3, 'take_pct': 0.6},
+        'intraday': {'stop_pct': 0.8, 'take_pct': 1.6},
+        'swing': {'stop_pct': 1.5, 'take_pct': 3.0},  # Reduzido de 2%/4% para 1.5%/3%
+        'position': {'stop_pct': 2.5, 'take_pct': 5.0}  # Reduzido de 4%/8% para 2.5%/5%
     }
     
     params = style_params.get(trading_style, style_params['swing'])
     
-    # Calculate levels
+    # Calculate levels with more realistic multipliers
     if 'COMPRA' in direction:
         stop_loss = current_price * (1 - params['stop_pct'] / 100)
         take_profit = current_price * (1 + params['take_pct'] / 100)
-        dd_max = current_price * (1 - params['dd_multiplier'] * params['stop_pct'] / 100)
-        ext_max = current_price * (1 + params['ext_multiplier'] * params['take_pct'] / 100)
+        # DD and extension with more conservative multipliers
+        dd_max = current_price * (1 - 1.5 * params['stop_pct'] / 100)  # 1.5x stop instead of 3-5x
+        ext_max = current_price * (1 + 1.8 * params['take_pct'] / 100)  # 1.8x take instead of 2-8x
     elif 'VENDA' in direction:
         stop_loss = current_price * (1 + params['stop_pct'] / 100)
         take_profit = current_price * (1 - params['take_pct'] / 100)
-        dd_max = current_price * (1 + params['dd_multiplier'] * params['stop_pct'] / 100)
-        ext_max = current_price * (1 - params['ext_multiplier'] * params['take_pct'] / 100)
+        dd_max = current_price * (1 + 1.5 * params['stop_pct'] / 100)
+        ext_max = current_price * (1 - 1.8 * params['take_pct'] / 100)
     else:
         return None
     
@@ -2901,14 +2902,14 @@ def display_multi_pair_results():
         trading_params = result['trading_params']
         risk_level = result['risk_level']
         
-        # Color coding based on score
-        if score >= 80:
+        # Color coding based on score - ajustado para scores mais baixos
+        if score >= 40:
             color = "#00C851"
             badge = "🟢 EXCELENTE"
-        elif score >= 70:
+        elif score >= 30:
             color = "#4CAF50"
             badge = "🟡 BOA"
-        elif score >= 60:
+        elif score >= 20:
             color = "#FF9800"
             badge = "🟠 MODERADA"
         else:
@@ -2961,9 +2962,9 @@ def display_multi_pair_results():
                     <div>
                         <h4 style="color: #FF6B6B; margin: 0.5rem 0;">⚠️ Gestão de Risco</h4>
                         <p style="margin: 0.2rem 0;"><strong>DD Máximo:</strong> {trading_params['dd_max_price']:.5f}</p>
-                        <p style="margin: 0.2rem 0;"><strong>DD em Pips:</strong> {trading_params['dd_max_pips']:.1f} pips</p>
+                        <p style="margin: 0.2rem 0;"><strong>DD em Pips:</strong> {trading_params['dd_max_pips']:.0f} pips</p>
                         <p style="margin: 0.2rem 0;"><strong>Extensão Máx:</strong> {trading_params['ext_max_price']:.5f}</p>
-                        <p style="margin: 0.2rem 0;"><strong>Ext em Pips:</strong> {trading_params['ext_max_pips']:.1f} pips</p>
+                        <p style="margin: 0.2rem 0;"><strong>Ext em Pips:</strong> {trading_params['ext_max_pips']:.0f} pips</p>
                         <p style="margin: 0.2rem 0;"><strong>Nível de Risco:</strong> <span style="color: {'#00C851' if risk_level == 'Baixo' else '#FF9800' if risk_level == 'Moderado' else '#F44336'};">{risk_level}</span></p>
                     </div>
                 </div>
