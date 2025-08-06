@@ -661,10 +661,30 @@ def apply_theme_css():
             font-weight: 600 !important;
         }
         
-        /* Force all dropdown content to be visible */
-        .stSelectbox [data-baseweb="popover"] * {
+        /* Force all dropdown content to be visible - comprehensive */
+        .stSelectbox [data-baseweb="popover"] *,
+        .stSelectbox [data-baseweb="popover"] li *,
+        .stSelectbox [data-baseweb="popover"] div *,
+        .stSelectbox [data-baseweb="popover"] span *,
+        .stSelectbox [data-baseweb="popover"] [role="option"] *,
+        .stSelectbox [data-baseweb="popover"] [data-baseweb="menu-item"] *,
+        .stSelectbox [data-baseweb="popover"] [data-baseweb="list-item"] * {
             color: #000000 !important;
             background: transparent !important;
+            font-weight: 600 !important;
+            font-size: 0.9rem !important;
+        }
+        
+        /* Specific targeting for menu items */
+        [data-baseweb="menu"] li,
+        [data-baseweb="menu"] [role="option"],
+        [data-baseweb="list"] li,
+        [data-baseweb="list"] [role="option"] {
+            background: rgba(255,255,255,0.98) !important;
+            color: #000000 !important;
+            font-weight: 600 !important;
+            padding: 8px 12px !important;
+            border-bottom: 1px solid rgba(0,245,255,0.2) !important;
         }
         
         /* Selectbox option hover */
@@ -686,9 +706,32 @@ def apply_theme_css():
         
         /* Ensure all popover elements have proper styling */
         .stSelectbox [data-baseweb="popover"] > div,
-        .stSelectbox [data-baseweb="popover-content"] > div {
+        .stSelectbox [data-baseweb="popover-content"] > div,
+        .stSelectbox [data-baseweb="popover"] ul,
+        .stSelectbox [data-baseweb="popover"] ol,
+        .stSelectbox [data-baseweb="menu"],
+        .stSelectbox [data-baseweb="list"] {
             background: rgba(255,255,255,0.98) !important;
             color: #000000 !important;
+        }
+        
+        /* Universal selectbox option override */
+        .stSelectbox option,
+        .stSelectbox [role="option"],
+        .stSelectbox [data-baseweb="menu-item"],
+        .stSelectbox [data-baseweb="list-item"] {
+            background: rgba(255,255,255,0.98) !important;
+            color: #000000 !important;
+            font-weight: 600 !important;
+            font-size: 0.9rem !important;
+        }
+        
+        /* Hover states for options */
+        .stSelectbox [role="option"]:hover,
+        .stSelectbox [data-baseweb="menu-item"]:hover,
+        .stSelectbox [data-baseweb="list-item"]:hover {
+            background: rgba(0,245,255,0.8) !important;
+            color: #ffffff !important;
         }
         
         /* Selectbox option text visibility */
