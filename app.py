@@ -941,7 +941,7 @@ def main():
 
         
         # Gestão de Banca Simplificada em expander colapsável
-        with st.expander("💰 Configuração de Trading", expanded=False):
+        with st.expander("💰 Calculadora de Lote", expanded=False):
             col1, col2 = st.columns(2)
             with col1:
                 bank_value = st.number_input(
