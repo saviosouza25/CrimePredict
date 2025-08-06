@@ -621,6 +621,58 @@ def apply_theme_css():
             text-shadow: 0 0 8px rgba(0,245,255,0.3) !important;
         }
         
+        /* Selectbox dropdown styling */
+        section[data-testid="stSidebar"] .stSelectbox > div > div,
+        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"],
+        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div {
+            background: rgba(26,26,62,0.9) !important;
+            color: rgba(255,255,255,0.95) !important;
+            border: 1px solid rgba(0,245,255,0.4) !important;
+            border-radius: 8px !important;
+            font-size: 0.9rem !important;
+            font-weight: 500 !important;
+        }
+        
+        /* Selectbox dropdown options */
+        .stSelectbox [data-baseweb="popover"] ul,
+        .stSelectbox [data-baseweb="popover"] li {
+            background: rgba(26,26,62,0.95) !important;
+            color: rgba(255,255,255,0.95) !important;
+            border: 1px solid rgba(0,245,255,0.3) !important;
+            font-size: 0.9rem !important;
+        }
+        
+        /* Selectbox option hover */
+        .stSelectbox [data-baseweb="popover"] li:hover {
+            background: rgba(0,245,255,0.2) !important;
+            color: #ffffff !important;
+        }
+        
+        /* Additional selectbox styling for better visibility */
+        .stSelectbox [data-baseweb="popover"] {
+            background: rgba(26,26,62,0.98) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 2px solid rgba(0,245,255,0.4) !important;
+            border-radius: 10px !important;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
+        }
+        
+        /* Selectbox option text visibility */
+        .stSelectbox [data-baseweb="popover"] div,
+        .stSelectbox [data-baseweb="popover"] span {
+            color: rgba(255,255,255,0.95) !important;
+            font-weight: 500 !important;
+            font-size: 0.9rem !important;
+            text-shadow: 0 0 5px rgba(0,245,255,0.2) !important;
+        }
+        
+        /* Selectbox selected option */
+        .stSelectbox [data-baseweb="popover"] [aria-selected="true"] {
+            background: rgba(0,245,255,0.3) !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+        }
+        
         /* Sidebar headers */
         .css-1d391kg h1, 
         .css-1d391kg h2, 
@@ -657,11 +709,22 @@ def apply_theme_css():
             background: rgba(255,255,255,0.25) !important;
         }
         
-        /* Select dropdown options */
+        /* Select dropdown options - enhanced */
         .stSelectbox > div > div > div {
             background: rgba(26,26,62,0.95) !important;
-            color: #ffffff !important;
+            color: rgba(255,255,255,0.95) !important;
             backdrop-filter: blur(15px) !important;
+            border: 1px solid rgba(0,245,255,0.3) !important;
+            border-radius: 8px !important;
+            font-size: 0.9rem !important;
+            font-weight: 500 !important;
+        }
+        
+        /* Selectbox input text */
+        .stSelectbox > div > div input {
+            color: rgba(255,255,255,0.95) !important;
+            font-size: 0.9rem !important;
+            font-weight: 500 !important;
         }
         
         /* Number input styling */
