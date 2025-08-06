@@ -768,6 +768,65 @@ def main():
         multi_pair_analysis = st.button("🌍 Executar Análise Multi-Pares", use_container_width=True, key="multi_pair_btn")
         
         st.markdown("---")
+        st.markdown("### 📊 Parâmetros de Risco Separados")
+        
+        # Controles separados para Stop Loss e Take Profit
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**🛡️ Stop Loss**")
+            stop_percentage = st.slider(
+                "% do Movimento Contrário",
+                min_value=10,
+                max_value=100,
+                value=50,
+                step=5,
+                help="Porcentagem do movimento contrário previsto para Stop Loss",
+                key="stop_percentage_slider"
+            )
+            
+        with col2:
+            st.markdown("**🎯 Take Profit**")
+            take_percentage = st.slider(
+                "% do Movimento Favorável",
+                min_value=10,
+                max_value=100,
+                value=50,
+                step=5,
+                help="Porcentagem do movimento favorável previsto para Take Profit",
+                key="take_percentage_slider"
+            )
+        
+        # Armazenar no session state
+        st.session_state['stop_percentage'] = stop_percentage
+        st.session_state['take_percentage'] = take_percentage
+        
+        # Mostrar configuração atual
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Stop Loss", f"{stop_percentage}% movimento contrário", help="Baseado na análise Alpha Vantage")
+        with col2:
+            st.metric("Take Profit", f"{take_percentage}% movimento favorável", help="Baseado na análise Alpha Vantage")
+        
+        # Calcular Risk/Reward ratio
+        rr_ratio = take_percentage / stop_percentage if stop_percentage > 0 else 1.0
+        
+        # Feedback visual baseado na configuração
+        if stop_percentage < 30 and take_percentage < 30:
+            st.warning("⚠️ **Ultra Conservador**: Ambos muito próximos - alta chance de acerto, baixo R/R")
+        elif stop_percentage > 80 or take_percentage > 80:
+            st.warning("🚀 **Ultra Agressivo**: Targets muito distantes - baixa chance de acerto, alto R/R")
+        elif rr_ratio > 2.0:
+            st.success(f"✅ **Favor Take**: R/R = {rr_ratio:.1f} - Risco menor que recompensa")
+        elif rr_ratio < 0.5:
+            st.error(f"❌ **Favor Stop**: R/R = {rr_ratio:.1f} - Risco maior que recompensa")
+        else:
+            st.success(f"✅ **Equilibrado**: R/R = {rr_ratio:.1f} - Configuração balanceada")
+        
+        # Mostrar Risk/Reward como métrica
+        st.metric("Risk/Reward Ratio", f"{rr_ratio:.2f}", help="Take % ÷ Stop % = Relação Risco/Recompensa")
+        
+        st.markdown("---")
         
         # Market selection
         st.markdown("### 📊 Mercado")
@@ -827,65 +886,6 @@ def main():
         st.info(f"📊 **{preset_choice}** | Intervalo: {interval} | Horizonte: {horizon}")
         st.caption(f"💡 {selected_preset['description']}")
         st.success(f"🎯 **Estratégia Ativa:** {trading_style.upper()}")
-        
-        st.markdown("---")
-        st.markdown("### 📊 Parâmetros de Risco Separados")
-        
-        # Controles separados para Stop Loss e Take Profit
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**🛡️ Stop Loss**")
-            stop_percentage = st.slider(
-                "% do Movimento Contrário",
-                min_value=10,
-                max_value=100,
-                value=50,
-                step=5,
-                help="Porcentagem do movimento contrário previsto para Stop Loss",
-                key="stop_percentage_slider"
-            )
-            
-        with col2:
-            st.markdown("**🎯 Take Profit**")
-            take_percentage = st.slider(
-                "% do Movimento Favorável",
-                min_value=10,
-                max_value=100,
-                value=50,
-                step=5,
-                help="Porcentagem do movimento favorável previsto para Take Profit",
-                key="take_percentage_slider"
-            )
-        
-        # Armazenar no session state
-        st.session_state['stop_percentage'] = stop_percentage
-        st.session_state['take_percentage'] = take_percentage
-        
-        # Mostrar configuração atual
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Stop Loss", f"{stop_percentage}% movimento contrário", help="Baseado na análise Alpha Vantage")
-        with col2:
-            st.metric("Take Profit", f"{take_percentage}% movimento favorável", help="Baseado na análise Alpha Vantage")
-        
-        # Calcular Risk/Reward ratio
-        rr_ratio = take_percentage / stop_percentage if stop_percentage > 0 else 1.0
-        
-        # Feedback visual baseado na configuração
-        if stop_percentage < 30 and take_percentage < 30:
-            st.warning("⚠️ **Ultra Conservador**: Ambos muito próximos - alta chance de acerto, baixo R/R")
-        elif stop_percentage > 80 or take_percentage > 80:
-            st.warning("🚀 **Ultra Agressivo**: Targets muito distantes - baixa chance de acerto, alto R/R")
-        elif rr_ratio > 2.0:
-            st.success(f"✅ **Favor Take**: R/R = {rr_ratio:.1f} - Risco menor que recompensa")
-        elif rr_ratio < 0.5:
-            st.error(f"❌ **Favor Stop**: R/R = {rr_ratio:.1f} - Risco maior que recompensa")
-        else:
-            st.success(f"✅ **Equilibrado**: R/R = {rr_ratio:.1f} - Configuração balanceada")
-        
-        # Mostrar Risk/Reward como métrica
-        st.metric("Risk/Reward Ratio", f"{rr_ratio:.2f}", help="Take % ÷ Stop % = Relação Risco/Recompensa")
         
         # Opção avançada para configuração manual (colapsável)
         with st.expander("⚙️ Configuração Manual Avançada"):
