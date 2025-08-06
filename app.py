@@ -1913,26 +1913,68 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     volatility_component = 10 if 0.8 <= volatility_ratio <= 1.5 else 5 if volatility_ratio <= 2.0 else 2
     timing_score += volatility_component
     
-    # DECISÃO DE TIMING baseada no score total (independente do perfil)
-    if timing_score >= 85:
-        market_timing = "🟢 EXECUTAR AGORA (Setup Perfeito)"
-    elif timing_score >= 70:
-        market_timing = "🟡 Aguardar 5-15min (Confirmação)"
-    elif timing_score >= 55:
-        market_timing = "🟠 Aguardar 30-60min (Melhor Setup)"
-    elif timing_score >= 40:
-        market_timing = "🔴 Aguardar 2-4h (Condições Inadequadas)"
-    else:
-        market_timing = "⚫ Evitar - Aguardar Novo Ciclo (24h+)"
-    
-    # Adicionar contexto específico do perfil ao timing
-    profile_context = {
-        'scalping': " | Foco: Movimentos 1-5min",
-        'intraday': " | Foco: Movimentos diários",
-        'swing': " | Foco: Movimentos 2-7 dias",
-        'position': " | Foco: Tendências longas"
+    # THRESHOLDS ADAPTATIVOS POR PERFIL - Cada estratégia tem sua tolerância temporal
+    profile_thresholds = {
+        'scalping': {
+            # Scalping: Aceita mais risco para mais frequência
+            'execute_now': 25,      # Score 25+ = EXECUTAR (muito tolerante)
+            'wait_5_15min': 40,     # Score 40+ = Aguardar pouco
+            'wait_30_60min': 55,    # Score 55+ = Aguardar moderado
+            'wait_2_4h': 70,        # Score 70+ = Aguardar mais
+            'philosophy': 'Frequência > Qualidade Perfeita'
+        },
+        'intraday': {
+            # Intraday: Equilibrio entre frequência e qualidade
+            'execute_now': 40,      # Score 40+ = EXECUTAR (moderado)
+            'wait_5_15min': 55,     # Score 55+ = Aguardar pouco
+            'wait_30_60min': 70,    # Score 70+ = Aguardar moderado
+            'wait_2_4h': 80,        # Score 80+ = Aguardar mais
+            'philosophy': 'Equilibrio Frequência/Qualidade'
+        },
+        'swing': {
+            # Swing: Prioriza qualidade sobre frequência
+            'execute_now': 55,      # Score 55+ = EXECUTAR (seletivo)
+            'wait_5_15min': 70,     # Score 70+ = Aguardar pouco
+            'wait_30_60min': 80,    # Score 80+ = Aguardar moderado  
+            'wait_2_4h': 90,        # Score 90+ = Condições ideais
+            'philosophy': 'Qualidade > Frequência'
+        },
+        'position': {
+            # Position: Muito seletivo, espera condições ideais
+            'execute_now': 70,      # Score 70+ = EXECUTAR (muito seletivo)
+            'wait_5_15min': 80,     # Score 80+ = Aguardar pouco
+            'wait_30_60min': 90,    # Score 90+ = Quase perfeito
+            'wait_2_4h': 95,        # Score 95+ = Setup perfeito
+            'philosophy': 'Máxima Seletividade'
+        }
     }
-    market_timing += profile_context.get(profile, "")
+    
+    # Obter thresholds do perfil atual
+    thresholds = profile_thresholds.get(profile, profile_thresholds['intraday'])
+    
+    # DECISÃO ADAPTATIVA baseada no perfil específico
+    if timing_score >= thresholds['execute_now']:
+        if timing_score >= 85:  # Setup excepcionalmente bom
+            market_timing = f"🟢 EXECUTAR AGORA (Setup Perfeito - Score {timing_score:.0f})"
+        else:
+            market_timing = f"🟢 EXECUTAR AGORA ({thresholds['philosophy']} - Score {timing_score:.0f})"
+    elif timing_score >= thresholds.get('wait_5_15min', 999):
+        market_timing = f"🟡 Aguardar 5-15min (Confirmação - Score {timing_score:.0f})"
+    elif timing_score >= thresholds.get('wait_30_60min', 999):
+        market_timing = f"🟠 Aguardar 30-60min (Melhor Setup - Score {timing_score:.0f})"
+    elif timing_score >= thresholds.get('wait_2_4h', 999):
+        market_timing = f"🔴 Aguardar 2-4h (Condições Inadequadas - Score {timing_score:.0f})"
+    else:
+        market_timing = f"⚫ Evitar - Aguardar Novo Ciclo 24h+ (Score {timing_score:.0f})"
+    
+    # Adicionar contexto específico do perfil
+    profile_contexts = {
+        'scalping': " | Micro-movimentos ultra-rápidos",
+        'intraday': " | Movimentos da sessão diária", 
+        'swing': " | Movimentos multi-dia",
+        'position': " | Tendências semanais/mensais"
+    }
+    market_timing += profile_contexts.get(profile, "")
     
     # Risk level assessment based on Alpha Vantage calculated stops (dinâmico)
     # Remove valores fixos - usa apenas análise real dos dados Alpha Vantage
