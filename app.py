@@ -747,8 +747,25 @@ def main():
         # Header da sidebar compacto
         st.markdown("## ⚙️ Configurações")
         
+        # Market selection
+        st.markdown("### 📊 Mercado")
+        market_type = st.radio(
+            "Tipo de Mercado:",
+            ["Forex", "Criptomoedas"],
+            index=0,
+            key="market_type_select"
+        )
+        
+        # Pair selection based on market type
+        if market_type == "Forex":
+            available_pairs = PAIRS
+            pair_label = "💱 Par de Moedas"
+        else:  # Criptomoedas
+            available_pairs = CRYPTO_PAIRS
+            pair_label = "₿ Par Cripto"
+        
         # Configurações básicas compactas
-        pair = st.selectbox("💱 Par de Moedas", PAIRS, key="pair_selectbox")
+        pair = st.selectbox(pair_label, available_pairs, key="pair_selectbox")
         
         # Sistema unificado de Intervalo e Horizonte
         st.markdown("**⏰ Configuração Temporal Unificada**")
@@ -1578,21 +1595,33 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
         # Get trading style for consistent analysis
         trading_style = st.session_state.get('trading_style', 'swing')
         
+        # Include both forex and crypto pairs based on market selection
+        market_type_selected = st.session_state.get('market_type_select', 'Forex')
+        if market_type_selected == 'Forex':
+            analysis_pairs = PAIRS
+            analysis_label = "pares de moedas"
+        else:
+            analysis_pairs = CRYPTO_PAIRS  
+            analysis_label = "pares cripto"
+        
         # Results storage
         all_results = []
-        total_pairs = len(PAIRS)
+        total_pairs = len(analysis_pairs)
         
-        status_text.text(f"📊 Analisando {total_pairs} pares de moedas...")
+        status_text.text(f"📊 Analisando {total_pairs} {analysis_label}...")
         
-        for i, pair in enumerate(PAIRS):
+        for i, pair in enumerate(analysis_pairs):
             try:
                 # Update progress
                 progress = 10 + int((i / total_pairs) * 80)
                 progress_bar.progress(progress)
                 status_text.text(f"🔄 Analisando {pair} ({i+1}/{total_pairs})...")
                 
+                # Determine market type based on selected market
+                market_type = 'crypto' if market_type_selected == 'Criptomoedas' else 'forex'
+                
                 # Fetch data for current pair
-                df = services['data_service'].fetch_forex_data(pair, INTERVALS[interval], 'compact')
+                df = services['data_service'].fetch_forex_data(pair, INTERVALS[interval], 'compact', market_type)
                 
                 if not services['data_service'].validate_data(df):
                     continue
@@ -1601,7 +1630,7 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                 df_with_indicators = add_technical_indicators(df)
                 
                 # Get current price
-                current_price = services['data_service'].get_latest_price(pair)
+                current_price = services['data_service'].get_latest_price(pair, market_type)
                 if current_price is None:
                     continue
                 
@@ -2126,10 +2155,13 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
             status_text.text("📊 Buscando dados do mercado...")
             progress_bar.progress(30)
             
+            # Determine market type from current selection
+            market_type = 'crypto' if st.session_state.get('market_type_select', 'Forex') == 'Criptomoedas' else 'forex'
             df = services['data_service'].fetch_forex_data(
                 pair, 
                 INTERVALS[interval], 
-                'full' if not is_quick else 'compact'
+                'full' if not is_quick else 'compact',
+                market_type
             )
             
             if not services['data_service'].validate_data(df):
@@ -2147,7 +2179,7 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
             status_text.text("💰 Obtendo preço atual...")
             progress_bar.progress(60)
             
-            current_price = services['data_service'].get_latest_price(pair)
+            current_price = services['data_service'].get_latest_price(pair, market_type)
             
             if current_price is None:
                 progress_container.empty()

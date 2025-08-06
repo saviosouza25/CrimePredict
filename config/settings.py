@@ -56,6 +56,34 @@ PAIRS: List[str] = [
     'GBP/PLN',  # British Pound/Polish Zloty
 ]
 
+# Cryptocurrency Pairs - Alpha Vantage Compatible
+CRYPTO_PAIRS: List[str] = [
+    # Major Cryptocurrencies
+    'BTC/USD',   # Bitcoin/US Dollar
+    'ETH/USD',   # Ethereum/US Dollar
+    'BNB/USD',   # Binance Coin/US Dollar
+    'ADA/USD',   # Cardano/US Dollar
+    'SOL/USD',   # Solana/US Dollar
+    'XRP/USD',   # Ripple/US Dollar
+    'DOT/USD',   # Polkadot/US Dollar
+    'DOGE/USD',  # Dogecoin/US Dollar
+    'AVAX/USD',  # Avalanche/US Dollar
+    'MATIC/USD', # Polygon/US Dollar
+    'ATOM/USD',  # Cosmos/US Dollar
+    'LINK/USD',  # Chainlink/US Dollar
+    'UNI/USD',   # Uniswap/US Dollar
+    'LTC/USD',   # Litecoin/US Dollar
+    'BCH/USD',   # Bitcoin Cash/US Dollar
+    
+    # Alternative Markets
+    'BTC/EUR',   # Bitcoin/Euro
+    'ETH/EUR',   # Ethereum/Euro
+    'BTC/GBP',   # Bitcoin/British Pound
+    'ETH/GBP',   # Ethereum/British Pound
+    'BTC/JPY',   # Bitcoin/Japanese Yen
+    'ETH/JPY',   # Ethereum/Japanese Yen
+]
+
 # Time Intervals
 INTERVALS: Dict[str, str] = {
     '1min': '1min',
@@ -281,6 +309,13 @@ TEMPORAL_AI_PARAMETERS = {
     }
 }
 
+# Market Type Classification
+MARKET_TYPES = {
+    'forex': PAIRS,
+    'crypto': CRYPTO_PAIRS,
+    # 'commodities': []  # XAUUSD not supported by Alpha Vantage
+}
+
 # Parâmetros específicos para pares da Alpha Vantage por volatilidade
 PAIR_AI_ADJUSTMENTS = {
     # Majors - Baixa volatilidade, alta previsibilidade
@@ -302,5 +337,22 @@ PAIR_AI_ADJUSTMENTS = {
     # Exotics - Alta volatilidade, menor previsibilidade
     'USD/TRY': {'volatility_multiplier': 2.5, 'prediction_confidence_boost': 0.6},
     'USD/ZAR': {'volatility_multiplier': 2.0, 'prediction_confidence_boost': 0.7},
-    'USD/MXN': {'volatility_multiplier': 1.8, 'prediction_confidence_boost': 0.75}
+    'USD/MXN': {'volatility_multiplier': 1.8, 'prediction_confidence_boost': 0.75},
+    
+    # Cryptocurrencies - Muito alta volatilidade, previsibilidade variável
+    'BTC/USD': {'volatility_multiplier': 3.5, 'prediction_confidence_boost': 0.8},
+    'ETH/USD': {'volatility_multiplier': 4.0, 'prediction_confidence_boost': 0.75},
+    'BNB/USD': {'volatility_multiplier': 4.5, 'prediction_confidence_boost': 0.7},
+    'ADA/USD': {'volatility_multiplier': 5.0, 'prediction_confidence_boost': 0.65},
+    'SOL/USD': {'volatility_multiplier': 5.5, 'prediction_confidence_boost': 0.6},
+    'XRP/USD': {'volatility_multiplier': 4.8, 'prediction_confidence_boost': 0.65},
+    'DOT/USD': {'volatility_multiplier': 5.2, 'prediction_confidence_boost': 0.6},
+    'DOGE/USD': {'volatility_multiplier': 6.0, 'prediction_confidence_boost': 0.5},
+    'AVAX/USD': {'volatility_multiplier': 5.8, 'prediction_confidence_boost': 0.55},
+    'MATIC/USD': {'volatility_multiplier': 5.5, 'prediction_confidence_boost': 0.6},
+    'ATOM/USD': {'volatility_multiplier': 5.3, 'prediction_confidence_boost': 0.6},
+    'LINK/USD': {'volatility_multiplier': 5.0, 'prediction_confidence_boost': 0.65},
+    'UNI/USD': {'volatility_multiplier': 5.4, 'prediction_confidence_boost': 0.6},
+    'LTC/USD': {'volatility_multiplier': 4.2, 'prediction_confidence_boost': 0.7},
+    'BCH/USD': {'volatility_multiplier': 4.5, 'prediction_confidence_boost': 0.68}
 }
