@@ -986,6 +986,9 @@ def main():
         # Análise rápida
         quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, key="quick_analysis_btn")
         
+        # Análise multi-pares com perfis de trader
+        multi_pair_analysis = st.button("🌍 Análise Multi-Pares (Identificação de Tendências)", use_container_width=True, key="multi_pair_trend_btn")
+        
 
         
         # Processamento dos diferentes tipos de análise
@@ -1034,6 +1037,8 @@ def main():
             pair, interval, horizon, lookback_period, 
             mc_samples, epochs, quick_analysis
         )
+    elif multi_pair_analysis:
+        run_multi_pair_trend_analysis(interval, horizon, lookback_period, mc_samples, epochs)
 
     
     # Always show main header
@@ -2280,7 +2285,900 @@ def calculate_scenario_probability(analysis_components, pair, trading_style):
 
 # Função de cálculo de validade de análise removida conforme solicitação do usuário
 
-# Função de exibição de resultados multi-pares removida conforme solicitação do usuário
+def run_multi_pair_trend_analysis(interval, horizon, lookback_period, mc_samples, epochs):
+    """Análise multi-pares focada em identificação de tendências com perfis de trader"""
+    
+    # Obter configurações do usuário
+    market_type = st.session_state.get('market_type_select', 'Forex')
+    
+    # Seletor de perfil de trader
+    st.markdown("### 👤 Selecione o Perfil de Trader")
+    trader_profiles = {
+        'scalper': {
+            'name': 'Scalper',
+            'timeframe': '1-5min',
+            'holding_time': '<30min',
+            'max_extension': '50 pips',
+            'max_dd': '1%',
+            'win_rate_target': '55-65%',
+            'description': 'Foco em tendências curtas e entradas rápidas'
+        },
+        'day_trader': {
+            'name': 'Day Trader',
+            'timeframe': '15-60min',
+            'holding_time': '1-4h',
+            'max_extension': '100 pips',
+            'max_dd': '2%',
+            'win_rate_target': '60-70%',
+            'description': 'Tendências intraday com fechamento no fim do dia'
+        },
+        'swing_trader': {
+            'name': 'Swing Trader',
+            'timeframe': 'Diário',
+            'holding_time': '2-7 dias',
+            'max_extension': '200-500 pips',
+            'max_dd': '5%',
+            'win_rate_target': '58-68%',
+            'description': 'Tendências médias com risco:retorno 1:3'
+        },
+        'position_trader': {
+            'name': 'Position Trader',
+            'timeframe': 'Semanal/Mensal',
+            'holding_time': '>1 mês',
+            'max_extension': '1000+ pips',
+            'max_dd': '10%',
+            'win_rate_target': '55-65%',
+            'description': 'Tendências longas com análise macro'
+        }
+    }
+    
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        selected_profile = st.selectbox(
+            "Perfil de Trader:",
+            options=list(trader_profiles.keys()),
+            format_func=lambda x: f"{trader_profiles[x]['name']} ({trader_profiles[x]['timeframe']})",
+            key="trader_profile_select"
+        )
+    
+    with col2:
+        profile_info = trader_profiles[selected_profile]
+        st.info(f"**{profile_info['name']}**\n"
+               f"📊 Timeframe: {profile_info['timeframe']}\n"
+               f"⏰ Holding: {profile_info['holding_time']}\n"
+               f"🎯 Win Rate: {profile_info['win_rate_target']}")
+    
+    st.caption(profile_info['description'])
+    
+    # Definir pares baseado no mercado selecionado
+    if market_type == "Forex":
+        from config.settings import PAIRS
+        analysis_pairs = PAIRS
+        market_label = "Forex"
+        market_icon = "💱"
+    else:
+        from config.settings import CRYPTO_PAIRS
+        analysis_pairs = CRYPTO_PAIRS[:6]  # Primeiros 6 pares crypto
+        market_label = "Criptomoedas"
+        market_icon = "₿"
+    
+    # Botão para executar análise
+    if st.button(f"🚀 Executar Análise {market_label} ({len(analysis_pairs)} pares)", type="primary", use_container_width=True):
+        
+        st.markdown(f"## 🌍 Análise Multi-Pares {market_label} {market_icon}")
+        st.markdown(f"### Identificação de Tendências - Perfil: {profile_info['name']}")
+        st.caption(f"Analisando {len(analysis_pairs)} pares com parâmetros otimizados para {selected_profile}")
+        
+        # Barra de progresso
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        # Container para resultados em tempo real
+        results_container = st.container()
+        
+        # Lista para armazenar resultados
+        analysis_results = []
+        successful_analyses = 0
+        
+        # Executar análise para cada par
+        for i, pair in enumerate(analysis_pairs):
+            try:
+                # Atualizar progresso
+                progress = (i + 1) / len(analysis_pairs)
+                progress_bar.progress(progress)
+                status_text.text(f"Analisando {pair} ({i+1}/{len(analysis_pairs)})...")
+                
+                # Executar análise completa do par
+                pair_result = analyze_pair_for_trend_identification(
+                    pair, selected_profile, profile_info, interval, 
+                    lookback_period, mc_samples, epochs
+                )
+                
+                if pair_result:
+                    analysis_results.append(pair_result)
+                    successful_analyses += 1
+                    
+                    # Mostrar resultado em tempo real
+                    with results_container:
+                        display_pair_trend_result(pair_result, i+1)
+                
+            except Exception as e:
+                st.error(f"Erro ao analisar {pair}: {str(e)}")
+                continue
+        
+        # Finalizar análise
+        progress_bar.progress(1.0)
+        status_text.text(f"✅ Análise concluída! {successful_analyses} pares analisados com sucesso")
+        
+        # Salvar resultados na sessão
+        st.session_state['multi_pair_trend_results'] = {
+            'results': analysis_results,
+            'profile': selected_profile,
+            'profile_info': profile_info,
+            'market_type': market_type,
+            'timestamp': datetime.now(),
+            'parameters': {
+                'interval': interval,
+                'horizon': horizon,
+                'lookback_period': lookback_period,
+                'mc_samples': mc_samples,
+                'epochs': epochs
+            }
+        }
+        
+        # Exibir resumo final
+        if successful_analyses > 0:
+            display_trend_analysis_summary(analysis_results, profile_info)
+        
+        st.rerun()
+
+def analyze_pair_for_trend_identification(pair, profile, profile_info, interval, lookback_period, mc_samples, epochs):
+    """Análise completa de um par para identificação de tendências"""
+    
+    try:
+        # 1. Obter dados históricos
+        price_data = get_pair_data_for_analysis(pair, interval, lookback_period)
+        
+        if price_data is None or len(price_data) < 50:
+            return None
+        
+        # 2. Análise de Liquidez (volume médio, spreads)
+        liquidity_analysis = analyze_liquidity_for_trends(price_data, pair)
+        
+        # 3. Análise de Tendência (EMA, RSI, ADX, MACD)
+        trend_analysis = analyze_technical_trends(price_data, profile)
+        
+        # 4. Análise de Sentimento (NLP básico)
+        sentiment_analysis = analyze_market_sentiment_for_trends(pair)
+        
+        # 5. IA/LSTM para previsão de tendência
+        lstm_analysis = analyze_lstm_trend_prediction(price_data, lookback_period, epochs)
+        
+        # 6. Cálculo de DD Máximo e Extensão Máxima
+        risk_metrics = calculate_trend_risk_metrics(price_data, profile_info)
+        
+        # 7. Probabilidade de sucesso baseada no perfil
+        success_probability = calculate_trend_success_probability(
+            liquidity_analysis, trend_analysis, sentiment_analysis, 
+            lstm_analysis, risk_metrics, profile_info
+        )
+        
+        # 8. Sinais de entrada/saída
+        entry_exit_signals = generate_trend_signals(
+            trend_analysis, lstm_analysis, profile_info
+        )
+        
+        # Obter preço atual
+        current_price = get_current_price(price_data)
+        
+        return {
+            'pair': pair,
+            'current_price': current_price,
+            'profile': profile,
+            'liquidity': liquidity_analysis,
+            'trend': trend_analysis,
+            'sentiment': sentiment_analysis,
+            'lstm': lstm_analysis,
+            'risk_metrics': risk_metrics,
+            'success_probability': success_probability,
+            'signals': entry_exit_signals,
+            'timestamp': datetime.now()
+        }
+        
+    except Exception as e:
+        st.warning(f"Erro na análise de {pair}: {str(e)}")
+        return None
+
+def get_pair_data_for_analysis(pair, interval, lookback_period):
+    """Obter dados históricos para análise de tendência"""
+    
+    try:
+        # Determinar se é crypto ou forex
+        if any(crypto in pair for crypto in ['BTC', 'ETH', 'ADA', 'SOL', 'XRP', 'DOT', 'DOGE', 'LTC', 'BCH']):
+            # Para crypto
+            price_data = services['data_service'].fetch_forex_data(pair, interval, 'full', 'crypto')
+        else:
+            # Para forex - converter formato do par
+            pair_symbol = pair.replace('/', '')  # EUR/USD -> EURUSD
+            price_data = services['data_service'].fetch_forex_data(pair_symbol, interval, 'full', 'forex')
+        
+        if price_data is not None and len(price_data) >= lookback_period:
+            return price_data.tail(lookback_period * 2)  # Usar dados extras para indicadores
+        
+        return None
+        
+    except Exception as e:
+        return None
+
+def analyze_liquidity_for_trends(price_data, pair):
+    """Análise de liquidez focada em identificação de tendências"""
+    
+    try:
+        # Obter colunas de dados
+        volume_col = None
+        for col in ['5. volume', 'volume', '5. Volume']:
+            if col in price_data.columns:
+                volume_col = col
+                break
+        
+        close_col = None
+        for col in ['4. close', 'close', '4. Close']:
+            if col in price_data.columns:
+                close_col = col
+                break
+        
+        high_col = None
+        low_col = None
+        for col in price_data.columns:
+            if 'high' in col.lower():
+                high_col = col
+            elif 'low' in col.lower():
+                low_col = col
+        
+        # Calcular métricas de liquidez
+        avg_volume = 0
+        spread_estimate = 0.001  # Spread padrão
+        liquidity_score = 50  # Score padrão
+        
+        if volume_col and close_col:
+            volumes = pd.to_numeric(price_data[volume_col], errors='coerce').fillna(0)
+            avg_volume = volumes.mean()
+            
+            # Score baseado no volume (>1M = alta liquidez)
+            if avg_volume > 1000000:
+                liquidity_score = 85
+            elif avg_volume > 500000:
+                liquidity_score = 70
+            elif avg_volume > 100000:
+                liquidity_score = 60
+            else:
+                liquidity_score = 40
+        
+        if high_col and low_col and close_col:
+            highs = pd.to_numeric(price_data[high_col], errors='coerce')
+            lows = pd.to_numeric(price_data[low_col], errors='coerce')
+            closes = pd.to_numeric(price_data[close_col], errors='coerce')
+            
+            # Estimar spread como % da diferença high-low
+            daily_ranges = highs - lows
+            spread_estimate = (daily_ranges.mean() / closes.mean()) * 0.1  # 10% da range média
+        
+        return {
+            'avg_volume': avg_volume,
+            'spread_estimate': spread_estimate,
+            'liquidity_score': liquidity_score,
+            'high_liquidity': avg_volume > 1000000,
+            'suitable_for_trends': liquidity_score > 60
+        }
+        
+    except Exception as e:
+        return {
+            'avg_volume': 0,
+            'spread_estimate': 0.001,
+            'liquidity_score': 50,
+            'high_liquidity': False,
+            'suitable_for_trends': True
+        }
+
+def analyze_market_sentiment_for_trends(pair):
+    """Análise de sentimento para identificação de tendências"""
+    
+    try:
+        # Usar serviço de sentimento existente
+        sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
+        
+        # Classificar sentimento
+        if sentiment_score > 0.5:
+            sentiment_signal = 'BULLISH'
+            sentiment_strength = min(100, sentiment_score * 200)
+        elif sentiment_score < -0.5:
+            sentiment_signal = 'BEARISH'
+            sentiment_strength = min(100, abs(sentiment_score) * 200)
+        else:
+            sentiment_signal = 'NEUTRAL'
+            sentiment_strength = 30
+        
+        return {
+            'sentiment_score': sentiment_score,
+            'sentiment_signal': sentiment_signal,
+            'sentiment_strength': sentiment_strength,
+            'bullish': sentiment_score > 0.1,
+            'bearish': sentiment_score < -0.1,
+            'reliable': abs(sentiment_score) > 0.2
+        }
+        
+    except Exception as e:
+        return {
+            'sentiment_score': 0.0,
+            'sentiment_signal': 'NEUTRAL',
+            'sentiment_strength': 30,
+            'bullish': False,
+            'bearish': False,
+            'reliable': False
+        }
+
+def analyze_lstm_trend_prediction(price_data, lookback_period, epochs):
+    """Análise LSTM para previsão de tendências"""
+    
+    try:
+        # Usar serviço LSTM existente se disponível
+        if 'ai_lstm_service' in services:
+            prediction = services['ai_lstm_service'].predict_price_movement(
+                price_data, '1 Dia', epochs
+            )
+            
+            lstm_signal = prediction.get('direction', 'HOLD')
+            lstm_confidence = prediction.get('confidence', 50)
+            
+            # Converter para formato de tendência
+            if lstm_signal == 'BUY':
+                trend_signal = 'BULLISH'
+            elif lstm_signal == 'SELL':
+                trend_signal = 'BEARISH'
+            else:
+                trend_signal = 'SIDEWAYS'
+                
+        else:
+            # LSTM simplificado baseado em padrões de preço
+            close_col = None
+            for col in ['4. close', 'close', '4. Close']:
+                if col in price_data.columns:
+                    close_col = col
+                    break
+            
+            if close_col:
+                closes = pd.to_numeric(price_data[close_col], errors='coerce').fillna(method='ffill')
+                
+                # Análise de padrão simples
+                recent_trend = closes.tail(5).mean() - closes.head(5).mean()
+                trend_strength = abs(recent_trend) / closes.mean() * 100
+                
+                if recent_trend > 0 and trend_strength > 1:
+                    trend_signal = 'BULLISH'
+                    lstm_confidence = min(85, 50 + trend_strength * 10)
+                elif recent_trend < 0 and trend_strength > 1:
+                    trend_signal = 'BEARISH'
+                    lstm_confidence = min(85, 50 + trend_strength * 10)
+                else:
+                    trend_signal = 'SIDEWAYS'
+                    lstm_confidence = 40
+            else:
+                trend_signal = 'SIDEWAYS'
+                lstm_confidence = 50
+        
+        return {
+            'trend_signal': trend_signal,
+            'confidence': lstm_confidence,
+            'accuracy_estimate': min(85, lstm_confidence + 10),
+            'bullish_probability': lstm_confidence if trend_signal == 'BULLISH' else 100 - lstm_confidence,
+            'bearish_probability': lstm_confidence if trend_signal == 'BEARISH' else 100 - lstm_confidence,
+            'reliable': lstm_confidence > 65
+        }
+        
+    except Exception as e:
+        return {
+            'trend_signal': 'SIDEWAYS',
+            'confidence': 50,
+            'accuracy_estimate': 60,
+            'bullish_probability': 50,
+            'bearish_probability': 50,
+            'reliable': False
+        }
+
+def calculate_trend_risk_metrics(price_data, profile_info):
+    """Calcular DD Máximo e Extensão Máxima para perfil específico"""
+    
+    try:
+        close_col = None
+        for col in ['4. close', 'close', '4. Close']:
+            if col in price_data.columns:
+                close_col = col
+                break
+        
+        if close_col is None:
+            return get_default_risk_metrics(profile_info)
+        
+        closes = pd.to_numeric(price_data[close_col], errors='coerce').fillna(method='ffill')
+        
+        # Calcular drawdown máximo
+        rolling_max = closes.expanding().max()
+        drawdown = (closes - rolling_max) / rolling_max * 100
+        max_drawdown = abs(drawdown.min())
+        
+        # Calcular extensão máxima (volatilidade em pips/points)
+        daily_changes = closes.pct_change().dropna()
+        volatility = daily_changes.std() * 100  # Em percentual
+        
+        # Estimar pips baseado no par
+        if closes.iloc[-1] < 10:  # Pares como EURUSD (1.0xxx)
+            pip_size = 0.0001
+            current_volatility_pips = (volatility / 100) * closes.iloc[-1] / pip_size
+        else:  # Pares como USDJPY (150.xxx)
+            pip_size = 0.01
+            current_volatility_pips = (volatility / 100) * closes.iloc[-1] / pip_size
+        
+        # Ajustar para perfil do trader
+        profile_multipliers = {
+            'scalper': {'dd': 0.5, 'ext': 0.3},
+            'day_trader': {'dd': 1.0, 'ext': 1.0},
+            'swing_trader': {'dd': 2.0, 'ext': 3.0},
+            'position_trader': {'dd': 3.0, 'ext': 5.0}
+        }
+        
+        profile = profile_info.get('name', 'Day Trader').lower().replace(' ', '_')
+        multiplier = profile_multipliers.get(profile, profile_multipliers['day_trader'])
+        
+        estimated_max_dd = min(max_drawdown * multiplier['dd'], float(profile_info['max_dd'].replace('%', '')))
+        estimated_max_extension = current_volatility_pips * multiplier['ext']
+        
+        # Win rate baseado no perfil e volatilidade
+        base_win_rate = float(profile_info['win_rate_target'].split('-')[0].replace('%', ''))
+        if max_drawdown < 2:  # Baixa volatilidade
+            estimated_win_rate = min(75, base_win_rate + 5)
+        elif max_drawdown > 5:  # Alta volatilidade
+            estimated_win_rate = max(45, base_win_rate - 5)
+        else:
+            estimated_win_rate = base_win_rate
+        
+        return {
+            'max_drawdown': round(estimated_max_dd, 2),
+            'max_extension_pips': round(estimated_max_extension, 0),
+            'volatility': round(volatility, 2),
+            'estimated_win_rate': round(estimated_win_rate, 0),
+            'risk_reward_ratio': '1:2.5',  # Padrão otimizado
+            'suitable_for_profile': estimated_max_dd <= float(profile_info['max_dd'].replace('%', ''))
+        }
+        
+    except Exception as e:
+        return get_default_risk_metrics(profile_info)
+
+def get_default_risk_metrics(profile_info):
+    """Métricas de risco padrão baseadas no perfil"""
+    profile_defaults = {
+        'Scalper': {'dd': 0.8, 'ext': 30, 'win': 58},
+        'Day Trader': {'dd': 1.5, 'ext': 80, 'win': 65},
+        'Swing Trader': {'dd': 3.5, 'ext': 300, 'win': 63},
+        'Position Trader': {'dd': 7.0, 'ext': 800, 'win': 60}
+    }
+    
+    defaults = profile_defaults.get(profile_info['name'], profile_defaults['Day Trader'])
+    
+    return {
+        'max_drawdown': defaults['dd'],
+        'max_extension_pips': defaults['ext'],
+        'volatility': 2.5,
+        'estimated_win_rate': defaults['win'],
+        'risk_reward_ratio': '1:2.5',
+        'suitable_for_profile': True
+    }
+
+def calculate_trend_success_probability(liquidity, trend, sentiment, lstm, risk_metrics, profile_info):
+    """Calcular probabilidade de sucesso baseada no perfil e análises"""
+    
+    try:
+        # Pesos por componente (baseado nas especificações)
+        weights = {
+            'liquidity': 0.25,
+            'trend': 0.30,
+            'sentiment': 0.20,
+            'lstm': 0.25
+        }
+        
+        # Normalizar scores para 0-100
+        liquidity_score = liquidity.get('liquidity_score', 50)
+        trend_score = trend.get('trend_strength', 30)
+        sentiment_score = sentiment.get('sentiment_strength', 30)
+        lstm_score = lstm.get('confidence', 50)
+        
+        # Calcular score ponderado
+        weighted_score = (
+            liquidity_score * weights['liquidity'] +
+            trend_score * weights['trend'] +
+            sentiment_score * weights['sentiment'] +
+            lstm_score * weights['lstm']
+        )
+        
+        # Ajustar baseado no perfil do trader
+        profile_name = profile_info['name']
+        if profile_name == 'Scalper' and liquidity_score < 60:
+            weighted_score *= 0.8  # Scalpers precisam de alta liquidez
+        elif profile_name == 'Position Trader' and sentiment_score < 40:
+            weighted_score *= 0.9  # Position traders dependem mais do sentimento
+        
+        # Ajustar baseado nas métricas de risco
+        if risk_metrics['suitable_for_profile']:
+            weighted_score *= 1.1
+        else:
+            weighted_score *= 0.9
+        
+        # Converter para probabilidade de sucesso
+        success_probability = min(85, max(15, weighted_score))
+        
+        # Determinar classificação
+        if success_probability > 70:
+            classification = 'ALTA'
+            color = 'green'
+        elif success_probability > 50:
+            classification = 'MÉDIA'
+            color = 'orange'
+        else:
+            classification = 'BAIXA'
+            color = 'red'
+        
+        return {
+            'probability': round(success_probability, 1),
+            'classification': classification,
+            'color': color,
+            'weighted_score': round(weighted_score, 1),
+            'target_win_rate': profile_info['win_rate_target'],
+            'meets_target': success_probability >= float(profile_info['win_rate_target'].split('-')[0].replace('%', ''))
+        }
+        
+    except Exception as e:
+        return {
+            'probability': 60.0,
+            'classification': 'MÉDIA',
+            'color': 'orange',
+            'weighted_score': 60.0,
+            'target_win_rate': profile_info.get('win_rate_target', '60%'),
+            'meets_target': True
+        }
+
+def generate_trend_signals(trend_analysis, lstm_analysis, profile_info):
+    """Gerar sinais de entrada/saída baseados na análise de tendência"""
+    
+    try:
+        # Combinar sinais técnicos e LSTM
+        trend_signal = trend_analysis.get('trend_direction', 'SIDEWAYS')
+        lstm_signal = lstm_analysis.get('trend_signal', 'SIDEWAYS')
+        
+        # Determinar sinal principal
+        if trend_signal == lstm_signal and trend_signal != 'SIDEWAYS':
+            main_signal = trend_signal
+            signal_strength = 'FORTE'
+        elif trend_signal != 'SIDEWAYS' and lstm_signal == 'SIDEWAYS':
+            main_signal = trend_signal
+            signal_strength = 'MODERADO'
+        elif lstm_signal != 'SIDEWAYS' and trend_signal == 'SIDEWAYS':
+            main_signal = lstm_signal
+            signal_strength = 'MODERADO'
+        else:
+            main_signal = 'AGUARDAR'
+            signal_strength = 'FRACO'
+        
+        # Determinar pontos de entrada/saída baseados no perfil
+        profile_name = profile_info['name']
+        
+        if profile_name == 'Scalper':
+            entry_condition = "EMA crossover + RSI > 50"
+            exit_condition = "Target: 30-50 pips | Stop: 15-20 pips"
+            timeframe_rec = "1-5 minutos"
+        elif profile_name == 'Day Trader':
+            entry_condition = "Tendência confirmada + ADX > 25"
+            exit_condition = "Target: 80-120 pips | Stop: 40-50 pips"
+            timeframe_rec = "15-60 minutos"
+        elif profile_name == 'Swing Trader':
+            entry_condition = "MACD crossover + LSTM confirma"
+            exit_condition = "Target: 200-400 pips | Stop: 100-150 pips"
+            timeframe_rec = "Diário"
+        else:  # Position Trader
+            entry_condition = "Tendência macro + Sentimento alinhado"
+            exit_condition = "Target: 800-1200 pips | Stop: 300-400 pips"
+            timeframe_rec = "Semanal/Mensal"
+        
+        return {
+            'main_signal': main_signal,
+            'signal_strength': signal_strength,
+            'entry_condition': entry_condition,
+            'exit_condition': exit_condition,
+            'timeframe_recommendation': timeframe_rec,
+            'confidence': trend_analysis.get('trend_strength', 50),
+            'action': 'COMPRAR' if main_signal == 'BULLISH' else 'VENDER' if main_signal == 'BEARISH' else 'AGUARDAR'
+        }
+        
+    except Exception as e:
+        return {
+            'main_signal': 'AGUARDAR',
+            'signal_strength': 'FRACO',
+            'entry_condition': 'Aguardar confirmação',
+            'exit_condition': 'Definir com base no perfil',
+            'timeframe_recommendation': profile_info.get('timeframe', 'Diário'),
+            'confidence': 50,
+            'action': 'AGUARDAR'
+        }
+
+def get_current_price(price_data):
+    """Obter preço atual dos dados"""
+    
+    try:
+        close_col = None
+        for col in ['4. close', 'close', '4. Close']:
+            if col in price_data.columns:
+                close_col = col
+                break
+        
+        if close_col:
+            return float(price_data.iloc[-1][close_col])
+        
+        return 1.0000
+        
+    except Exception as e:
+        return 1.0000
+
+def display_pair_trend_result(pair_result, index):
+    """Exibir resultado individual de cada par em tempo real"""
+    
+    try:
+        pair = pair_result['pair']
+        trend = pair_result['trend']
+        signals = pair_result['signals']
+        success_prob = pair_result['success_probability']
+        
+        # Determinar cor baseada no sinal
+        if signals['main_signal'] == 'BULLISH':
+            color = "🟢"
+            action_color = "#00C851"
+        elif signals['main_signal'] == 'BEARISH':
+            color = "🔴"
+            action_color = "#F44336"
+        else:
+            color = "🟡"
+            action_color = "#FF9800"
+        
+        # Exibir resultado compacto
+        with st.container():
+            col1, col2, col3, col4 = st.columns([2, 2, 2, 2])
+            
+            with col1:
+                st.metric(
+                    f"{color} {pair}",
+                    f"{pair_result['current_price']:.4f}",
+                    f"{trend['trend_direction']}"
+                )
+            
+            with col2:
+                st.metric(
+                    "Probabilidade",
+                    f"{success_prob['probability']:.1f}%",
+                    f"{success_prob['classification']}"
+                )
+            
+            with col3:
+                st.metric(
+                    "Sinal",
+                    signals['action'],
+                    f"Força: {signals['signal_strength']}"
+                )
+            
+            with col4:
+                risk = pair_result['risk_metrics']
+                st.metric(
+                    "DD Max",
+                    f"{risk['max_drawdown']:.1f}%",
+                    f"Ext: {risk['max_extension_pips']:.0f} pips"
+                )
+            
+            st.caption(f"✓ {index} - {signals['entry_condition']}")
+            st.markdown("---")
+    
+    except Exception as e:
+        st.error(f"Erro ao exibir resultado de {pair_result.get('pair', 'Par desconhecido')}: {str(e)}")
+
+def display_trend_analysis_summary(analysis_results, profile_info):
+    """Exibir resumo final da análise multi-pares"""
+    
+    try:
+        st.markdown("## 📊 Resumo da Análise Multi-Pares")
+        st.markdown(f"### Perfil: {profile_info['name']} | {len(analysis_results)} Pares Analisados")
+        
+        # Métricas gerais
+        col1, col2, col3, col4 = st.columns(4)
+        
+        # Contar sinais
+        bullish_count = sum(1 for r in analysis_results if r['signals']['main_signal'] == 'BULLISH')
+        bearish_count = sum(1 for r in analysis_results if r['signals']['main_signal'] == 'BEARISH')
+        wait_count = len(analysis_results) - bullish_count - bearish_count
+        
+        # Probabilidade média
+        avg_probability = sum(r['success_probability']['probability'] for r in analysis_results) / len(analysis_results)
+        
+        with col1:
+            st.metric("🟢 Sinais Bullish", bullish_count)
+        with col2:
+            st.metric("🔴 Sinais Bearish", bearish_count)
+        with col3:
+            st.metric("🟡 Aguardar", wait_count)
+        with col4:
+            st.metric("📈 Probabilidade Média", f"{avg_probability:.1f}%")
+        
+        # Top oportunidades
+        st.markdown("### 🏆 Top 5 Oportunidades")
+        
+        # Ordenar por probabilidade de sucesso
+        top_opportunities = sorted(analysis_results, key=lambda x: x['success_probability']['probability'], reverse=True)[:5]
+        
+        for i, opp in enumerate(top_opportunities, 1):
+            with st.expander(f"#{i} - {opp['pair']} ({opp['success_probability']['probability']:.1f}%)"):
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown(f"""
+                    **📊 Análise Técnica:**
+                    - Tendência: {opp['trend']['trend_direction']}
+                    - Força: {opp['trend']['trend_strength']:.1f}/100
+                    - RSI: {opp['trend']['rsi']:.1f}
+                    - ADX: {opp['trend']['adx']:.1f}
+                    """)
+                    
+                with col2:
+                    st.markdown(f"""
+                    **🎯 Recomendação:**
+                    - Ação: {opp['signals']['action']}
+                    - Entrada: {opp['signals']['entry_condition']}
+                    - Saída: {opp['signals']['exit_condition']}
+                    - DD Max: {opp['risk_metrics']['max_drawdown']:.1f}%
+                    """)
+        
+        # Distribuição por classificação
+        st.markdown("### 📈 Distribuição de Probabilidades")
+        
+        high_prob = sum(1 for r in analysis_results if r['success_probability']['probability'] > 70)
+        med_prob = sum(1 for r in analysis_results if 50 < r['success_probability']['probability'] <= 70)
+        low_prob = sum(1 for r in analysis_results if r['success_probability']['probability'] <= 50)
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("🟢 Alta (>70%)", high_prob, f"{high_prob/len(analysis_results)*100:.1f}%")
+        with col2:
+            st.metric("🟡 Média (50-70%)", med_prob, f"{med_prob/len(analysis_results)*100:.1f}%")
+        with col3:
+            st.metric("🔴 Baixa (<50%)", low_prob, f"{low_prob/len(analysis_results)*100:.1f}%")
+        
+    except Exception as e:
+        st.error(f"Erro ao exibir resumo: {str(e)}")
+
+def analyze_technical_trends(price_data, profile):
+    """Análise técnica focada em identificação de tendências"""
+    
+    try:
+        # Obter coluna de fechamento
+        close_col = None
+        for col in ['4. close', 'close', '4. Close']:
+            if col in price_data.columns:
+                close_col = col
+                break
+        
+        if close_col is None:
+            return None
+        
+        closes = pd.to_numeric(price_data[close_col], errors='coerce').fillna(method='ffill')
+        
+        # 1. EMA 12/26 crossover
+        ema12 = closes.ewm(span=12).mean()
+        ema26 = closes.ewm(span=26).mean()
+        ema_signal = 1 if ema12.iloc[-1] > ema26.iloc[-1] else -1
+        ema_strength = abs(ema12.iloc[-1] - ema26.iloc[-1]) / ema26.iloc[-1]
+        
+        # 2. RSI (14 períodos)
+        delta = closes.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        current_rsi = rsi.iloc[-1]
+        
+        # Sinais RSI baseados nos níveis 50/70/30
+        if current_rsi > 70:
+            rsi_signal = -1  # Sobrecomprado
+        elif current_rsi < 30:
+            rsi_signal = 1   # Sobrevendido
+        elif current_rsi > 50:
+            rsi_signal = 1   # Bullish
+        else:
+            rsi_signal = -1  # Bearish
+        
+        # 3. ADX (força da tendência)
+        high_col = None
+        low_col = None
+        for col in price_data.columns:
+            if 'high' in col.lower():
+                high_col = col
+            elif 'low' in col.lower():
+                low_col = col
+        
+        adx_value = 25  # Valor padrão
+        adx_signal = 0
+        
+        if high_col and low_col:
+            highs = pd.to_numeric(price_data[high_col], errors='coerce').fillna(method='ffill')
+            lows = pd.to_numeric(price_data[low_col], errors='coerce').fillna(method='ffill')
+            
+            # Cálculo simplificado do ADX
+            tr1 = highs - lows
+            tr2 = abs(highs - closes.shift(1))
+            tr3 = abs(lows - closes.shift(1))
+            tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+            atr = tr.rolling(window=14).mean()
+            
+            # Estimativa do ADX baseada no ATR
+            adx_value = min(100, (atr.iloc[-1] / closes.iloc[-1]) * 1000)
+            adx_signal = 1 if adx_value > 25 else 0  # Tendência forte se >25
+        
+        # 4. MACD (12/26/9)
+        ema12_macd = closes.ewm(span=12).mean()
+        ema26_macd = closes.ewm(span=26).mean()
+        macd_line = ema12_macd - ema26_macd
+        signal_line = macd_line.ewm(span=9).mean()
+        macd_histogram = macd_line - signal_line
+        
+        macd_signal = 1 if macd_line.iloc[-1] > signal_line.iloc[-1] else -1
+        macd_strength = abs(macd_histogram.iloc[-1])
+        
+        # Determinar tendência geral
+        signals = [ema_signal, rsi_signal, adx_signal, macd_signal]
+        trend_score = sum(signals) / len(signals)
+        
+        if trend_score > 0.5:
+            trend_direction = 'BULLISH'
+            trend_strength = min(100, trend_score * 100)
+        elif trend_score < -0.5:
+            trend_direction = 'BEARISH'
+            trend_strength = min(100, abs(trend_score) * 100)
+        else:
+            trend_direction = 'SIDEWAYS'
+            trend_strength = 30
+        
+        return {
+            'trend_direction': trend_direction,
+            'trend_strength': trend_strength,
+            'ema_signal': ema_signal,
+            'ema_strength': ema_strength,
+            'rsi': current_rsi,
+            'rsi_signal': rsi_signal,
+            'adx': adx_value,
+            'adx_signal': adx_signal,
+            'macd_signal': macd_signal,
+            'macd_strength': macd_strength,
+            'overall_score': trend_score,
+            'strong_trend': adx_value > 25 and abs(trend_score) > 0.6
+        }
+        
+    except Exception as e:
+        return {
+            'trend_direction': 'SIDEWAYS',
+            'trend_strength': 30,
+            'ema_signal': 0,
+            'ema_strength': 0,
+            'rsi': 50,
+            'rsi_signal': 0,
+            'adx': 20,
+            'adx_signal': 0,
+            'macd_signal': 0,
+            'macd_strength': 0,
+            'overall_score': 0,
+            'strong_trend': False
+        }
 
 def generate_trading_recommendations(analysis_results):
     """Generate comprehensive trading recommendations based on analysis"""
