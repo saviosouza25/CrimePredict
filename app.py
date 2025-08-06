@@ -770,8 +770,6 @@ def main():
             # Configurações básicas compactas
             pair = st.selectbox(pair_label, available_pairs, key="pair_selectbox")
         
-        st.markdown("---")
-        
         # Análise multi-pares com seleção de tipo em expander colapsável
         with st.expander("🌍 Análise Multi-Pares Especializada", expanded=False):
             # Seleção do tipo de análise baseado no perfil
@@ -787,8 +785,6 @@ def main():
             )
             
             multi_pair_analysis = st.button("🌍 Executar Análise Multi-Pares", use_container_width=True, key="multi_pair_btn")
-        
-        st.markdown("---")
         
         # Parâmetros de risco em expander colapsável
         with st.expander("📊 Parâmetros de Risco Separados", expanded=False):
@@ -847,8 +843,6 @@ def main():
             
             # Mostrar Risk/Reward como métrica
             st.metric("Risk/Reward Ratio", f"{rr_ratio:.2f}", help="Take % ÷ Stop % = Relação Risco/Recompensa")
-        
-        st.markdown("---")
         
         # Sistema unificado de Intervalo e Horizonte em expander colapsável
         with st.expander("⏰ Configuração Temporal Unificada", expanded=True):
@@ -919,8 +913,6 @@ def main():
         # Usar configuração de risco padrão (moderado)
         risk_level_en = "Moderate"
         
-        st.markdown("---")
-        
         # Seção de análises especializadas em expander colapsável
         with st.expander("🎯 Análises Especializadas", expanded=False):
             # Nova análise de tendência Alpha Vantage - Mais precisa
@@ -979,7 +971,6 @@ def main():
             st.session_state['lot_size'] = lot_size
             
             # Calculadora de DD/Extensão Independente
-            st.markdown("---")
             st.markdown("**🧮 Calculadora de DD/Extensão**")
             
             # Usar análise mais recente se disponível
@@ -1079,8 +1070,6 @@ def main():
         elif trend_analysis:
             st.session_state['analysis_mode'] = 'trend'
             analyze_button = True
-        
-        st.markdown("---")
         
         # Botões auxiliares compactos
         col1, col2 = st.columns(2)
