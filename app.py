@@ -924,82 +924,81 @@ def main():
 
 
         
-        # Gestão de Banca Simplificada
-        st.markdown("**💰 Configuração de Trading**")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            bank_value = st.number_input(
-                "💳 Valor da Banca (USD)", 
-                min_value=100.0, 
-                max_value=1000000.0, 
-                value=5000.0, 
-                step=500.0,
-                help="Valor total da sua banca em dólares",
-                key="bank_value_input"
-            )
-        
-        with col2:
-            lot_size = st.number_input(
-                "📊 Tamanho do Lote",
-                min_value=0.01,
-                max_value=100.0,
-                value=0.1,
-                step=0.01,
-                format="%.2f",
-                help="Tamanho do lote para a operação",
-                key="lot_size_input"
-            )
-        
-        # Armazenar no session state para uso nas análises
-        st.session_state['bank_value'] = bank_value
-        st.session_state['lot_size'] = lot_size
-        
-        # Calculadora de DD/Extensão Independente
-        st.markdown("---")
-        st.markdown("**🧮 Calculadora de DD/Extensão**")
-        
-        # Usar análise mais recente se disponível
-        if st.session_state.get('analysis_results'):
-            results = st.session_state['analysis_results']
-            if 'drawdown_pips' in results and 'extension_pips' in results:
-                drawdown_pips = results['drawdown_pips']
-                extension_pips = results['extension_pips']
-                
-                # Calcular valor do pip baseado no par selecionado
-                pair_str = str(pair)  # Garantir que é string
-                if 'JPY' in pair_str:
-                    pip_value_per_lot = 10.0
-                elif str(pair) in ['XAUUSD', 'GOLD']:
-                    pip_value_per_lot = 1.0
+        # Gestão de Banca Simplificada em expander colapsável
+        with st.expander("💰 Configuração de Trading", expanded=False):
+            col1, col2 = st.columns(2)
+            with col1:
+                bank_value = st.number_input(
+                    "💳 Valor da Banca (USD)", 
+                    min_value=100.0, 
+                    max_value=1000000.0, 
+                    value=5000.0, 
+                    step=500.0,
+                    help="Valor total da sua banca em dólares",
+                    key="bank_value_input"
+                )
+            
+            with col2:
+                lot_size = st.number_input(
+                    "📊 Tamanho do Lote",
+                    min_value=0.01,
+                    max_value=100.0,
+                    value=0.1,
+                    step=0.01,
+                    format="%.2f",
+                    help="Tamanho do lote para a operação",
+                    key="lot_size_input"
+                )
+            
+            # Armazenar no session state para uso nas análises
+            st.session_state['bank_value'] = bank_value
+            st.session_state['lot_size'] = lot_size
+            
+            # Calculadora de DD/Extensão Independente
+            st.markdown("---")
+            st.markdown("**🧮 Calculadora de DD/Extensão**")
+            
+            # Usar análise mais recente se disponível
+            if st.session_state.get('analysis_results'):
+                results = st.session_state['analysis_results']
+                if 'drawdown_pips' in results and 'extension_pips' in results:
+                    drawdown_pips = results['drawdown_pips']
+                    extension_pips = results['extension_pips']
+                    
+                    # Calcular valor do pip baseado no par selecionado
+                    pair_str = str(pair)  # Garantir que é string
+                    if 'JPY' in pair_str:
+                        pip_value_per_lot = 10.0
+                    elif str(pair) in ['XAUUSD', 'GOLD']:
+                        pip_value_per_lot = 1.0
+                    else:
+                        pip_value_per_lot = 10.0
+                    
+                    # Calcular valores em dólares
+                    dd_usd = drawdown_pips * pip_value_per_lot * lot_size
+                    ext_usd = extension_pips * pip_value_per_lot * lot_size
+                    dd_pct = (dd_usd / bank_value) * 100
+                    ext_pct = (ext_usd / bank_value) * 100
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric(
+                            "📉 Drawdown Máximo",
+                            f"${dd_usd:.2f}",
+                            f"{dd_pct:.2f}% da banca"
+                        )
+                    with col2:
+                        st.metric(
+                            "📈 Extensão Máxima", 
+                            f"${ext_usd:.2f}",
+                            f"{ext_pct:.2f}% da banca"
+                        )
+                    
+                    st.caption(f"💡 Baseado em DD: {drawdown_pips} pips | Extensão: {extension_pips} pips")
                 else:
-                    pip_value_per_lot = 10.0
-                
-                # Calcular valores em dólares
-                dd_usd = drawdown_pips * pip_value_per_lot * lot_size
-                ext_usd = extension_pips * pip_value_per_lot * lot_size
-                dd_pct = (dd_usd / bank_value) * 100
-                ext_pct = (ext_usd / bank_value) * 100
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric(
-                        "📉 Drawdown Máximo",
-                        f"${dd_usd:.2f}",
-                        f"{dd_pct:.2f}% da banca"
-                    )
-                with col2:
-                    st.metric(
-                        "📈 Extensão Máxima", 
-                        f"${ext_usd:.2f}",
-                        f"{ext_pct:.2f}% da banca"
-                    )
-                
-                st.caption(f"💡 Baseado em DD: {drawdown_pips} pips | Extensão: {extension_pips} pips")
+                    st.info("🔍 Execute uma análise para ver os cálculos de DD/Extensão")
             else:
                 st.info("🔍 Execute uma análise para ver os cálculos de DD/Extensão")
-        else:
-            st.info("🔍 Execute uma análise para ver os cálculos de DD/Extensão")
         
         # Configurações de IA colapsáveis
         with st.expander("🤖 Configurações Avançadas de IA"):
