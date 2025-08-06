@@ -2647,7 +2647,7 @@ def analyze_lstm_trend_prediction(price_data, lookback_period, epochs):
                     break
             
             if close_col:
-                closes = pd.to_numeric(price_data[close_col], errors='coerce').fillna(method='ffill')
+                closes = pd.to_numeric(price_data[close_col], errors='coerce').fillna(method='forward_fill')
                 
                 # Análise de padrão simples
                 recent_trend = closes.tail(5).mean() - closes.head(5).mean()
@@ -2698,7 +2698,7 @@ def calculate_trend_risk_metrics(price_data, profile_info):
         if close_col is None:
             return get_default_risk_metrics(profile_info)
         
-        closes = pd.to_numeric(price_data[close_col], errors='coerce').fillna(method='ffill')
+        closes = pd.to_numeric(price_data[close_col], errors='coerce').fillna(method='forward_fill')
         
         # Calcular drawdown máximo
         rolling_max = closes.expanding().max()
@@ -3072,7 +3072,7 @@ def analyze_technical_trends(price_data, profile):
         if close_col is None:
             return None
         
-        closes = pd.to_numeric(price_data[close_col], errors='coerce').fillna(method='ffill')
+        closes = pd.to_numeric(price_data[close_col], errors='coerce').fillna(method='forward_fill')
         
         # 1. EMA 12/26 crossover
         ema12 = closes.ewm(span=12).mean()
