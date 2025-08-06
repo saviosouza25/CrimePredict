@@ -1779,9 +1779,12 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     is_buy = 'COMPRA' in str(direction)
     is_strong = 'FORTE' in str(direction)
     
-    # Get risk profile parameters
-    risk_profile = 'Moderate'  # Default
-    risk_params = RISK_PROFILES[risk_profile]
+    # Get profile from analysis config if available
+    profile = analysis_result.get('profile', trading_style)
+    
+    # Get profile-specific risk parameters
+    profile_risk_params = get_profile_risk_parameters(profile)
+    risk_params = RISK_PROFILES.get('Moderate', {})  # Fallback
     
     # Get temporal parameters  
     horizon_key = st.session_state.get('horizon', '1 Hora')
@@ -1806,17 +1809,18 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     else:
         atr = current_price * 0.001
     
-    # Calculate levels based on strategy
+    # Calculate levels based on profile-specific strategy
     if is_buy:
         entry_price = current_price
-        stop_loss = entry_price - (atr * risk_params['atr_multiplier_stop'])
-        take_profit = entry_price + (atr * risk_params['atr_multiplier_tp'])
+        stop_loss = entry_price - (atr * profile_risk_params['atr_multiplier_stop'])
+        take_profit = entry_price + (atr * profile_risk_params['atr_multiplier_tp'])
     else:
         entry_price = current_price
-        stop_loss = entry_price + (atr * risk_params['atr_multiplier_stop'])
-        take_profit = entry_price - (atr * risk_params['atr_multiplier_tp'])
+        stop_loss = entry_price + (atr * profile_risk_params['atr_multiplier_stop'])
+        take_profit = entry_price - (atr * profile_risk_params['atr_multiplier_tp'])
     
-    # Calculate position size
+    # Calculate position size based on profile
+    risk_percentage = profile_risk_params['banca_risk'] / 100
     risk_amount = bank_value * risk_percentage
     pip_value = 1  # Simplified - would need proper pip calculation
     stop_distance_pips = abs(entry_price - stop_loss) * 10000  # Convert to pips
@@ -1833,19 +1837,43 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     potential_profit = tp_distance_pips * position_size
     potential_loss = stop_distance_pips * position_size
     
-    # Market timing based on sentiment and technical confluence
-    market_timing = "Imediato"
-    if confidence > 0.8 and is_strong:
-        market_timing = "Imediato"
-    elif confidence > 0.7:
-        market_timing = "Curto Prazo (2-4h)"
+    # Market timing based on profile and confidence
+    if profile == 'scalping':
+        if confidence > 0.8 and is_strong:
+            market_timing = "Imediato (1-5min)"
+        else:
+            market_timing = "Aguardar Setup (15min)"
+    elif profile == 'intraday':
+        if confidence > 0.7 and is_strong:
+            market_timing = "Curto Prazo (1-4h)"
+        else:
+            market_timing = "Médio Prazo (4-8h)"
+    elif profile == 'swing':
+        if confidence > 0.6:
+            market_timing = "1-3 dias"
+        else:
+            market_timing = "3-7 dias"
+    elif profile == 'position':
+        if confidence > 0.6:
+            market_timing = "1-2 semanas"
+        else:
+            market_timing = "2-4 semanas"
     else:
-        market_timing = "Médio Prazo (1-2 dias)"
+        market_timing = "Médio Prazo"
     
-    # Risk level assessment
-    if stop_distance_pips < 20:
+    # Risk level assessment based on profile expectations
+    profile_expected_stops = {
+        'scalping': 15,    # Scalping expects tight stops
+        'intraday': 30,    # Intraday moderate stops
+        'swing': 60,       # Swing wider stops
+        'position': 120    # Position very wide stops
+    }
+    
+    expected_stop = profile_expected_stops.get(profile, 40)
+    
+    if stop_distance_pips < expected_stop * 0.7:
         risk_level = "Baixo"
-    elif stop_distance_pips < 40:
+    elif stop_distance_pips < expected_stop * 1.3:
         risk_level = "Moderado"
     else:
         risk_level = "Alto"
@@ -1865,7 +1893,10 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         'market_timing': market_timing,
         'risk_level': risk_level,
         'confidence': round(confidence * 100, 1),
-        'sentiment_bias': 'Positivo' if sentiment_score > 0.05 else 'Negativo' if sentiment_score < -0.05 else 'Neutro'
+        'sentiment_bias': 'Positivo' if sentiment_score > 0.05 else 'Negativo' if sentiment_score < -0.05 else 'Neutro',
+        'trading_profile': profile.title(),
+        'profile_description': profile_risk_params['description'],
+        'expected_success_rate': profile_risk_params['success_rate_target']
     }
 
 def display_multi_pair_results():
@@ -2086,18 +2117,25 @@ def display_execution_positions(results):
                 st.write(f"• **Stop Distance:** {execution['stop_distance_pips']:.1f} pips")
                 st.write(f"• **TP Distance:** {execution['tp_distance_pips']:.1f} pips")
             
-            # Risk and timing info
-            st.markdown("**⏰ Timing e Risco:**")
-            timing_col1, timing_col2, timing_col3 = st.columns(3)
+            # Profile-specific information
+            st.markdown("**🎯 Configuração do Perfil:**")
+            profile_col1, profile_col2 = st.columns(2)
             
-            with timing_col1:
+            with profile_col1:
+                st.info(f"**Perfil:** {execution.get('trading_profile', 'N/A')}")
                 st.info(f"**Timing:** {execution['market_timing']}")
-            with timing_col2:
+                
+            with profile_col2:
                 risk_color = "🟢" if execution['risk_level'] == 'Baixo' else "🟡" if execution['risk_level'] == 'Moderado' else "🔴"
                 st.info(f"**Risco:** {risk_color} {execution['risk_level']}")
-            with timing_col3:
                 sentiment_color = "🟢" if execution['sentiment_bias'] == 'Positivo' else "🔴" if execution['sentiment_bias'] == 'Negativo' else "🟡"
                 st.info(f"**Sentimento:** {sentiment_color} {execution['sentiment_bias']}")
+            
+            # Profile description and success rate
+            if 'profile_description' in execution:
+                st.markdown(f"**📋 Estratégia:** {execution['profile_description']}")
+            if 'expected_success_rate' in execution:
+                st.markdown(f"**🎯 Taxa de Sucesso Esperada:** {execution['expected_success_rate']}%")
 
 def display_detailed_summary(results):
     """Exibir resumo detalhado da análise"""
@@ -5306,6 +5344,50 @@ def calculate_ai_analysis_simple(df_with_indicators, current_price):
         return {'signal': signal, 'confidence': 0.6, 'method': 'price_momentum'}
     except:
         return {'signal': 0.0, 'confidence': 0.3, 'method': 'fallback'}
+
+def get_profile_risk_parameters(profile):
+    """Retorna parâmetros de risco específicos por perfil operacional"""
+    
+    profile_configs = {
+        'scalping': {
+            'atr_multiplier_stop': 1.0,  # Stop apertado para scalping
+            'atr_multiplier_tp': 1.5,    # Take profit moderado (1:1.5 R/R)
+            'banca_risk': 1.0,           # 1% da banca por trade
+            'max_trades_day': 20,        # Muitas operações por dia
+            'timeframe_focus': '1min-5min',
+            'success_rate_target': 70,   # Alta taxa de acerto necessária
+            'description': 'Scalping - Operações rápidas com stops apertados'
+        },
+        'intraday': {
+            'atr_multiplier_stop': 1.5,  # Stop moderado
+            'atr_multiplier_tp': 2.5,    # Take profit balanceado (1:1.67 R/R) 
+            'banca_risk': 1.5,           # 1.5% da banca por trade
+            'max_trades_day': 8,         # Moderadas operações por dia
+            'timeframe_focus': '15min-4h',
+            'success_rate_target': 60,   # Taxa de acerto moderada
+            'description': 'Intraday - Operações balanceadas dentro do dia'
+        },
+        'swing': {
+            'atr_multiplier_stop': 2.0,  # Stop mais amplo
+            'atr_multiplier_tp': 4.0,    # Take profit amplo (1:2 R/R)
+            'banca_risk': 2.0,           # 2% da banca por trade
+            'max_trades_day': 3,         # Poucas operações por dia
+            'timeframe_focus': '4h-Daily',
+            'success_rate_target': 55,   # Taxa de acerto menor mas R/R maior
+            'description': 'Swing - Operações de médio prazo com R/R alto'
+        },
+        'position': {
+            'atr_multiplier_stop': 3.0,  # Stop muito amplo para tendências longas
+            'atr_multiplier_tp': 6.0,    # Take profit muito amplo (1:2 R/R)
+            'banca_risk': 2.5,           # 2.5% da banca por trade
+            'max_trades_day': 1,         # Uma operação por dia ou menos
+            'timeframe_focus': 'Weekly-Monthly',
+            'success_rate_target': 50,   # Menor taxa mas R/R muito alto
+            'description': 'Position - Operações de longo prazo seguindo tendências'
+        }
+    }
+    
+    return profile_configs.get(profile, profile_configs['swing'])  # Default para swing
 
 def calculate_risk_analysis_simple(df_with_indicators, current_price):
     """Simplified risk analysis for multi-pair processing"""
