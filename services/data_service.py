@@ -78,14 +78,28 @@ class DataService:
         df.index = pd.to_datetime(df.index)
         df = df.sort_index()
         
-        # Standardize column names
+        # Standardize column names for forex
         column_mapping = {
             '1. open': 'open',
             '2. high': 'high', 
             '3. low': 'low',
-            '4. close': 'close'
+            '4. close': 'close',
+            '5. volume': 'volume'
         }
         df = df.rename(columns=column_mapping)
+        
+        # Ensure required columns exist and normalize case
+        required_columns = ['open', 'high', 'low', 'close']
+        df.columns = [col.lower() for col in df.columns]
+        
+        # Capitalize column names to match expected format
+        df = df.rename(columns={
+            'open': 'Open',
+            'high': 'High', 
+            'low': 'Low',
+            'close': 'Close',
+            'volume': 'Volume'
+        })
         
         if df.empty:
             raise ValueError("No data received from API")
@@ -111,7 +125,7 @@ class DataService:
         try:
             df = DataService.fetch_forex_data(pair, '5min', 'compact', market_type)
             if not df.empty:
-                return float(df['close'].iloc[-1])
+                return float(df['Close'].iloc[-1])
         except Exception:
             pass
         return None
@@ -165,18 +179,18 @@ class DataService:
         
         df = pd.DataFrame.from_dict(data[time_series_key], orient='index')
         
-        # Handle different column formats for crypto
+        # Handle different column formats for crypto - using actual API response format
         if function == 'DIGITAL_CURRENCY_DAILY':
-            # Daily format has different column names
+            # Daily crypto format (confirmed by API test)
             column_mapping = {
-                '1a. open (USD)': 'open',
-                '2a. high (USD)': 'high', 
-                '3a. low (USD)': 'low',
-                '4a. close (USD)': 'close',
+                '1. open': 'open',
+                '2. high': 'high', 
+                '3. low': 'low',
+                '4. close': 'close',
                 '5. volume': 'volume'
             }
         else:
-            # Intraday format
+            # Intraday crypto format
             column_mapping = {
                 '1. open': 'open',
                 '2. high': 'high',
@@ -194,7 +208,18 @@ class DataService:
         if missing_columns:
             raise ValueError(f"Missing required columns: {missing_columns}")
         
+        # Select only the columns we need
         df = df[required_columns + (['volume'] if 'volume' in df.columns else [])]
+        
+        # Normalize column names to match expected format (capitalized)
+        df = df.rename(columns={
+            'open': 'Open',
+            'high': 'High', 
+            'low': 'Low',
+            'close': 'Close',
+            'volume': 'Volume'
+        })
+        
         df = df.astype(np.float32)
         df.index = pd.to_datetime(df.index)
         df = df.sort_index()

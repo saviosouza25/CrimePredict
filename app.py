@@ -2305,9 +2305,11 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                 st.write(f"✓ {pair}: {overall_dir} - Score: {opportunity_score:.1f}")
                 
             except Exception as e:
-                st.error(f"Erro detalhado ao analisar {pair}: {str(e)}")
-                import traceback
-                st.code(traceback.format_exc())
+                error_msg = str(e)
+                st.error(f"❌ Erro ao analisar {pair}: {error_msg}")
+                # Show detailed error for debugging
+                if "Missing required columns" in error_msg or "API" in error_msg:
+                    st.warning(f"🔧 Problema específico com {pair}: {error_msg}")
                 continue
         
         # Final processing
