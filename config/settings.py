@@ -3,6 +3,7 @@ from typing import Dict, List
 
 # API Configuration
 API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
+ALPHA_VANTAGE_API_KEY = API_KEY  # Alias for backward compatibility
 
 # Trading Pairs - User specified list only (excluding XAU/USD due to API limitations)
 PAIRS: List[str] = [

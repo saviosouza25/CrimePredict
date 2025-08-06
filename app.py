@@ -2232,6 +2232,7 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
         status_text.text(f"📊 Analisando {total_pairs} {analysis_label} em {len(timeframes)} timeframes...")
         
         operation_count = 0
+        successful_pairs = 0
         
         for i, pair in enumerate(analysis_pairs):
             try:
@@ -2297,6 +2298,11 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                 }
                 
                 all_results.append(pair_result)
+                successful_pairs += 1
+                
+                # Debug output for successful analysis
+                overall_dir = overall_analysis.get('overall_direction', 'NEUTRO')
+                st.write(f"✓ {pair}: {overall_dir} - Score: {opportunity_score:.1f}")
                 
             except Exception as e:
                 st.error(f"Erro detalhado ao analisar {pair}: {str(e)}")
@@ -2320,8 +2326,11 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
             'horizon': horizon
         }
         
-        status_text.text("✅ Análise multi-pares concluída!")
+        status_text.text(f"✅ Análise concluída! {successful_pairs} de {total_pairs} pares analisados com sucesso.")
         progress_bar.progress(100)
+        
+        # Show summary
+        st.info(f"📊 Resumo: {len(all_results)} pares com dados válidos encontrados de {total_pairs} analisados.")
         
         # Clear progress after moment
         import time
