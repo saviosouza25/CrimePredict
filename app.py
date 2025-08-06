@@ -916,12 +916,8 @@ def main():
         
         # Seção de análises especializadas em expander colapsável
         with st.expander("🎯 Análises Especializadas", expanded=False):
-            # Nova análise de tendência Alpha Vantage - Mais precisa
-            trend_alpha_analysis = st.button("🎯 Análise de Tendência Alpha Vantage", type="primary", use_container_width=True,
-                                            help="Análise avançada de tendências com indicadores Alpha Vantage otimizados por perfil", key="trend_alpha_btn")
-            
             # Análise unificada principal
-            unified_analysis = st.button("🧠 Análise Unificada Inteligente", use_container_width=True, 
+            unified_analysis = st.button("🧠 Análise Unificada Inteligente", type="primary", use_container_width=True, 
                                        help="Combina todas as análises para a melhor previsão do mercado", key="unified_analysis_btn")
             
             st.markdown("**Análises Individuais:**")
@@ -1047,19 +1043,7 @@ def main():
         # Processamento dos diferentes tipos de análise
         analyze_button = False
         
-        # Mapear trading_style para formato de perfil esperado pela função Alpha Vantage
-        trading_style = st.session_state.get('trading_style', 'swing')
-        profile_mapping = {
-            'intraday': 'Intraday',
-            'swing': 'Swing', 
-            'position': 'Position',
-            'scalping': 'Scalping'
-        }
-        selected_trading_profile = profile_mapping.get(trading_style, 'Swing')
-        
-        if trend_alpha_analysis:
-            execute_alpha_vantage_trend_analysis(pair, selected_trading_profile, market_type)
-        elif unified_analysis:
+        if unified_analysis:
             st.session_state['analysis_mode'] = 'unified'
             analyze_button = True
         elif technical_analysis:
