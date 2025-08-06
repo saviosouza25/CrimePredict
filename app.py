@@ -1722,9 +1722,9 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                 # Calculate trading opportunity score
                 opportunity_score = calculate_opportunity_score(analysis_result, pair, trading_style)
                 
-                # Generate execution position
+                # Generate execution position WITH opportunity score
                 execution_position = generate_execution_position(
-                    analysis_result, pair, current_price, trading_style, sentiment_score
+                    analysis_result, pair, current_price, trading_style, sentiment_score, opportunity_score
                 )
                 
                 # Store comprehensive result
@@ -1814,7 +1814,7 @@ def calculate_opportunity_score(analysis_result, pair, trading_style):
     
     return min(100, max(0, total_score))
 
-def generate_execution_position(analysis_result, pair, current_price, trading_style, sentiment_score):
+def generate_execution_position(analysis_result, pair, current_price, trading_style, sentiment_score, opportunity_score=None):
     """Gera posição completa de execução com todos os parâmetros"""
     
     direction = analysis_result.get('market_direction', '')
@@ -1953,8 +1953,10 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     thresholds = profile_thresholds.get(profile, profile_thresholds['intraday'])
     
     # EXCEÇÕES INTELIGENTES: Setups excepcionais podem override o timing
-    # Calcular Score de Oportunidade baseado na confiança e força do sinal
-    opportunity_score = confidence * 100  # Score de 0-100 baseado na confluência técnica
+    # Usar Score de Oportunidade REAL (se fornecido) ou calcular baseado na confiança
+    if opportunity_score is None:
+        opportunity_score = confidence * 100  # Fallback para casos sem score externo
+    # Agora opportunity_score contém o valor REAL de 95.7 vindo da análise
     
     # SISTEMA HÍBRIDO: Exceções para setups excepcionais + Thresholds normais preservados
     override_applied = False
