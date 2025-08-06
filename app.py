@@ -750,7 +750,29 @@ def main():
         # Header da sidebar compacto
         st.markdown("## ⚙️ Configurações")
         
-        # Análise multi-pares com seleção de tipo - movido para o topo
+        # Market selection - movido para o topo
+        st.markdown("### 📊 Mercado")
+        market_type = st.radio(
+            "Tipo de Mercado:",
+            ["Forex", "Criptomoedas"],
+            index=0,
+            key="market_type_select"
+        )
+        
+        # Pair selection based on market type
+        if market_type == "Forex":
+            available_pairs = PAIRS
+            pair_label = "💱 Par de Moedas"
+        else:  # Criptomoedas
+            available_pairs = CRYPTO_PAIRS
+            pair_label = "₿ Par Cripto"
+        
+        # Configurações básicas compactas
+        pair = st.selectbox(pair_label, available_pairs, key="pair_selectbox")
+        
+        st.markdown("---")
+        
+        # Análise multi-pares com seleção de tipo
         st.markdown("**🌍 Análise Multi-Pares Especializada**")
         
         # Seleção do tipo de análise baseado no perfil
@@ -827,26 +849,6 @@ def main():
         st.metric("Risk/Reward Ratio", f"{rr_ratio:.2f}", help="Take % ÷ Stop % = Relação Risco/Recompensa")
         
         st.markdown("---")
-        
-        # Market selection
-        st.markdown("### 📊 Mercado")
-        market_type = st.radio(
-            "Tipo de Mercado:",
-            ["Forex", "Criptomoedas"],
-            index=0,
-            key="market_type_select"
-        )
-        
-        # Pair selection based on market type
-        if market_type == "Forex":
-            available_pairs = PAIRS
-            pair_label = "💱 Par de Moedas"
-        else:  # Criptomoedas
-            available_pairs = CRYPTO_PAIRS
-            pair_label = "₿ Par Cripto"
-        
-        # Configurações básicas compactas
-        pair = st.selectbox(pair_label, available_pairs, key="pair_selectbox")
         
         # Sistema unificado de Intervalo e Horizonte
         st.markdown("**⏰ Configuração Temporal Unificada**")
