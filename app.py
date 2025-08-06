@@ -2271,21 +2271,23 @@ def calculate_scenario_probability(analysis_components, pair, trading_style):
 def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs):
     """Execute análise completa em múltiplos pares com perfil operacional e previsões temporais"""
     
-    # Lista de pares principais para análise
-    pairs_to_analyze = [
-        'EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'AUD/USD', 'USD/CAD', 'NZD/USD',
-        'EUR/GBP', 'EUR/JPY', 'EUR/CHF', 'EUR/AUD', 'EUR/CAD', 'EUR/NZD',
-        'GBP/JPY', 'GBP/CHF', 'GBP/AUD', 'GBP/CAD', 'GBP/NZD',
-        'AUD/JPY', 'AUD/CHF', 'AUD/CAD', 'AUD/NZD',
-        'CAD/JPY', 'CAD/CHF', 'CHF/JPY', 'NZD/JPY', 'NZD/CHF', 'NZD/CAD'
-    ]
+    # Obter tipo de mercado selecionado
+    market_type = st.session_state.get('market_type_select', 'Forex')
     
-    # Adicionar crypto se disponível
-    crypto_pairs = ['BTC/USD', 'ETH/USD', 'ADA/USD', 'SOL/USD']
+    if market_type == "Forex":
+        # Lista completa de pares forex da configuração
+        from config.settings import PAIRS
+        forex_pairs = PAIRS  # Usar todos os pares configurados
+        all_pairs = forex_pairs
+        market_label = "Forex"
+    else:
+        # Lista de pares cripto da configuração
+        from config.settings import CRYPTO_PAIRS
+        crypto_pairs = CRYPTO_PAIRS[:4]  # Usar os primeiros 4 pares que funcionam bem
+        all_pairs = crypto_pairs
+        market_label = "Criptomoedas"
     
-    all_pairs = pairs_to_analyze + crypto_pairs
-    
-    st.info(f"🔄 Iniciando análise multi-pares para {len(all_pairs)} pares...")
+    st.info(f"🔄 Iniciando análise multi-pares {market_label} para {len(all_pairs)} pares...")
     
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -2762,7 +2764,10 @@ def display_multi_pair_results():
     timestamp = results_data['timestamp']
     
     # Header principal
-    st.markdown("## 🌍 Análise Multi-Pares - Previsões e Perfis Operacionais")
+    market_type = st.session_state.get('market_type_select', 'Forex')
+    market_icon = "💱" if market_type == "Forex" else "₿"
+    st.markdown(f"## 🌍 Análise Multi-Pares {market_type} {market_icon}")
+    st.markdown("### Previsões Percentuais e Perfis Operacionais")
     st.caption(f"Última atualização: {timestamp.strftime('%d/%m/%Y às %H:%M:%S')}")
     
     # Métricas gerais
