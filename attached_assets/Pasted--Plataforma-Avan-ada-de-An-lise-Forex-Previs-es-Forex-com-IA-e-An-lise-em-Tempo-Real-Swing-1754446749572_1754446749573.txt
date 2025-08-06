@@ -1,0 +1,160 @@
+📊 Plataforma Avançada de Análise Forex 
+Previsões Forex com IA e Análise em Tempo Real
+
+🧠 Swing Trading
+EUR/USD • 4H-1D • 3-7 dias
+
+📊 Momentum multi-timeframe + Confluência técnica
+
+⚪ LATERAL/NEUTRO
+Probabilidade: 50%
+🎯 Acurácia Histórica: 82%
+
+⏰ VALIDADE DA ANÁLISE
+Válida até: 09/08/2025 02:18 UTC
+Duração: 72 horas
+Gerada em: 06/08/2025 02:18 UTC
+
+🔍 COMPONENTES PRIORIZADOS
+Análise focada em:
+Técnica + Tendência + IA/LSTM
+
+Para esta estratégia específica
+
+Entry
+
+1.15670
+
+Stop Loss
+
+1.17407
+
+(-1.5%)
+
+Take Profit
+
+1.12198
+
+(+3.0%)
+
+BAIXA CONFIANÇA
+
+R/R Ratio: 1:2.0 | Confiança mínima: 70%
+
+Confluência de 2 componentes com 2 sinais fortes. Volatilidade: 0.07%. Confiança: 84%.
+
+Atual
+
+1.15670
+
+Previsto
+
+1.15657
+
+Variação
+
+-0.01%
+
+Confiança
+
+84%
+
+🎯 Análise Realística Especializada 
+⚠️ DRAWDOWN MÁXIMO
+
+1.16120
+-45 pips (21% prob.)
+🎯 EXTENSÃO MÁXIMA
+
+1.14650
+-102 pips (94% prob.)
+📊 Gestão de Risco e Probabilidades
+🎯 Probabilidade de Sucesso
+
+70%
+Base 45% + Boost 25%
+⚖️ Razão Risco:Recompensa
+
+1:2.3
+Drawdown vs Extensão
+📈 Expectativa Matemática
+
+2.59%
+Por trade (2% risco)
+📋 Detalhes Completos da Análise
+
+💰 Gestão de Banca - Valores em Dólar
+💰 Valores de Trading Calculados
+💳 Valor da Banca
+
+$5,000.00
+Configurado no sidebar
+📊 Lote Selecionado
+
+0.10
+Configurado no sidebar
+📉 Drawdown Máximo
+
+$45.00
+0.90% da banca
+📈 Extensão Máxima
+
+$102.00
+2.04% da banca
+🔍 Componentes da Análise Unificada
+🔴 Technical: -10.00% (peso: 20%)
+
+🟢 Volume: +0.03% (peso: 15%)
+
+🟢 Ai_Lstm: +0.01% (peso: 15%)
+
+🔴 Trend: -60.00% (peso: 20%)
+
+🟡 Sentiment: +0.00% (peso: 15%)
+
+🟢 Risk: +50.00% (peso: 15%)
+
+Foco da Análise: ANÁLISE UNIFICADA AVANÇADA - Confluência: 2/6 componentes | Força: 2 sinais fortes
+
+
+📈 Gráficos
+
+
+🔍 Detalhes Técnicos
+
+
+📰 Sentimento
+
+
+📊 Métricas
+
+📈 Gráficos de Análise
+streamlit.errors.StreamlitDuplicateElementId: There are multiple button elements with the same auto-generated ID. When this element is created, it is assigned an internal ID based on the element type and provided parameters. Multiple elements with the same type and parameters will cause this error.
+
+To fix this error, please pass a unique key argument to the button element.
+
+Traceback:
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 128, in exec_func_with_error_handling
+    result = func()
+             ^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 669, in code_to_exec
+    exec(code, module.__dict__)  # noqa: S102
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/app.py", line 4462, in <module>
+    main()
+File "/home/runner/workspace/app.py", line 731, in main
+    if st.button("🏠 Home", type="primary", use_container_width=True):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/metrics_util.py", line 443, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/elements/widgets/button.py", line 243, in button
+    return self.dg._button(
+           ^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/elements/widgets/button.py", line 1013, in _button
+    element_id = compute_and_register_element_id(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/elements/lib/utils.py", line 254, in compute_and_register_element_id
+    _register_element_id(ctx, element_type, element_id)
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/elements/lib/utils.py", line 148, in _register_element_id
+    raise StreamlitDuplicateElementId(element_type)

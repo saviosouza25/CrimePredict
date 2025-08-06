@@ -616,11 +616,11 @@ def check_authentication():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.markdown("### 🔑 Digite a Senha de Acesso")
-            password = st.text_input("Senha:", type="password", placeholder="Digite sua senha...")
+            password = st.text_input("Senha:", type="password", placeholder="Digite sua senha...", key="login_password")
             
             col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
             with col_btn2:
-                if st.button("🚀 Entrar na Plataforma", type="primary", use_container_width=True):
+                if st.button("🚀 Entrar na Plataforma", type="primary", use_container_width=True, key="login_button"):
                     if password == "artec2025":
                         st.session_state.authenticated = True
                         st.success("✅ Acesso autorizado! Redirecionando...")
@@ -728,7 +728,7 @@ def main():
     # Sidebar lateral simples como era antes
     with st.sidebar:
         # Botão Home no topo da sidebar
-        if st.button("🏠 Home", type="primary", use_container_width=True):
+        if st.button("🏠 Home", type="primary", use_container_width=True, key="home_button"):
             # Limpar todos os resultados e voltar ao estado inicial
             for key in ['analysis_results', 'show_analysis', 'analysis_mode']:
                 if key in st.session_state:
@@ -736,7 +736,7 @@ def main():
             st.rerun()
         
         # Botão de logout
-        if st.button("🚪 Logout", type="secondary", use_container_width=True):
+        if st.button("🚪 Logout", type="secondary", use_container_width=True, key="logout_button"):
             # Limpar sessão e autenticação
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
@@ -748,7 +748,7 @@ def main():
         st.markdown("## ⚙️ Configurações")
         
         # Configurações básicas compactas
-        pair = st.selectbox("💱 Par de Moedas", PAIRS)
+        pair = st.selectbox("💱 Par de Moedas", PAIRS, key="pair_selectbox")
         
         # Sistema unificado de Intervalo e Horizonte
         st.markdown("**⏰ Configuração Temporal Unificada**")
@@ -765,7 +765,8 @@ def main():
             "Estratégia Temporal:",
             list(temporal_presets.keys()),
             index=1,  # Default Intraday
-            help="Presets otimizados para máxima precisão entre intervalo e horizonte"
+            help="Presets otimizados para máxima precisão entre intervalo e horizonte",
+            key="temporal_preset_selectbox"
         )
         
         selected_preset = temporal_presets[preset_choice]
@@ -793,7 +794,7 @@ def main():
             st.warning("⚠️ Configuração manual pode reduzir a precisão se intervalo e horizonte não estiverem alinhados!")
             
             manual_interval = st.selectbox("Intervalo Manual:", list(INTERVALS.keys()), 
-                                         index=list(INTERVALS.keys()).index(interval))
+                                         index=list(INTERVALS.keys()).index(interval), key="manual_interval_selectbox")
             # Verificar se horizonte existe na lista, senão usar primeiro item
             horizon_index = 0
             try:
@@ -802,9 +803,9 @@ def main():
                 horizon = HORIZONS[0]  # Usar o primeiro como fallback
             
             manual_horizon = st.selectbox("Horizonte Manual:", HORIZONS,
-                                        index=horizon_index)
+                                        index=horizon_index, key="manual_horizon_selectbox")
             
-            if st.checkbox("Usar Configuração Manual"):
+            if st.checkbox("Usar Configuração Manual", key="manual_config_checkbox"):
                 interval = manual_interval
                 horizon = manual_horizon
                 # Tentar manter o trading_style consistente mesmo no modo manual
@@ -833,7 +834,8 @@ def main():
                 max_value=1000000.0, 
                 value=5000.0, 
                 step=500.0,
-                help="Valor total da sua banca em dólares"
+                help="Valor total da sua banca em dólares",
+                key="bank_value_input"
             )
         
         with col2:
@@ -844,7 +846,8 @@ def main():
                 value=0.1,
                 step=0.01,
                 format="%.2f",
-                help="Tamanho do lote para a operação"
+                help="Tamanho do lote para a operação",
+                key="lot_size_input"
             )
         
         # Armazenar no session state para uso nas análises
@@ -899,9 +902,9 @@ def main():
         
         # Configurações de IA colapsáveis
         with st.expander("🤖 Configurações Avançadas de IA"):
-            lookback_period = st.slider("Histórico de Dados", 30, 120, LOOKBACK_PERIOD)
-            epochs = st.slider("Épocas de Treinamento", 5, 20, EPOCHS)
-            mc_samples = st.slider("Amostras Monte Carlo", 10, 50, MC_SAMPLES)
+            lookback_period = st.slider("Histórico de Dados", 30, 120, LOOKBACK_PERIOD, key="lookback_slider")
+            epochs = st.slider("Épocas de Treinamento", 5, 20, EPOCHS, key="epochs_slider")
+            mc_samples = st.slider("Amostras Monte Carlo", 10, 50, MC_SAMPLES, key="mc_samples_slider")
         
         # Cache compacto
         cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
@@ -910,7 +913,7 @@ def main():
             with col1:
                 st.caption(f"💾 {cache_count} em cache")
             with col2:
-                if st.button("🗑️", help="Limpar Cache"):
+                if st.button("🗑️", help="Limpar Cache", key="clear_cache_btn"):
                     # Limpar cache do session state
                     for key in list(st.session_state.keys()):
                         if isinstance(st.session_state.get(key), tuple):
@@ -933,7 +936,7 @@ def main():
         
         # Análise unificada principal
         unified_analysis = st.button("🧠 Análise Unificada Inteligente", type="primary", use_container_width=True, 
-                                   help="Combina todas as análises para a melhor previsão do mercado")
+                                   help="Combina todas as análises para a melhor previsão do mercado", key="unified_analysis_btn")
         
 
         
@@ -942,16 +945,16 @@ def main():
         # Análises técnicas em colunas
         col1, col2 = st.columns(2)
         with col1:
-            technical_analysis = st.button("📊 Técnica", use_container_width=True)
-            sentiment_analysis = st.button("📰 Sentimento", use_container_width=True)
-            risk_analysis = st.button("⚖️ Risco", use_container_width=True)
+            technical_analysis = st.button("📊 Técnica", use_container_width=True, key="technical_btn")
+            sentiment_analysis = st.button("📰 Sentimento", use_container_width=True, key="sentiment_btn")
+            risk_analysis = st.button("⚖️ Risco", use_container_width=True, key="risk_btn")
         with col2:
-            ai_analysis = st.button("🤖 IA/LSTM", use_container_width=True)
-            volume_analysis = st.button("📈 Volume", use_container_width=True)
-            trend_analysis = st.button("📉 Tendência", use_container_width=True)
+            ai_analysis = st.button("🤖 IA/LSTM", use_container_width=True, key="ai_btn")
+            volume_analysis = st.button("📈 Volume", use_container_width=True, key="volume_btn")
+            trend_analysis = st.button("📉 Tendência", use_container_width=True, key="trend_btn")
         
         # Análise rápida
-        quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True)
+        quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, key="quick_analysis_btn")
         
         # Processamento dos diferentes tipos de análise
         analyze_button = False
@@ -1033,7 +1036,7 @@ def display_comprehensive_tutorial():
     st.markdown("### *Guia Definitivo para Maximizar seus Resultados no Trading Forex*")
     
     # Botão para fechar tutorial
-    if st.button("❌ Fechar Tutorial", type="secondary"):
+    if st.button("❌ Fechar Tutorial", type="secondary", key="close_tutorial_btn"):
         st.session_state['show_tutorial'] = False
         st.rerun()
     
