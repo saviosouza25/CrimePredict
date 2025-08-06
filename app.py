@@ -1047,6 +1047,16 @@ def main():
         # Processamento dos diferentes tipos de análise
         analyze_button = False
         
+        # Mapear trading_style para formato de perfil esperado pela função Alpha Vantage
+        trading_style = st.session_state.get('trading_style', 'swing')
+        profile_mapping = {
+            'intraday': 'Intraday',
+            'swing': 'Swing', 
+            'position': 'Position',
+            'scalping': 'Scalping'
+        }
+        selected_trading_profile = profile_mapping.get(trading_style, 'Swing')
+        
         if trend_alpha_analysis:
             execute_alpha_vantage_trend_analysis(pair, selected_trading_profile, market_type)
         elif unified_analysis:
