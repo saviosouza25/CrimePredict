@@ -2371,12 +2371,21 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                     'trading_style': trading_style
                 }
                 
+                # Análise detalhada para recomendações de trading
+                liquidity_data = timeframe_analysis.get('D1', {}).get('liquidity_analysis', {})
+                technical_strength = calculate_technical_strength(timeframe_analysis)
+                trading_recommendation = generate_trading_recommendation(
+                    overall_analysis, liquidity_data, sentiment_score, technical_strength, trading_style
+                )
+                
+                pair_result['trading_recommendation'] = trading_recommendation
+                
                 all_results.append(pair_result)
                 successful_pairs += 1
                 
                 # Debug output for successful analysis
                 overall_dir = overall_analysis.get('overall_direction', 'NEUTRO')
-                st.write(f"✓ {pair}: {overall_dir} - Score: {opportunity_score:.1f}")
+                st.write(f"✓ {pair}: {overall_dir} - Score: {opportunity_score:.1f} - Rec: {trading_recommendation['action']}")
                 
             except Exception as e:
                 error_msg = str(e)
@@ -2460,6 +2469,114 @@ def calculate_opportunity_score(analysis_result, pair, trading_style):
         total_score *= 1.05  # 5% bonus for stability
     
     return min(100, max(0, total_score))
+
+def calculate_technical_strength(timeframe_analysis):
+    """Calcula força técnica baseada nos sinais de múltiplos timeframes"""
+    strengths = []
+    
+    for tf_name, tf_data in timeframe_analysis.items():
+        signal = tf_data.get('trend_signal', 'NEUTRO')
+        probability = tf_data.get('probability', 50)
+        
+        # Converter sinais em força numérica
+        if 'COMPRA FORTE' in signal:
+            strength = 0.8
+        elif 'COMPRA' in signal:
+            strength = 0.6
+        elif 'VENDA FORTE' in signal:
+            strength = -0.8
+        elif 'VENDA' in signal:
+            strength = -0.6
+        else:
+            strength = 0
+        
+        # Ajustar pela probabilidade
+        strength *= (probability / 100)
+        strengths.append(strength)
+    
+    if strengths:
+        return sum(strengths) / len(strengths)
+    return 0
+
+def generate_trading_recommendation(overall_analysis, liquidity_data, sentiment_score, technical_strength, trading_style):
+    """Gera recomendação detalhada de trading"""
+    
+    direction = overall_analysis.get('overall_direction', 'NEUTRO')
+    probability = overall_analysis.get('consensus_probability', 50)
+    confidence = overall_analysis.get('consensus_confidence', 'Baixa')
+    
+    # Determinar ação principal
+    if 'COMPRA' in direction and probability > 60:
+        action = 'COMPRAR'
+        action_confidence = 'Alta' if probability > 75 else 'Média'
+    elif 'VENDA' in direction and probability > 60:
+        action = 'VENDER'
+        action_confidence = 'Alta' if probability > 75 else 'Média'
+    else:
+        action = 'AGUARDAR'
+        action_confidence = 'Baixa'
+    
+    # Análise de liquidez
+    liquidity_rec = liquidity_data.get('trading_recommendation', 'MODERADA')
+    liquidity_impact = 'Favorável' if liquidity_rec in ['ÓTIMA', 'BOA'] else 'Limitada' if liquidity_rec == 'MODERADA' else 'Desfavorável'
+    
+    # Timing baseado no estilo de trading
+    if trading_style == 'intraday':
+        if action_confidence == 'Alta':
+            timing = 'Imediato (próximas 2-4 horas)'
+        else:
+            timing = 'Aguardar confirmação'
+    elif trading_style == 'swing':
+        if action_confidence == 'Alta':
+            timing = 'Hoje ou amanhã (1-2 dias)'
+        else:
+            timing = 'Aguardar melhores sinais'
+    else:  # position
+        if action_confidence == 'Alta':
+            timing = 'Esta semana (2-7 dias)'
+        else:
+            timing = 'Aguardar tendência clara'
+    
+    # Gestão de risco
+    if action_confidence == 'Alta':
+        risk_level = 'Moderado (2-3% da banca)'
+    elif action_confidence == 'Média':
+        risk_level = 'Baixo (1-2% da banca)'
+    else:
+        risk_level = 'Mínimo (0.5-1% da banca)'
+    
+    # Fatores de confirmação
+    confirmations = []
+    if abs(technical_strength) > 0.4:
+        confirmations.append('Força técnica elevada')
+    if liquidity_impact == 'Favorável':
+        confirmations.append('Liquidez adequada')
+    if abs(sentiment_score) > 0.1:
+        sentiment_direction = 'positivo' if sentiment_score > 0 else 'negativo'
+        confirmations.append(f'Sentimento {sentiment_direction}')
+    if probability > 70:
+        confirmations.append('Alta probabilidade')
+    
+    # Alertas e cuidados
+    alerts = []
+    if liquidity_impact == 'Desfavorável':
+        alerts.append('⚠️ Liquidez limitada - use posições menores')
+    if action_confidence == 'Baixa':
+        alerts.append('⚠️ Sinais conflitantes - aguarde confirmação')
+    if abs(sentiment_score) > 0.15:
+        alerts.append('⚠️ Sentimento extremo - possível reversão')
+    
+    return {
+        'action': action,
+        'confidence': action_confidence,
+        'timing': timing,
+        'risk_level': risk_level,
+        'liquidity_impact': liquidity_impact,
+        'confirmations': confirmations,
+        'alerts': alerts,
+        'probability': probability,
+        'technical_strength': round(technical_strength, 2)
+    }
 
 def generate_execution_position(analysis_result, pair, current_price, trading_style, sentiment_score):
     """Gera posição completa de execução com todos os parâmetros"""
@@ -2621,15 +2738,19 @@ def display_multi_pair_results():
     st.markdown(f"### 📊 Top Oportunidades ({len(filtered_results)} pares)")
     
     # Create tabs for different views
-    tab1, tab2, tab3 = st.tabs(["🏆 Ranking", "📈 Posições de Execução", "📋 Resumo Detalhado"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🏆 Ranking", "💼 Recomendações de Trading", "📈 Posições de Execução", "📋 Resumo Detalhado"])
     
     with tab1:
         display_opportunity_ranking(filtered_results)
     
     with tab2:
-        display_execution_positions(filtered_results)
+        from trading_recommendations import display_trading_recommendations
+        display_trading_recommendations(filtered_results)
     
     with tab3:
+        display_execution_positions(filtered_results)
+    
+    with tab4:
         display_detailed_summary(filtered_results)
     
     # Action buttons
@@ -2657,7 +2778,7 @@ def display_opportunity_ranking(results):
         st.warning("Nenhuma oportunidade encontrada com os filtros aplicados.")
         return
     
-    st.markdown("#### 🎯 Ranking Multi-Timeframe - Tendências Futuras (EMA 20/200)")
+    st.markdown("#### 🎯 Ranking Multi-Timeframe - Tendências Futuras (Análise Técnica + IA + Liquidez)")
     
     for i, result in enumerate(results[:15]):  # Top 15
         pair = result['pair']
@@ -2704,7 +2825,7 @@ def display_opportunity_ranking(results):
         for tf_name in ['M5', 'M15', 'H1', 'D1']:
             if tf_name in timeframe_analysis:
                 tf_data = timeframe_analysis[tf_name]
-                signal = tf_data.get('ema_signal', 'NEUTRO')
+                signal = tf_data.get('trend_signal', 'NEUTRO')
                 prob = tf_data.get('probability', 50)
                 
                 if 'COMPRA' in signal:
