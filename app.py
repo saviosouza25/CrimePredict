@@ -556,21 +556,23 @@ def apply_theme_css():
             to { text-shadow: 0 0 25px rgba(255,0,245,0.8); }
         }
         
-        /* Futuristic Buttons */
+        /* Enhanced Futuristic Buttons */
         .stButton > button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-            color: white !important;
-            border: none !important;
+            color: #ffffff !important;
+            border: 2px solid rgba(0,245,255,0.4) !important;
             border-radius: 12px !important;
             padding: 1rem 2rem !important;
-            font-weight: 600 !important;
+            font-weight: 700 !important;
             font-family: 'Inter', sans-serif !important;
             text-transform: uppercase !important;
             letter-spacing: 1.5px !important;
+            font-size: 0.9rem !important;
             position: relative !important;
             overflow: hidden !important;
             transition: all 0.4s ease !important;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4), 0 0 20px rgba(0,245,255,0.2) !important;
+            text-shadow: 0 0 10px rgba(255,255,255,0.8) !important;
         }
         
         .stButton > button::before {
@@ -595,25 +597,77 @@ def apply_theme_css():
             border: 1px solid rgba(0,245,255,0.4) !important;
         }
         
-        /* Sidebar AI Design */
-        .css-1d391kg {
+        /* Enhanced Sidebar AI Design */
+        .css-1d391kg, .st-emotion-cache-1d391kg, section[data-testid="stSidebar"] {
             background: linear-gradient(180deg, #1a1a3e 0%, #0a0a23 100%) !important;
             border-right: 2px solid rgba(0,245,255,0.4) !important;
         }
         
-        /* Input Fields with Glow */
-        .stSelectbox > div > div, .stNumberInput > div > div > input, .stTextInput > div > div > input {
-            background: rgba(255,255,255,0.1) !important;
-            border: 1px solid rgba(0,245,255,0.4) !important;
-            border-radius: 10px !important;
-            color: #00f5ff !important;
-            backdrop-filter: blur(10px) !important;
-            transition: all 0.3s ease !important;
+        /* Sidebar content visibility */
+        .css-1d391kg .stMarkdown, 
+        .css-1d391kg label, 
+        .css-1d391kg .stSelectbox label,
+        .css-1d391kg .stNumberInput label,
+        .css-1d391kg .stSlider label,
+        .css-1d391kg p,
+        .css-1d391kg span,
+        .css-1d391kg div,
+        section[data-testid="stSidebar"] .stMarkdown,
+        section[data-testid="stSidebar"] label,
+        section[data-testid="stSidebar"] p,
+        section[data-testid="stSidebar"] span {
+            color: rgba(255,255,255,0.95) !important;
+            font-weight: 500 !important;
+            text-shadow: 0 0 8px rgba(0,245,255,0.3) !important;
         }
         
-        .stSelectbox > div > div:focus, .stNumberInput > div > div > input:focus {
+        /* Sidebar headers */
+        .css-1d391kg h1, 
+        .css-1d391kg h2, 
+        .css-1d391kg h3,
+        section[data-testid="stSidebar"] h1,
+        section[data-testid="stSidebar"] h2,
+        section[data-testid="stSidebar"] h3 {
+            color: #00f5ff !important;
+            text-shadow: 0 0 15px rgba(0,245,255,0.7) !important;
+            font-weight: 700 !important;
+            margin-bottom: 1rem !important;
+        }
+        
+        /* Enhanced Input Fields with High Visibility */
+        .stSelectbox > div > div, 
+        .stNumberInput > div > div > input, 
+        .stTextInput > div > div > input,
+        .stSlider > div > div > div > div {
+            background: rgba(255,255,255,0.15) !important;
+            border: 2px solid rgba(0,245,255,0.6) !important;
+            border-radius: 10px !important;
+            color: #ffffff !important;
+            backdrop-filter: blur(15px) !important;
+            transition: all 0.3s ease !important;
+            font-weight: 600 !important;
+            text-shadow: 0 0 5px rgba(255,255,255,0.8) !important;
+        }
+        
+        .stSelectbox > div > div:focus, 
+        .stNumberInput > div > div > input:focus,
+        .stTextInput > div > div > input:focus {
             border: 2px solid #00f5ff !important;
-            box-shadow: 0 0 20px rgba(0,245,255,0.3) !important;
+            box-shadow: 0 0 25px rgba(0,245,255,0.5) !important;
+            background: rgba(255,255,255,0.25) !important;
+        }
+        
+        /* Select dropdown options */
+        .stSelectbox > div > div > div {
+            background: rgba(26,26,62,0.95) !important;
+            color: #ffffff !important;
+            backdrop-filter: blur(15px) !important;
+        }
+        
+        /* Number input styling */
+        .stNumberInput input {
+            font-size: 1rem !important;
+            font-weight: 600 !important;
         }
         
         /* Futuristic Tabs */
@@ -699,19 +753,51 @@ def apply_theme_css():
             backdrop-filter: blur(10px) !important;
         }
         
-        /* Text and Content */
+        /* Enhanced Text and Content Visibility */
         .stMarkdown, p, span, div, label {
-            color: rgba(255,255,255,0.9) !important;
+            color: rgba(255,255,255,0.95) !important;
             font-family: 'Inter', sans-serif !important;
+            font-weight: 500 !important;
+            text-shadow: 0 0 5px rgba(255,255,255,0.2) !important;
         }
         
-        /* Expanders */
+        /* Strong emphasis for labels and important text */
+        label, .stMarkdown strong, .stMarkdown b {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            text-shadow: 0 0 10px rgba(0,245,255,0.4) !important;
+        }
+        
+        /* Caption and help text */
+        .stMarkdown .caption, .help {
+            color: rgba(255,255,255,0.8) !important;
+            font-size: 0.9rem !important;
+        }
+        
+        /* Enhanced Expanders */
         .streamlit-expanderHeader {
-            background: rgba(255,255,255,0.1) !important;
-            border: 1px solid rgba(0,245,255,0.4) !important;
-            border-radius: 10px !important;
-            color: #00f5ff !important;
-            backdrop-filter: blur(10px) !important;
+            background: rgba(255,255,255,0.15) !important;
+            border: 2px solid rgba(0,245,255,0.6) !important;
+            border-radius: 12px !important;
+            color: #ffffff !important;
+            backdrop-filter: blur(15px) !important;
+            font-weight: 600 !important;
+            text-shadow: 0 0 10px rgba(0,245,255,0.5) !important;
+            padding: 1rem !important;
+        }
+        
+        .streamlit-expanderHeader:hover {
+            background: rgba(255,255,255,0.2) !important;
+            border: 2px solid #00f5ff !important;
+            box-shadow: 0 0 20px rgba(0,245,255,0.3) !important;
+        }
+        
+        /* Expander content */
+        .streamlit-expanderContent {
+            background: rgba(255,255,255,0.05) !important;
+            border: 1px solid rgba(0,245,255,0.3) !important;
+            border-radius: 0 0 12px 12px !important;
+            padding: 1rem !important;
         }
         
         /* Charts with AI glow */
@@ -752,6 +838,64 @@ def apply_theme_css():
         /* Hide default spinners */
         .stSpinner > div, div[data-testid="stSpinner"], .stStatus {
             display: none !important;
+        }
+        
+        /* Sidebar specific styling overrides */
+        section[data-testid="stSidebar"] .stButton > button {
+            width: 100% !important;
+            padding: 0.8rem 1.5rem !important;
+            font-size: 0.85rem !important;
+            margin: 0.5rem 0 !important;
+        }
+        
+        /* Slider styling */
+        .stSlider > div > div > div {
+            background: rgba(0,245,255,0.3) !important;
+        }
+        
+        .stSlider > div > div > div > div {
+            background: #00f5ff !important;
+            border: 2px solid #ffffff !important;
+            box-shadow: 0 0 15px rgba(0,245,255,0.6) !important;
+        }
+        
+        /* Radio button styling */
+        .stRadio > div {
+            background: rgba(255,255,255,0.05) !important;
+            border-radius: 10px !important;
+            padding: 1rem !important;
+        }
+        
+        .stRadio > div > label {
+            color: #ffffff !important;
+            font-weight: 600 !important;
+        }
+        
+        /* Checkbox styling */
+        .stCheckbox > label {
+            color: #ffffff !important;
+            font-weight: 600 !important;
+        }
+        
+        /* File uploader styling */
+        .stFileUploader > div {
+            background: rgba(255,255,255,0.1) !important;
+            border: 2px dashed rgba(0,245,255,0.5) !important;
+            border-radius: 12px !important;
+            color: #ffffff !important;
+        }
+        
+        /* Progress bar styling */
+        .stProgress > div > div {
+            background: linear-gradient(90deg, #00f5ff, #ff00f5) !important;
+        }
+        
+        /* Alert boxes */
+        .element-container .stAlert {
+            background: rgba(255,255,255,0.1) !important;
+            border: 1px solid rgba(0,245,255,0.4) !important;
+            border-radius: 10px !important;
+            backdrop-filter: blur(10px) !important;
         }
     </style>
     """
