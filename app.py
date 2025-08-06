@@ -2792,12 +2792,9 @@ def display_multi_pair_results():
         st.warning("Nenhum resultado de análise multi-pares encontrado na sessão.")
         return
     
-    # Debug: mostrar quantos resultados foram encontrados
     results = results_data.get('results', [])
-    st.success(f"✅ {len(results)} resultados encontrados na sessão")
-    
     if not results:
-        st.warning("Lista de resultados está vazia.")
+        st.warning("Nenhum resultado disponível.")
         return
     
     results = results_data['results']
@@ -2831,21 +2828,15 @@ def display_multi_pair_results():
     
     # Filter and enhance results
     enhanced_results = []
-    st.info(f"Debug: Processando {len(results)} resultados com filtros - Score mín: {min_score}, Direção: {direction_filter}, Risco: {risk_filter}")
     
-    for i, result in enumerate(results):
-        st.write(f"Debug {i+1}: Par {result['pair']} - Score: {result['opportunity_score']:.1f}")
-        
+    for result in results:
         if result['opportunity_score'] < min_score:
-            st.write(f"  ❌ Filtrado por score baixo: {result['opportunity_score']:.1f} < {min_score}")
             continue
         
         overall_analysis = result.get('overall_analysis', {})
         overall_direction = overall_analysis.get('overall_direction', 'NEUTRO')
-        st.write(f"  ✓ Score OK: {result['opportunity_score']:.1f} - Direção: {overall_direction}")
         
         if direction_filter != "Todas" and direction_filter not in overall_direction:
-            st.write(f"  ❌ Filtrado por direção: {overall_direction} não contém {direction_filter}")
             continue
         
         # Get recommended trading style for this pair
@@ -2854,7 +2845,6 @@ def display_multi_pair_results():
         
         # Calculate trading parameters
         current_price = result.get('current_price', 0)
-        st.write(f"  ⚡ Preço atual: {current_price}")
         
         if current_price > 0:
             trading_params = calculate_trading_parameters(
@@ -2867,26 +2857,16 @@ def display_multi_pair_results():
                 
                 # Risk level filter
                 risk_level = 'Baixo' if trading_params['stop_pips'] < 30 else 'Moderado' if trading_params['stop_pips'] < 60 else 'Alto'
-                st.write(f"  ⚖️ Risco calculado: {risk_level} (Stop: {trading_params['stop_pips']:.1f} pips)")
                 
                 if risk_filter != "Todos" and risk_filter != risk_level:
-                    st.write(f"  ❌ Filtrado por risco: {risk_level} != {risk_filter}")
                     continue
                 
                 result['risk_level'] = risk_level
                 enhanced_results.append(result)
-                st.write(f"  ✅ Adicionado aos resultados finais!")
-            else:
-                st.write(f"  ❌ Falha ao calcular parâmetros de trading")
-        else:
-            st.write(f"  ❌ Preço atual inválido: {current_price}")
-    
-    st.info(f"Debug final: {len(enhanced_results)} resultados após filtragem")
     
     if not enhanced_results:
-        st.error(f"❌ Nenhuma oportunidade encontrada com os filtros aplicados!")
-        st.warning(f"Foram processados {len(results)} resultados originais, mas {len(enhanced_results)} passaram pelos filtros.")
-        st.info("Tente diminuir o score mínimo ou mudar os filtros de direção/risco.")
+        st.warning("Nenhuma oportunidade encontrada com os filtros aplicados.")
+        st.info("Ajuste os filtros para ver mais resultados.")
         return
         
     # Sort by opportunity score
@@ -3060,53 +3040,20 @@ def display_multi_pair_results():
             st.session_state['multi_pair_results'] = {}
             st.rerun()
     with col2:
-        if st.button("💾 Exportar Relatório"):
-            st.info("Funcionalidade de exportação em desenvolvimento")
-    
-
-    tab1, tab2, tab3, tab4 = st.tabs(["🏆 Ranking", "💼 Recomendações de Trading", "📈 Posições de Execução", "📋 Resumo Detalhado"])
-    
-    with tab1:
-        display_opportunity_ranking(filtered_results)
-    
-    with tab2:
-        from trading_recommendations import display_trading_recommendations
-        display_trading_recommendations(filtered_results)
-    
-    with tab3:
-        display_execution_positions(filtered_results)
-    
-    with tab4:
-        display_detailed_summary(filtered_results)
-    
-    # Action buttons
-    st.markdown("---")
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("🔄 Nova Análise Multi-Pares"):
-            del st.session_state['multi_pair_results']
-            st.rerun()
-    
-    with col2:
         if st.button("📊 Análise Individual"):
-            del st.session_state['multi_pair_results']
+            st.session_state['multi_pair_results'] = {}
             st.rerun()
-    
-    with col3:
-        if st.button("💾 Exportar Resultados"):
-            st.info("Funcionalidade de exportação em desenvolvimento")
 
-def display_opportunity_ranking(results):
+def display_opportunity_ranking(enhanced_results):
     """Exibir ranking de oportunidades com análise multi-timeframe"""
     
-    if not results:
+    if not enhanced_results:
         st.warning("Nenhuma oportunidade encontrada com os filtros aplicados.")
         return
     
     st.markdown("#### 🎯 Ranking Multi-Timeframe - Tendências Futuras (Análise Técnica + IA + Liquidez)")
     
-    for i, result in enumerate(results[:15]):  # Top 15
+    for i, result in enumerate(enhanced_results[:15]):  # Top 15
         pair = result['pair']
         score = result['opportunity_score']
         current_price = result['current_price']
