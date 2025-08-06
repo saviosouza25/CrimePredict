@@ -620,14 +620,23 @@ def apply_theme_css():
             text-shadow: 0 0 8px rgba(0,245,255,0.3) !important;
         }
         
-        /* Sidebar selectbox text visibility - specific override */
+        /* Sidebar selectbox text visibility - comprehensive override */
         section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] > div,
         section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] span,
-        section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] div {
+        section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] div,
+        section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] *,
+        section[data-testid="stSidebar"] .stSelectbox [role="button"] *,
+        section[data-testid="stSidebar"] .stSelectbox [role="combobox"] * {
             color: #000000 !important;
             background: rgba(255,255,255,0.95) !important;
             font-weight: 600 !important;
             font-size: 0.9rem !important;
+        }
+        
+        /* Ensure dropdown arrows and icons are visible */
+        section[data-testid="stSidebar"] .stSelectbox svg {
+            color: #000000 !important;
+            fill: #000000 !important;
         }
         
         /* Selectbox dropdown styling - main field */
@@ -641,14 +650,21 @@ def apply_theme_css():
             font-weight: 600 !important;
         }
         
-        /* Selectbox dropdown options */
+        /* Selectbox dropdown options - force visibility */
         .stSelectbox [data-baseweb="popover"] ul,
-        .stSelectbox [data-baseweb="popover"] li {
+        .stSelectbox [data-baseweb="popover"] li,
+        .stSelectbox [data-baseweb="popover"] [role="option"] {
             background: rgba(255,255,255,0.98) !important;
             color: #000000 !important;
             border: 1px solid rgba(0,245,255,0.4) !important;
             font-size: 0.9rem !important;
             font-weight: 600 !important;
+        }
+        
+        /* Force all dropdown content to be visible */
+        .stSelectbox [data-baseweb="popover"] * {
+            color: #000000 !important;
+            background: transparent !important;
         }
         
         /* Selectbox option hover */
@@ -659,12 +675,20 @@ def apply_theme_css():
         }
         
         /* Additional selectbox styling for better visibility */
-        .stSelectbox [data-baseweb="popover"] {
+        .stSelectbox [data-baseweb="popover"],
+        .stSelectbox [data-baseweb="popover-content"] {
             background: rgba(255,255,255,0.98) !important;
             backdrop-filter: blur(20px) !important;
             border: 2px solid rgba(0,245,255,0.4) !important;
             border-radius: 10px !important;
             box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
+        }
+        
+        /* Ensure all popover elements have proper styling */
+        .stSelectbox [data-baseweb="popover"] > div,
+        .stSelectbox [data-baseweb="popover-content"] > div {
+            background: rgba(255,255,255,0.98) !important;
+            color: #000000 !important;
         }
         
         /* Selectbox option text visibility */
