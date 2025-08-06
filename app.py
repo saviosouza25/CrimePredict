@@ -1899,7 +1899,9 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         'data_points_used': prob_params.get('data_points_used', 0),
         'probability_calculation': prob_params.get('probability_calculation', ''),
         'stop_reasoning': prob_params.get('stop_reasoning', ''),
-        'take_reasoning': prob_params.get('take_reasoning', '')
+        'take_reasoning': prob_params.get('take_reasoning', ''),
+        'movement_direction': prob_params.get('movement_direction', ''),
+        'base_movement_pct': prob_params.get('base_movement_pct', 0)
     }
 
 def display_multi_pair_results():
@@ -2121,6 +2123,8 @@ def display_execution_positions(results):
                 st.write(f"• **Risco da Banca:** {execution.get('actual_risk_pct', 0):.1f}%")
                 
                 # Dados da análise Alpha Vantage
+                if execution.get('movement_direction'):
+                    st.write(f"• **Movimento Provável:** {execution['movement_direction']} {execution.get('base_movement_pct', 0):.2f}%")
                 if execution.get('volatility_analyzed'):
                     st.write(f"• **Volatilidade:** {execution['volatility_analyzed']:.3f}%")
                 if execution.get('data_points_used'):
@@ -2158,9 +2162,10 @@ def display_execution_positions(results):
             if 'optimization_method' in execution:
                 st.success(f"**🎯 {execution['optimization_method']}**")
                 
-            # Detalhes dos cálculos Alpha Vantage
+            # Detalhes dos cálculos Alpha Vantage baseados em 50%
             if execution.get('stop_reasoning') or execution.get('take_reasoning'):
-                st.markdown("**📊 Cálculos Baseados em Dados Reais:**")
+                st.markdown("**📊 Cálculo: Stop e Take em 50% do Movimento Provável:**")
+                st.info("**Metodologia:** Stop = 50% movimento contrário | Take = 50% movimento favorável")
                 if execution.get('stop_reasoning'):
                     st.write(f"• {execution['stop_reasoning']}")
                 if execution.get('take_reasoning'):
@@ -5484,79 +5489,71 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     profile_base_configs = {
         'scalping': {
             'base_success_rate': 0.80,    # 80% sucesso com dados reais
-            'stop_safety_factor': 0.3,    # Stops ultra apertados (30% da volatilidade)
-            'take_probability_factor': 0.4, # Takes em 40% do movimento provável  
-            'volatility_multiplier': 0.5,  # Metade da volatilidade histórica
-            'confidence_weight': 0.9,     # Alto peso da confiança
+            'stop_safety_factor': 0.7,    # 70% dos 50% (mais apertado)
+            'take_probability_factor': 0.8, # 80% dos 50% (mais conservador)
             'risk_per_trade': 0.8,        # 0.8% risco por trade
-            'timeframe_adjustment': 1.2,  # Ajuste para timeframe curto
-            'description': 'Scalping - 80% sucesso com stops ultra precisos baseados em Alpha Vantage'
+            'description': 'Scalping - Stop/Take em 50% do movimento ± ajustes precisos'
         },
         'intraday': {
             'base_success_rate': 0.76,    # 76% sucesso equilibrado
-            'stop_safety_factor': 0.6,    # Stops moderados (60% da volatilidade)
-            'take_probability_factor': 0.7, # Takes em 70% do movimento provável
-            'volatility_multiplier': 0.8,  # 80% da volatilidade histórica
-            'confidence_weight': 0.7,     # Peso moderado da confiança
+            'stop_safety_factor': 1.0,    # 100% dos 50% (padrão)
+            'take_probability_factor': 1.0, # 100% dos 50% (padrão)
             'risk_per_trade': 1.2,        # 1.2% risco por trade
-            'timeframe_adjustment': 1.0,  # Sem ajuste (referência)
-            'description': 'Intraday - 76% sucesso com parâmetros equilibrados Alpha Vantage'
+            'description': 'Intraday - Stop/Take exatos em 50% do movimento provável'
         },
         'swing': {
             'base_success_rate': 0.78,    # 78% sucesso com paciência
-            'stop_safety_factor': 1.2,    # Stops amplos (120% da volatilidade)
-            'take_probability_factor': 1.1, # Takes em 110% do movimento provável
-            'volatility_multiplier': 1.5,  # 150% da volatilidade para ruído
-            'confidence_weight': 0.5,     # Menor peso da confiança (paciência)
+            'stop_safety_factor': 1.3,    # 130% dos 50% (mais espaço)
+            'take_probability_factor': 1.2, # 120% dos 50% (mais agressivo)
             'risk_per_trade': 1.8,        # 1.8% risco por trade
-            'timeframe_adjustment': 0.7,  # Reduz pressão temporal
-            'description': 'Swing - 78% sucesso com tolerância à volatilidade Alpha Vantage'
+            'description': 'Swing - Stop/Take em 50% ± tolerância para volatilidade'
         },
         'position': {
             'base_success_rate': 0.82,    # 82% sucesso longo prazo
-            'stop_safety_factor': 2.5,    # Stops muito amplos (250% da volatilidade)
-            'take_probability_factor': 1.8, # Takes em 180% do movimento provável
-            'volatility_multiplier': 2.5,  # 250% da volatilidade para trends
-            'confidence_weight': 0.3,     # Baixo peso da confiança (trend following)
+            'stop_safety_factor': 1.8,    # 180% dos 50% (muito mais espaço)
+            'take_probability_factor': 1.5, # 150% dos 50% (muito agressivo)
             'risk_per_trade': 2.2,        # 2.2% risco por trade
-            'timeframe_adjustment': 0.4,  # Mínima pressão temporal
-            'description': 'Position - 82% sucesso seguindo tendências principais Alpha Vantage'
+            'description': 'Position - Stop/Take em 50% ± máxima tolerância trends'
         }
     }
     
     config = profile_base_configs.get(profile, profile_base_configs['intraday'])
     
-    # Cálculo de Stop Loss baseado em dados Alpha Vantage reais
-    # Stop: Baseado na volatilidade histórica real com fator de segurança por perfil
-    base_volatility = daily_vol * config['volatility_multiplier']
-    safety_factor = config['stop_safety_factor']
+    # Calcular movimento provável baseado nos dados Alpha Vantage
+    if signal_strength > 0:  # Sinal de Compra
+        probable_movement = upside_range
+        movement_direction = "Alta"
+    else:  # Sinal de Venda
+        probable_movement = downside_range  
+        movement_direction = "Baixa"
     
-    # Ajuste por confiança da análise (mais confiança = stop mais apertado)
-    confidence_adjustment = 1.0 - (confidence * config['confidence_weight'] * 0.3)
+    # STOP LOSS: 50% do movimento provável (contra a direção do sinal)
+    # Para compra: stop baseado em 50% do movimento de baixa provável
+    # Para venda: stop baseado em 50% do movimento de alta provável
+    if signal_strength > 0:  # Compra - stop baseado no movimento de baixa
+        stop_base_movement = downside_range
+    else:  # Venda - stop baseado no movimento de alta
+        stop_base_movement = upside_range
     
-    # Ajuste por força do sinal (sinal forte = stop mais apertado)
-    signal_adjustment = 1.0 - (abs(signal_strength) * 0.2)
+    # Stop Loss = 50% do movimento contrário provável
+    stop_distance_base = stop_base_movement * 0.5
     
-    # Stop Loss final com base em dados reais
-    stop_distance = base_volatility * safety_factor * confidence_adjustment * signal_adjustment * config['timeframe_adjustment']
+    # Ajustes por perfil para diferenciar comportamentos
+    profile_stop_modifier = config['stop_safety_factor']
+    confidence_stop_adj = 0.8 + (confidence * 0.4)  # Mais confiança = stop mais apertado
     
-    # Take Profit baseado em movimentos prováveis reais dos dados Alpha Vantage
-    if signal_strength > 0:  # Compra
-        base_target_range = upside_range
-    else:  # Venda  
-        base_target_range = downside_range
+    stop_distance = stop_distance_base * profile_stop_modifier * confidence_stop_adj
     
-    # Take profit baseado na probabilidade real de movimento
-    probability_factor = config['take_probability_factor']
+    # TAKE PROFIT: 50% do movimento provável (na direção do sinal)
+    # Para compra: take baseado em 50% do movimento de alta provável
+    # Para venda: take baseado em 50% do movimento de baixa provável
+    tp_distance_base = probable_movement * 0.5
     
-    # Ajuste por confiança (mais confiança = target mais conservador para manter probabilidade)
-    confidence_target_adj = 0.8 + (confidence * 0.4)  # 0.8 a 1.2
+    # Ajustes por perfil para diferenciar comportamentos
+    profile_tp_modifier = config['take_probability_factor']
+    confidence_tp_adj = 0.9 + (confidence * 0.2)  # Mais confiança = take mais conservador
     
-    # Take Profit final com base em dados históricos reais
-    tp_distance = base_target_range * probability_factor * confidence_target_adj
-    
-    # Garantir que TP seja realista baseado nos dados históricos
-    tp_distance = min(tp_distance, base_target_range * 0.9)  # Máximo 90% do movimento histórico
+    tp_distance = tp_distance_base * profile_tp_modifier * confidence_tp_adj
     
     # Risk management baseado na taxa de sucesso real calculada
     success_rate = config['base_success_rate'] + (confidence - 0.5) * 0.1  # Ajuste menor
@@ -5589,40 +5586,42 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         'volatility_analyzed': daily_vol * 100,  # Volatilidade real analisada
         'data_points_used': len(df),
         'probability_calculation': f"Baseado em {len(df)} períodos Alpha Vantage",
-        'stop_reasoning': f"Stop: {safety_factor*100:.0f}% da volatilidade {config['volatility_multiplier']*100:.0f}%",
-        'take_reasoning': f"Take: {probability_factor*100:.0f}% do movimento provável"
+        'stop_reasoning': f"Stop: 50% do movimento contrário × {config['stop_safety_factor']:.1f} (perfil)",
+        'take_reasoning': f"Take: 50% do movimento favorável × {config['take_probability_factor']:.1f} (perfil)",
+        'movement_direction': movement_direction,
+        'base_movement_pct': probable_movement * 100
     }
 
 def get_profile_characteristics(profile):
     """Retorna características específicas do perfil para exibição"""
     characteristics = {
         'scalping': {
-            'stop_behavior': 'Stops Ultra Apertados (-20%)',
-            'take_behavior': 'Takes Conservadores (+20% mais próximos)',
-            'risk_approach': 'Risco Reduzido (-30%)',
+            'stop_behavior': '50% × 0.7 = 35% movimento contrário',
+            'take_behavior': '50% × 0.8 = 40% movimento favorável',
+            'risk_approach': 'Risco 0.8% da banca',
             'timing': 'Execução Imediata',
-            'focus': 'Alta Precisão'
+            'focus': 'Máxima Precisão'
         },
         'intraday': {
-            'stop_behavior': 'Stops Padrão',
-            'take_behavior': 'Takes Balanceados',
-            'risk_approach': 'Risco Moderado',
+            'stop_behavior': '50% × 1.0 = 50% movimento contrário',
+            'take_behavior': '50% × 1.0 = 50% movimento favorável',
+            'risk_approach': 'Risco 1.2% da banca',
             'timing': 'Execução Equilibrada',
-            'focus': 'Balanço R/R'
+            'focus': 'Exato em 50%'
         },
         'swing': {
-            'stop_behavior': 'Stops Amplos (+40% mais espaço)',
-            'take_behavior': 'Takes Agressivos (-30% mais distantes)',
-            'risk_approach': 'Risco Elevado (+30%)',
+            'stop_behavior': '50% × 1.3 = 65% movimento contrário',
+            'take_behavior': '50% × 1.2 = 60% movimento favorável',
+            'risk_approach': 'Risco 1.8% da banca',
             'timing': 'Paciência Estratégica',
-            'focus': 'Tolerância à Volatilidade'
+            'focus': 'Tolerância Volatilidade'
         },
         'position': {
-            'stop_behavior': 'Stops Muito Amplos (+100% máximo espaço)',
-            'take_behavior': 'Takes Muito Agressivos (-50% mais distantes)', 
-            'risk_approach': 'Risco Máximo (+50%)',
-            'timing': 'Visão de Longo Prazo',
-            'focus': 'Seguir Tendências Principais'
+            'stop_behavior': '50% × 1.8 = 90% movimento contrário',
+            'take_behavior': '50% × 1.5 = 75% movimento favorável', 
+            'risk_approach': 'Risco 2.2% da banca',
+            'timing': 'Visão Longo Prazo',
+            'focus': 'Seguir Tendência Principal'
         }
     }
     return characteristics.get(profile, characteristics['intraday'])
