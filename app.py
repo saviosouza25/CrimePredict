@@ -986,6 +986,9 @@ def main():
         # Análise rápida
         quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, key="quick_analysis_btn")
         
+        # Sistema Multi-Pares Avançado
+        multi_analysis = st.button("🌍 Sistema Multi-Pares Avançado", type="primary", use_container_width=True, key="multi_system_btn")
+        
 
         
         # Processamento dos diferentes tipos de análise
@@ -1034,6 +1037,33 @@ def main():
             pair, interval, horizon, lookback_period, 
             mc_samples, epochs, quick_analysis
         )
+    elif multi_analysis:
+        # Redirecionar para o sistema multi-pares avançado
+        st.info("🚀 Redirecionando para o Sistema Multi-Pares Avançado...")
+        st.markdown("""
+        ### 🌍 Sistema Multi-Pares Avançado
+        
+        Este é um sistema completo de análise multi-pares com:
+        
+        ✅ **Análise de Liquidez**: Volume >1M, spreads, profundidade  
+        ✅ **Análise Técnica**: RSI, EMA, ADX, MACD com dados reais  
+        ✅ **Sentimento NLP**: Notícias e redes sociais processadas  
+        ✅ **IA LSTM**: Predições >80% acurácia com TensorFlow  
+        ✅ **Backtesting**: DD máximo, extensão, win rate por perfil  
+        ✅ **Perfis Trader**: Scalper, Day, Swing, Position personalizados  
+        ✅ **Dashboard Moderno**: Design 2024-2025 otimizado  
+        
+        **Para usar o sistema avançado:**
+        1. Execute: `streamlit run forex_dashboard.py --server.port 5000`
+        2. Ou use o botão abaixo para alternar
+        """)
+        
+        if st.button("🚀 Abrir Dashboard Multi-Pares", type="primary"):
+            st.markdown("""
+            <script>
+            window.open('/forex_dashboard.py', '_blank');
+            </script>
+            """, unsafe_allow_html=True)
 
     
     # Always show main header
