@@ -1036,7 +1036,7 @@ def main():
             mc_samples, epochs, quick_analysis
         )
     elif multi_pair_analysis:
-        run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs)
+        st.info("🚧 Análise Multi-Pares será reimplementada em breve...")
     
     # Always show main header
     display_main_header()
@@ -1046,9 +1046,7 @@ def main():
         display_comprehensive_tutorial()
     
     # Display results if available
-    elif st.session_state.get('multi_pair_results'):
-        display_multi_pair_results()
-    elif st.session_state.get('analysis_results'):
+    if st.session_state.get('analysis_results'):
         display_analysis_results_with_tabs()
     else:
         # Show footer when no analysis is active
@@ -2268,287 +2266,78 @@ def calculate_scenario_probability(analysis_components, pair, trading_style):
         'confidence_level': 'Alta' if abs(weighted_score) > 0.3 else 'Média' if abs(weighted_score) > 0.15 else 'Baixa'
     }
 
-def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs):
-    """Análise avançada de tendências futuras multi-timeframe com indicadores técnicos padrão"""
-    
-    # Progress container
-    progress_container = st.container()
-    
-    with progress_container:
-        st.markdown("## 🌍 Análise Avançada Multi-Pares - Tendências Futuras")
-        st.markdown("**Análise baseada em:** Indicadores Técnicos (RSI + MACD + SMA + Bollinger) + AI/LSTM + Liquidez Real + Sentimento")
-        
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        status_text.text("🔍 Iniciando análise multi-timeframe de todos os pares...")
-        progress_bar.progress(5)
-        
-        # Multi-timeframe analysis setup
-        timeframes = {
-            'M5': '5min',
-            'M15': '15min', 
-            'H1': '60min',
-            'D1': 'daily'
-        }
-        
-        # Get trading style for consistent analysis
-        trading_style = st.session_state.get('trading_style', 'swing')
-        
-        # Include both forex and crypto pairs based on market selection
-        market_type_selected = st.session_state.get('market_type_select', 'Forex')
-        if market_type_selected == 'Forex':
-            analysis_pairs = PAIRS
-            analysis_label = "pares de moedas"
-        else:
-            analysis_pairs = CRYPTO_PAIRS  
-            analysis_label = "pares cripto"
-        
-        # Results storage
-        all_results = []
-        total_pairs = len(analysis_pairs)
-        total_operations = total_pairs * len(timeframes)
-        
-        status_text.text(f"📊 Analisando {total_pairs} {analysis_label} em {len(timeframes)} timeframes...")
-        
-        operation_count = 0
-        successful_pairs = 0
-        
-        for i, pair in enumerate(analysis_pairs):
-            try:
-                # Update progress for this pair
-                pair_progress = 5 + int((i / total_pairs) * 85)
-                progress_bar.progress(pair_progress)
-                status_text.text(f"🔄 Analisando {pair} - Tendências Multi-Timeframe ({i+1}/{total_pairs})...")
-                
-                # Determine market type based on selected market
-                market_type = 'crypto' if market_type_selected == 'Criptomoedas' else 'forex'
-                
-                # Multi-timeframe analysis for this pair
-                timeframe_analysis = {}
-                
-                for tf_name, tf_interval in timeframes.items():
-                    try:
-                        operation_count += 1
-                        sub_progress = 5 + int((operation_count / total_operations) * 85)
-                        progress_bar.progress(sub_progress)
-                        status_text.text(f"🔄 {pair} - {tf_name} ({operation_count}/{total_operations})...")
-                        
-                        # Fetch data for this timeframe
-                        df = services['data_service'].fetch_forex_data(pair, tf_interval, 'compact', market_type)
-                        
-                        if df is None or df.empty or not services['data_service'].validate_data(df):
-                            timeframe_analysis[tf_name] = create_empty_timeframe_analysis()
-                            st.warning(f"⚠️ {pair} - {tf_name}: Dados insuficientes ou inválidos")
-                            continue
-                        
-                        # Add default technical indicators
-                        df_with_indicators = add_default_indicators(df)
-                        
-                        # Analyze this timeframe
-                        tf_result = analyze_timeframe_trend(df_with_indicators, pair, tf_name, market_type)
-                        timeframe_analysis[tf_name] = tf_result
-                        
-                    except Exception as e:
-                        timeframe_analysis[tf_name] = create_empty_timeframe_analysis()
-                        # Log specific timeframe errors for debugging
-                        if "API Error" in str(e):
-                            st.warning(f"⚠️ {pair} - {tf_name}: API não suporta este par")
-                        elif "API Limit" in str(e):
-                            st.warning(f"⚠️ {pair} - {tf_name}: Limite de API atingido")
-                        continue
-                
-                # Get current price (using daily data)
-                current_price = services['data_service'].get_latest_price(pair, market_type)
-                if current_price is None:
-                    st.warning(f"⚠️ {pair}: Não foi possível obter preço atual")
-                    continue
-                
-                # Get overall sentiment for this pair
-                sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
-                
-                # Calculate overall trend consensus across timeframes
-                overall_analysis = calculate_multi_timeframe_consensus(timeframe_analysis)
-                
-                # Calculate comprehensive opportunity score based on multi-timeframe confluence
-                opportunity_score = calculate_multi_timeframe_opportunity_score(timeframe_analysis, sentiment_score)
-                
-                # Store comprehensive multi-timeframe result
-                pair_result = {
-                    'pair': pair,
-                    'current_price': current_price,
-                    'timeframe_analysis': timeframe_analysis,
-                    'overall_analysis': overall_analysis,
-                    'opportunity_score': opportunity_score,
-                    'sentiment_score': sentiment_score,
-                    'trading_style': trading_style
-                }
-                
-                # Análise detalhada para recomendações de trading
-                liquidity_data = timeframe_analysis.get('D1', {}).get('liquidity_analysis', {})
-                technical_strength = calculate_technical_strength(timeframe_analysis)
-                trading_recommendation = generate_trading_recommendation(
-                    overall_analysis, liquidity_data, sentiment_score, technical_strength, trading_style
-                )
-                
-                pair_result['trading_recommendation'] = trading_recommendation
-                
-                all_results.append(pair_result)
-                successful_pairs += 1
-                
-                # Debug output for successful analysis
-                overall_dir = overall_analysis.get('overall_direction', 'NEUTRO')
-                st.write(f"✓ {pair}: {overall_dir} - Score: {opportunity_score:.1f} - Rec: {trading_recommendation['action']}")
-                
-            except Exception as e:
-                error_msg = str(e)
-                st.error(f"❌ Erro ao analisar {pair}: {error_msg}")
-                # Show detailed error for debugging
-                if "Missing required columns" in error_msg or "API" in error_msg:
-                    st.warning(f"🔧 Problema específico com {pair}: {error_msg}")
-                continue
-        
-        # Final processing
-        status_text.text("🎯 Processando resultados e gerando recomendações...")
-        progress_bar.progress(95)
-        
-        # Sort by opportunity score
-        all_results.sort(key=lambda x: x['opportunity_score'], reverse=True)
-        
-        # Store results in session state
-        st.session_state.multi_pair_results = {
-            'results': all_results,
-            'timestamp': datetime.now(),
-            'trading_style': trading_style,
-            'interval': interval,
-            'horizon': horizon
-        }
-        
-        status_text.text(f"✅ Análise concluída! {successful_pairs} de {total_pairs} pares analisados com sucesso.")
-        progress_bar.progress(100)
-        
-        # Show detailed summary
-        if len(all_results) > 0:
-            st.success(f"📊 Resumo: {len(all_results)} pares analisados com sucesso de {total_pairs} total.")
-            st.info(f"💡 Taxa de sucesso: {len(all_results)/total_pairs*100:.1f}%")
-        else:
-            st.error("❌ Nenhum par foi analisado com sucesso. Verifique a conexão com a API.")
-        
-        # Clear progress after moment
-        import time
-        time.sleep(1)
-        progress_container.empty()
+# Funções multi-pares removidas - serão reimplementadas
 
-def calculate_opportunity_score(analysis_result, pair, trading_style):
-    """Calcula score de oportunidade baseado em múltiplos fatores"""
+def generate_trading_recommendations(analysis_results):
+    """Generate comprehensive trading recommendations based on analysis"""
     
-    # Base score from model confidence - aumentado para dar scores mais altos
-    base_score = analysis_result.get('model_confidence', 0.5) * 150  # Aumentado de 100 para 150
+    ai_analysis = analysis_results.get('ai_analysis', {})
+    technical_analysis = analysis_results.get('technical_analysis', {})
+    sentiment_analysis = analysis_results.get('sentiment_analysis', {})
+    liquidity_analysis = analysis_results.get('liquidity_analysis', {})
     
-    # Direction strength bonus - aumentado
-    direction = analysis_result.get('market_direction', '')
-    if 'FORTE' in str(direction):
-        direction_bonus = 40  # Aumentado de 25 para 40
-    elif 'COMPRA' in str(direction) or 'VENDA' in str(direction):
-        direction_bonus = 25  # Aumentado de 15 para 25
-    else:
-        direction_bonus = 10  # Base mínima para neutros
+    # Extract key metrics
+    ai_prediction = ai_analysis.get('prediction', 'LATERAL')
+    ai_confidence = ai_analysis.get('confidence', 50)
     
-    # Components agreement bonus - aumentado
-    agreement_score = analysis_result.get('agreement_score', 0)
-    agreement_bonus = agreement_score * 10  # Aumentado de 5 para 10
-    
-    # Confluence strength bonus - aumentado
-    confluence = analysis_result.get('confluence_strength', 0)
-    confluence_bonus = confluence * 8  # Aumentado de 3 para 8
-    
-    # Success probability bonus - melhorado
-    success_prob = analysis_result.get('success_probability', 50)
-    prob_bonus = max(0, (success_prob - 40) * 0.8)  # Melhor scaling
-    
-    # Pair volatility adjustment
-    pair_adjustment = PAIR_AI_ADJUSTMENTS.get(pair, {})
-    volatility_mult = pair_adjustment.get('volatility_multiplier', 1.0)
-    confidence_boost = pair_adjustment.get('prediction_confidence_boost', 1.0)
-    
-    # Calculate final score com base mínima mais alta
-    total_score = max(15, (base_score + direction_bonus + agreement_bonus + 
-                          confluence_bonus + prob_bonus) * confidence_boost)
-    
-    # Adjust for volatility (higher volatility = higher potential but more risk)
-    if volatility_mult > 1.5:  # High volatility pairs
-        total_score *= 1.15  # Aumentado de 1.1 para 1.15
-    elif volatility_mult < 0.9:  # Low volatility pairs
-        total_score *= 1.08  # Aumentado de 1.05 para 1.08
-    
-    return min(100, max(20, total_score))  # Score mínimo 20, máximo 100
-
-def calculate_technical_strength(timeframe_analysis):
-    """Calcula força técnica baseada nos sinais de múltiplos timeframes"""
-    strengths = []
-    
-    for tf_name, tf_data in timeframe_analysis.items():
-        signal = tf_data.get('trend_signal', 'NEUTRO')
-        probability = tf_data.get('probability', 50)
-        
-        # Converter sinais em força numérica
-        if 'COMPRA FORTE' in signal:
-            strength = 0.8
-        elif 'COMPRA' in signal:
-            strength = 0.6
-        elif 'VENDA FORTE' in signal:
-            strength = -0.8
-        elif 'VENDA' in signal:
-            strength = -0.6
-        else:
-            strength = 0
-        
-        # Ajustar pela probabilidade
-        strength *= (probability / 100)
-        strengths.append(strength)
-    
-    if strengths:
-        return sum(strengths) / len(strengths)
-    return 0
-
-def generate_trading_recommendation(overall_analysis, liquidity_data, sentiment_score, technical_strength, trading_style):
-    """Gera recomendação detalhada de trading"""
-    
-    direction = overall_analysis.get('overall_direction', 'NEUTRO')
-    probability = overall_analysis.get('consensus_probability', 50)
-    confidence = overall_analysis.get('consensus_confidence', 'Baixa')
-    
-    # Determinar ação principal
-    if 'COMPRA' in direction and probability > 60:
-        action = 'COMPRAR'
-        action_confidence = 'Alta' if probability > 75 else 'Média'
-    elif 'VENDA' in direction and probability > 60:
-        action = 'VENDER'
-        action_confidence = 'Alta' if probability > 75 else 'Média'
+    # Determine action
+    if ai_prediction == 'COMPRA':
+        action = 'COMPRA'
+        action_confidence = 'Alta' if ai_confidence > 75 else 'Média' if ai_confidence > 60 else 'Baixa'
+        entry_strategy = 'Aguardar pullback para zona de suporte'
+        expected_direction = 'Movimento ascendente'
+    elif ai_prediction == 'VENDA':
+        action = 'VENDA'
+        action_confidence = 'Alta' if ai_confidence > 75 else 'Média' if ai_confidence > 60 else 'Baixa'
+        entry_strategy = 'Aguardar pullback para zona de resistência'
+        expected_direction = 'Movimento descendente'
     else:
         action = 'AGUARDAR'
         action_confidence = 'Baixa'
+        entry_strategy = 'Aguardar sinais mais claros'
+        expected_direction = 'Movimento lateral'
     
-    # Análise de liquidez
-    liquidity_rec = liquidity_data.get('trading_recommendation', 'MODERADA')
-    liquidity_impact = 'Favorável' if liquidity_rec in ['ÓTIMA', 'BOA'] else 'Limitada' if liquidity_rec == 'MODERADA' else 'Desfavorável'
+    # Technical strength
+    technical_indicators = technical_analysis.get('indicators', {})
+    rsi = technical_indicators.get('rsi', 50)
+    macd_signal = technical_indicators.get('macd_signal', 'NEUTRO')
     
-    # Timing baseado no estilo de trading
-    if trading_style == 'intraday':
-        if action_confidence == 'Alta':
-            timing = 'Imediato (próximas 2-4 horas)'
-        else:
-            timing = 'Aguardar confirmação'
-    elif trading_style == 'swing':
-        if action_confidence == 'Alta':
-            timing = 'Hoje ou amanhã (1-2 dias)'
-        else:
-            timing = 'Aguardar melhores sinais'
-    else:  # position
-        if action_confidence == 'Alta':
-            timing = 'Esta semana (2-7 dias)'
-        else:
-            timing = 'Aguardar tendência clara'
+    if rsi > 70:
+        technical_strength = -0.3  # Oversold
+    elif rsi < 30:
+        technical_strength = 0.3   # Overbought
+    elif 40 <= rsi <= 60:
+        technical_strength = 0.0   # Neutral
+    elif rsi > 60:
+        technical_strength = 0.1   # Slightly bullish
+    else:
+        technical_strength = -0.1  # Slightly bearish
+    
+    # MACD adjustment
+    if macd_signal == 'COMPRA':
+        technical_strength += 0.2
+    elif macd_signal == 'VENDA':
+        technical_strength -= 0.2
+    
+    # Sentiment
+    sentiment_score = sentiment_analysis.get('compound_score', 0)
+    
+    # Liquidity impact
+    liquidity_score = liquidity_analysis.get('overall_score', 50)
+    if liquidity_score > 70:
+        liquidity_impact = 'Favorável'
+    elif liquidity_score > 50:
+        liquidity_impact = 'Neutro'
+    else:
+        liquidity_impact = 'Desfavorável'
+    
+    # Calculate probability
+    base_probability = ai_confidence
+    technical_adjustment = technical_strength * 10
+    sentiment_adjustment = sentiment_score * 5
+    liquidity_adjustment = (liquidity_score - 50) / 10
+    
+    probability = min(95, max(5, base_probability + technical_adjustment + sentiment_adjustment + liquidity_adjustment))
     
     # Gestão de risco
     if action_confidence == 'Alta':
@@ -2691,359 +2480,9 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         'sentiment_bias': 'Positivo' if sentiment_score > 0.05 else 'Negativo' if sentiment_score < -0.05 else 'Neutro'
     }
 
-def calculate_trading_parameters(pair, overall_analysis, current_price, trading_style):
-    """Calculate trading parameters based on analysis and style"""
-    
-    # Get basic direction and probability
-    direction = overall_analysis.get('overall_direction', 'NEUTRO')
-    probability = overall_analysis.get('consensus_probability', 50)
-    confidence = overall_analysis.get('consensus_confidence', 'Baixa')
-    
-    # Trading style parameters com valores mais conservadores
-    style_params = {
-        'scalping': {'stop_pct': 0.3, 'take_pct': 0.6},
-        'intraday': {'stop_pct': 0.8, 'take_pct': 1.6},
-        'swing': {'stop_pct': 1.5, 'take_pct': 3.0},  # Reduzido de 2%/4% para 1.5%/3%
-        'position': {'stop_pct': 2.5, 'take_pct': 5.0}  # Reduzido de 4%/8% para 2.5%/5%
-    }
-    
-    params = style_params.get(trading_style, style_params['swing'])
-    
-    # Calculate levels with more realistic multipliers
-    if 'COMPRA' in direction:
-        stop_loss = current_price * (1 - params['stop_pct'] / 100)
-        take_profit = current_price * (1 + params['take_pct'] / 100)
-        # DD and extension with more conservative multipliers
-        dd_max = current_price * (1 - 1.5 * params['stop_pct'] / 100)  # 1.5x stop instead of 3-5x
-        ext_max = current_price * (1 + 1.8 * params['take_pct'] / 100)  # 1.8x take instead of 2-8x
-    elif 'VENDA' in direction:
-        stop_loss = current_price * (1 + params['stop_pct'] / 100)
-        take_profit = current_price * (1 - params['take_pct'] / 100)
-        dd_max = current_price * (1 + 1.5 * params['stop_pct'] / 100)
-        ext_max = current_price * (1 - 1.8 * params['take_pct'] / 100)
-    else:
-        return None
-    
-    # Calculate pip values
-    if 'JPY' in pair:
-        pip_value = 0.01
-    else:
-        pip_value = 0.0001
-    
-    stop_pips = abs((current_price - stop_loss) / pip_value)
-    take_pips = abs((take_profit - current_price) / pip_value)
-    dd_pips = abs((current_price - dd_max) / pip_value)
-    ext_pips = abs((ext_max - current_price) / pip_value)
-    
-    # Risk/Reward ratio
-    risk_reward = take_pips / stop_pips if stop_pips > 0 else 0
-    
-    # Success probability based on historical data and confidence
-    confidence_multiplier = {'Muito Alta': 1.2, 'Alta': 1.1, 'Moderada': 1.0, 'Baixa': 0.8}.get(confidence, 1.0)
-    success_probability = min(85, (probability / 100) * confidence_multiplier * 90)
-    
-    return {
-        'direction': direction,
-        'entry_price': current_price,
-        'stop_loss': round(stop_loss, 5),
-        'take_profit': round(take_profit, 5),
-        'stop_pips': round(stop_pips, 1),
-        'take_pips': round(take_pips, 1),
-        'risk_reward': round(risk_reward, 2),
-        'dd_max_price': round(dd_max, 5),
-        'ext_max_price': round(ext_max, 5),
-        'dd_max_pips': round(dd_pips, 1),
-        'ext_max_pips': round(ext_pips, 1),
-        'success_probability': round(success_probability, 1),
-        'trading_style': trading_style,
-        'confidence': confidence
-    }
+# Função removida - será reimplementada
 
-def get_recommended_trading_style(timeframe_analysis):
-    """Recommend best trading style based on timeframe alignment"""
-    
-    if not timeframe_analysis:
-        return 'swing'
-    
-    # Count aligned timeframes
-    aligned_tf = 0
-    total_tf = len(timeframe_analysis)
-    
-    for tf_data in timeframe_analysis.values():
-        if tf_data and tf_data.get('probability', 50) > 65:
-            aligned_tf += 1
-    
-    alignment_pct = aligned_tf / total_tf if total_tf > 0 else 0
-    
-    # Recommend style based on alignment
-    if alignment_pct >= 0.75:
-        return 'position'  # High alignment = longer term
-    elif alignment_pct >= 0.5:
-        return 'swing'     # Medium alignment = swing
-    elif alignment_pct >= 0.25:
-        return 'intraday'  # Low alignment = intraday
-    else:
-        return 'scalping'  # Very low alignment = scalping
-
-def display_multi_pair_results():
-    """Exibir resultados da análise multi-pares com informações completas de trading"""
-    
-    results_data = st.session_state.get('multi_pair_results', {})
-    if not results_data:
-        st.warning("Nenhum resultado de análise multi-pares encontrado na sessão.")
-        return
-    
-    results = results_data.get('results', [])
-    if not results:
-        st.warning("Nenhum resultado disponível.")
-        return
-    
-    results = results_data['results']
-    timestamp = results_data['timestamp']
-    trading_style = results_data.get('trading_style', 'swing')
-    
-    # Header
-    st.markdown("## 🌍 Análise Multi-Pares - Oportunidades de Trading")
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Total de Pares Analisados", len(results))
-    with col2:
-        st.metric("Estratégia Base", trading_style.title())
-    with col3:
-        valid_results = [r for r in results if r['opportunity_score'] > 25]
-        st.metric("Oportunidades Válidas", len(valid_results))
-    
-    st.caption(f"Última atualização: {timestamp.strftime('%d/%m/%Y %H:%M:%S')}")
-    
-    # Filtros
-    st.markdown("### 🔍 Filtros")
-    filter_col1, filter_col2, filter_col3 = st.columns(3)
-    
-    with filter_col1:
-        min_score = st.slider("Score Mínimo", 0, 100, 15, 5)
-    with filter_col2:
-        direction_filter = st.selectbox("Direção", ["Todas", "COMPRA", "VENDA"])
-    with filter_col3:
-        risk_filter = st.selectbox("Nível de Risco", ["Todos", "Baixo", "Moderado", "Alto"])
-    
-    # Filter and enhance results
-    enhanced_results = []
-    
-    for result in results:
-        if result['opportunity_score'] < min_score:
-            continue
-        
-        overall_analysis = result.get('overall_analysis', {})
-        overall_direction = overall_analysis.get('overall_direction', 'NEUTRO')
-        
-        if direction_filter != "Todas" and direction_filter not in overall_direction:
-            continue
-        
-        # Get recommended trading style for this pair
-        timeframe_analysis = result.get('timeframe_analysis', {})
-        recommended_style = get_recommended_trading_style(timeframe_analysis)
-        
-        # Calculate trading parameters
-        current_price = result.get('current_price', 0)
-        
-        if current_price > 0:
-            trading_params = calculate_trading_parameters(
-                result['pair'], overall_analysis, current_price, recommended_style
-            )
-            
-            if trading_params:
-                # Add trading parameters to result
-                result['trading_params'] = trading_params
-                
-                # Risk level filter
-                risk_level = 'Baixo' if trading_params['stop_pips'] < 30 else 'Moderado' if trading_params['stop_pips'] < 60 else 'Alto'
-                
-                if risk_filter != "Todos" and risk_filter != risk_level:
-                    continue
-                
-                result['risk_level'] = risk_level
-                enhanced_results.append(result)
-    
-    if not enhanced_results:
-        st.warning("Nenhuma oportunidade encontrada com os filtros aplicados.")
-        st.info("Ajuste os filtros para ver mais resultados.")
-        return
-        
-    # Sort by opportunity score
-    enhanced_results.sort(key=lambda x: x['opportunity_score'], reverse=True)
-    
-    # Display summary statistics
-    if enhanced_results:
-        st.markdown("### 📊 Resumo das Oportunidades")
-        
-        # Calculate summary stats
-        avg_success_rate = np.mean([r['trading_params']['success_probability'] for r in enhanced_results[:10]])
-        avg_risk_reward = np.mean([r['trading_params']['risk_reward'] for r in enhanced_results[:10]])
-        buy_signals = len([r for r in enhanced_results[:10] if 'COMPRA' in r['trading_params']['direction']])
-        sell_signals = len([r for r in enhanced_results[:10] if 'VENDA' in r['trading_params']['direction']])
-        
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Taxa de Sucesso Média", f"{avg_success_rate:.1f}%")
-        with col2:
-            st.metric("Risk/Reward Médio", f"1:{avg_risk_reward:.2f}")
-        with col3:
-            st.metric("Sinais de Compra", buy_signals)
-        with col4:
-            st.metric("Sinais de Venda", sell_signals)
-    
-    # Display top opportunities with detailed information
-    st.markdown("### 🎯 Top Oportunidades com Parâmetros de Trading")
-    
-    for i, result in enumerate(enhanced_results[:8]):  # Top 8 opportunities
-        pair = result['pair']
-        score = result['opportunity_score']
-        trading_params = result['trading_params']
-        risk_level = result['risk_level']
-        
-        # Color coding based on score - ajustado para scores mais baixos
-        if score >= 40:
-            color = "#00C851"
-            badge = "🟢 EXCELENTE"
-        elif score >= 30:
-            color = "#4CAF50"
-            badge = "🟡 BOA"
-        elif score >= 20:
-            color = "#FF9800"
-            badge = "🟠 MODERADA"
-        else:
-            color = "#F44336"
-            badge = "🔴 BAIXA"
-        
-        # Direction styling
-        direction = trading_params['direction']
-        if 'COMPRA' in direction:
-            dir_icon = "📈"
-            dir_color = "#00C851"
-        else:
-            dir_icon = "📉"
-            dir_color = "#F44336"
-        
-        # Create detailed card
-        with st.container():
-            st.markdown(f"""
-            <div style="
-                border: 2px solid {color}; 
-                border-radius: 15px; 
-                padding: 1.5rem; 
-                margin: 1rem 0;
-                background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.98));
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            ">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h3 style="margin: 0; color: {color};">#{i+1} {pair} {dir_icon}</h3>
-                    <div style="
-                        background: {color}; 
-                        color: white; 
-                        padding: 0.5rem 1rem; 
-                        border-radius: 25px; 
-                        font-weight: bold;
-                    ">
-                        {score:.1f}/100
-                    </div>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                    <div>
-                        <h4 style="color: {dir_color}; margin: 0.5rem 0;">🎯 Parâmetros de Entrada</h4>
-                        <p style="margin: 0.2rem 0;"><strong>Direção:</strong> {direction}</p>
-                        <p style="margin: 0.2rem 0;"><strong>Preço Entrada:</strong> {trading_params['entry_price']:.5f}</p>
-                        <p style="margin: 0.2rem 0;"><strong>Stop Loss:</strong> {trading_params['stop_loss']:.5f} ({trading_params['stop_pips']:.1f} pips)</p>
-                        <p style="margin: 0.2rem 0;"><strong>Take Profit:</strong> {trading_params['take_profit']:.5f} ({trading_params['take_pips']:.1f} pips)</p>
-                        <p style="margin: 0.2rem 0;"><strong>Risk/Reward:</strong> 1:{trading_params['risk_reward']:.2f}</p>
-                    </div>
-                    
-                    <div>
-                        <h4 style="color: #FF6B6B; margin: 0.5rem 0;">⚠️ Gestão de Risco</h4>
-                        <p style="margin: 0.2rem 0;"><strong>DD Máximo:</strong> {trading_params['dd_max_price']:.5f}</p>
-                        <p style="margin: 0.2rem 0;"><strong>DD em Pips:</strong> {trading_params['dd_max_pips']:.0f} pips</p>
-                        <p style="margin: 0.2rem 0;"><strong>Extensão Máx:</strong> {trading_params['ext_max_price']:.5f}</p>
-                        <p style="margin: 0.2rem 0;"><strong>Ext em Pips:</strong> {trading_params['ext_max_pips']:.0f} pips</p>
-                        <p style="margin: 0.2rem 0;"><strong>Nível de Risco:</strong> <span style="color: {'#00C851' if risk_level == 'Baixo' else '#FF9800' if risk_level == 'Moderado' else '#F44336'};">{risk_level}</span></p>
-                    </div>
-                </div>
-                
-                <div style="background: rgba(0,0,0,0.05); padding: 1rem; border-radius: 10px;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; text-align: center;">
-                        <div>
-                            <h5 style="margin: 0; color: #666;">Estilo Recomendado</h5>
-                            <p style="margin: 0.2rem 0; font-weight: bold; color: {color};">{trading_params['trading_style'].title()}</p>
-                        </div>
-                        <div>
-                            <h5 style="margin: 0; color: #666;">Taxa de Sucesso</h5>
-                            <p style="margin: 0.2rem 0; font-weight: bold; color: {color};">{trading_params['success_probability']:.1f}%</p>
-                        </div>
-                        <div>
-                            <h5 style="margin: 0; color: #666;">Confiança</h5>
-                            <p style="margin: 0.2rem 0; font-weight: bold; color: {color};">{trading_params['confidence']}</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 1rem; padding: 0.8rem; background: rgba(255,193,7,0.1); border-left: 4px solid #FFC107; border-radius: 5px;">
-                    <p style="margin: 0; font-size: 0.9rem;"><strong>🚨 Alerta de Reversão:</strong> 
-                    Monitorar se o preço atingir <strong>{trading_params['dd_max_price']:.5f}</strong> 
-                    ({trading_params['dd_max_pips']:.1f} pips de DD). Este nível indica possível reversão da tendência prevista.</p>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Trading recommendations summary
-    if enhanced_results:
-        st.markdown("### 📋 Relatório de Trading - Recomendações Principais")
-        
-        # Best opportunities by style
-        style_groups = {}
-        for result in enhanced_results[:10]:
-            style = result['trading_params']['trading_style']
-            if style not in style_groups:
-                style_groups[style] = []
-            style_groups[style].append(result)
-        
-        for style, group in style_groups.items():
-            if len(group) >= 2:  # Only show styles with multiple opportunities
-                st.markdown(f"#### 🎯 {style.title()} Trading")
-                
-                avg_success = np.mean([r['trading_params']['success_probability'] for r in group])
-                avg_rr = np.mean([r['trading_params']['risk_reward'] for r in group])
-                avg_stop = np.mean([r['trading_params']['stop_pips'] for r in group])
-                avg_take = np.mean([r['trading_params']['take_pips'] for r in group])
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown(f"""
-                    **📊 Estatísticas do Estilo:**
-                    - Taxa de Sucesso Média: {avg_success:.1f}%
-                    - Risk/Reward Médio: 1:{avg_rr:.2f}
-                    - Stop Loss Médio: {avg_stop:.1f} pips
-                    - Take Profit Médio: {avg_take:.1f} pips
-                    """)
-                
-                with col2:
-                    st.markdown(f"""
-                    **🎯 Pares Recomendados:**
-                    """)
-                    for j, result in enumerate(group[:3]):
-                        direction_emoji = "📈" if 'COMPRA' in result['trading_params']['direction'] else "📉"
-                        st.markdown(f"• {direction_emoji} **{result['pair']}** - Score: {result['opportunity_score']:.1f}")
-    
-    # Controls
-    st.markdown("---")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🔄 Nova Análise Multi-Pares"):
-            st.session_state['multi_pair_results'] = {}
-            st.rerun()
-    with col2:
-        if st.button("📊 Análise Individual"):
-            st.session_state['multi_pair_results'] = {}
-            st.rerun()
+# Função removida - será reimplementada
 
 def display_opportunity_ranking(enhanced_results):
     """Exibir ranking de oportunidades com análise multi-timeframe"""
