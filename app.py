@@ -2156,6 +2156,20 @@ def display_execution_positions(results):
         
         with st.expander(f"{direction_icon} **{pair}** - {execution['direction']} {execution['strength']} (Score: {result['opportunity_score']:.1f})"):
             
+            # Profile-specific information - movido para o topo
+            st.markdown("**🎯 Configuração do Perfil:**")
+            profile_col1, profile_col2 = st.columns(2)
+            
+            with profile_col1:
+                st.info(f"**Perfil:** {execution.get('trading_profile', 'N/A')}")
+                st.info(f"**Timing:** {execution['market_timing']}")
+                
+            with profile_col2:
+                risk_color = "🟢" if execution['risk_level'] == 'Baixo' else "🟡" if execution['risk_level'] == 'Moderado' else "🔴"
+                st.info(f"**Risco:** {risk_color} {execution['risk_level']}")
+                sentiment_color = "🟢" if execution['sentiment_bias'] == 'Positivo' else "🔴" if execution['sentiment_bias'] == 'Negativo' else "🟡"
+                st.info(f"**Sentimento:** {sentiment_color} {execution['sentiment_bias']}")
+            
             col1, col2 = st.columns(2)
             
             with col1:
@@ -2220,22 +2234,7 @@ def display_execution_positions(results):
                 if execution.get('data_points_used'):
                     st.write(f"• **Total Dados:** {execution['data_points_used']} períodos Alpha")
             
-            # Profile-specific information
-            st.markdown("**🎯 Configuração do Perfil:**")
-            profile_col1, profile_col2 = st.columns(2)
-            
-            with profile_col1:
-                st.info(f"**Perfil:** {execution.get('trading_profile', 'N/A')}")
-                st.info(f"**Timing:** {execution['market_timing']}")
-                
-            with profile_col2:
-                risk_color = "🟢" if execution['risk_level'] == 'Baixo' else "🟡" if execution['risk_level'] == 'Moderado' else "🔴"
-                st.info(f"**Risco:** {risk_color} {execution['risk_level']}")
-                sentiment_color = "🟢" if execution['sentiment_bias'] == 'Positivo' else "🔴" if execution['sentiment_bias'] == 'Negativo' else "🟡"
-                st.info(f"**Sentimento:** {sentiment_color} {execution['sentiment_bias']}")
-            
 
-                    
             if 'optimization_method' in execution:
                 st.success(f"**🎯 {execution['optimization_method']}**")
                 
