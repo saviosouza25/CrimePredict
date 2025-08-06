@@ -10,8 +10,7 @@ PAIRS: List[str] = [
     'CAD/CHF', 'CAD/JPY', 'CHF/JPY',
     'EUR/AUD', 'EUR/CAD', 'EUR/CHF', 'EUR/GBP', 'EUR/JPY', 'EUR/NZD', 'EUR/USD',
     'GBP/AUD', 'GBP/CAD', 'GBP/CHF', 'GBP/JPY', 'GBP/USD',
-    'NZD/USD', 'USD/CAD', 'USD/CHF', 'USD/JPY',
-    'GOLD'  # Gold - limited support
+    'NZD/USD', 'USD/CAD', 'USD/CHF', 'USD/JPY'
 ]
 
 # Special handling pairs with limited API support

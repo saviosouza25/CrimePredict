@@ -985,8 +985,7 @@ def main():
                     pair_str = str(pair)  # Garantir que é string
                     if 'JPY' in pair_str:
                         pip_value_per_lot = 10.0
-                    elif str(pair) in ['GOLD']:
-                        pip_value_per_lot = 1.0
+                    # Gold removed from analysis
                     else:
                         pip_value_per_lot = 10.0
                     
@@ -2299,8 +2298,7 @@ def display_execution_positions(results):
                 pair_str = str(pair)
                 if 'JPY' in pair_str:
                     pip_value_per_lot = 10.0
-                elif pair_str in ['GOLD']:
-                    pip_value_per_lot = 1.0
+                # Gold removed from analysis
                 else:
                     pip_value_per_lot = 10.0
                 
@@ -4679,8 +4677,7 @@ def display_main_summary(results, analysis_mode):
             pair_name_str = str(pair_name)  # Garantir que é string
             if 'JPY' in pair_name_str:
                 pip_value_per_lot = 10.0  # JPY pairs: 0.01 = $10 per standard lot
-            elif str(pair_name) in ['GOLD']:
-                pip_value_per_lot = 1.0   # Gold: 0.1 = $1 per 0.1 lot
+            # Gold removed from analysis
             else:
                 pip_value_per_lot = 10.0  # Major pairs: 0.0001 = $10 per standard lot
             
