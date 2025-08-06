@@ -5504,22 +5504,39 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
             daily_vol = price_changes.std()
             current_price = df['close'].iloc[-1]
             
-            # Análise de movimentos históricos por janela temporal de cada perfil
+            # PERFIL ESPECÍFICO: Parâmetros únicos para cada estratégia
             if profile == 'scalping':
-                # Scalping: análise de movimentos intraday (1-5 períodos)
-                window = min(5, len(df))
+                # SCALPING: Ultra-curto prazo - movimentos de tick/minuto
+                window = min(3, len(df))  # Janela muito curta
                 recent_data = df.tail(window)
-                high_low_range = (recent_data['high'].max() - recent_data['low'].min()) / current_price
-                upside_movement = (recent_data['high'].max() - current_price) / current_price
-                downside_movement = (current_price - recent_data['low'].min()) / current_price
+                
+                # Movimentos micro - baseados em volatilidade intrabar
+                tick_volatility = df['close'].tail(10).pct_change().std() if len(df) >= 10 else daily_vol
+                upside_movement = tick_volatility * 2.5  # Targets menores e rápidos
+                downside_movement = tick_volatility * 1.8  # Stops mais apertados
+                
+                # Multiplica por fator de velocidade do scalping
+                scalping_acceleration = 1.3
+                upside_movement *= scalping_acceleration
+                downside_movement *= scalping_acceleration
                 
             elif profile == 'intraday':
-                # Intraday: análise de movimentos do dia (5-15 períodos)
-                window = min(15, len(df))
+                # INTRADAY: Movimentos do dia - sessão completa
+                window = min(25, len(df))  # Janela do dia de trading
                 recent_data = df.tail(window)
-                high_low_range = (recent_data['high'].max() - recent_data['low'].min()) / current_price
-                upside_movement = (recent_data['high'].max() - current_price) / current_price
-                downside_movement = (current_price - recent_data['low'].min()) / current_price
+                
+                # Análise de range diário mais amplo
+                daily_range = (recent_data['high'].max() - recent_data['low'].min()) / current_price
+                session_volatility = recent_data['close'].pct_change().std()
+                
+                # Targets baseados no range da sessão
+                upside_movement = daily_range * 0.35 + session_volatility * 4.0  # Targets médios
+                downside_movement = daily_range * 0.28 + session_volatility * 3.2  # Stops intermediários
+                
+                # Fator de sustentação do intraday
+                intraday_sustainability = 1.1
+                upside_movement *= intraday_sustainability
+                downside_movement *= intraday_sustainability
                 
             elif profile == 'swing':
                 # Swing: análise de movimentos de médio prazo (15-50 períodos)
@@ -5540,16 +5557,24 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
             successful_downs = 0
             total_signals = 0
             
-            # Analisar padrões históricos do perfil específico
-            for i in range(window, len(df)-1):
+            # ANÁLISE HISTÓRICA ESPECÍFICA POR PERFIL
+            for i in range(max(window, 10), len(df)-1):  # Começar análise histórica mais tarde
                 if profile == 'scalping':
-                    future_window = 1  # 1 período à frente
+                    future_window = 1  # 1 período à frente - movimentos imediatos
+                    analysis_frequency = 3  # Analisa a cada 3 períodos (mais frequente)
                 elif profile == 'intraday': 
-                    future_window = 3  # 3 períodos à frente
+                    future_window = 5  # 5 períodos à frente - movimentos da sessão
+                    analysis_frequency = 2  # Analisa a cada 2 períodos
                 elif profile == 'swing':
-                    future_window = 10  # 10 períodos à frente
+                    future_window = 15  # 15 períodos à frente - movimentos de dias
+                    analysis_frequency = 1  # Analisa todo período
                 else:  # position
-                    future_window = 20  # 20 períodos à frente
+                    future_window = 25  # 25 períodos à frente - movimentos semanais
+                    analysis_frequency = 1
+                
+                # Pular períodos baseado na frequência de análise do perfil
+                if i % analysis_frequency != 0:
+                    continue
                 
                 if i + future_window < len(df):
                     entry_price = df['close'].iloc[i]
@@ -5595,14 +5620,14 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
             downside_range = (current_price - recent_low) / current_price * 0.6
             
         else:
-            # Dados insuficientes - valores mínimos por perfil
+            # VALORES ESPECÍFICOS PARA DADOS INSUFICIENTES - Diferenciação clara por perfil
             if profile == 'scalping':
-                daily_vol = 0.003
-                upside_range = 0.005
-                downside_range = 0.005
+                daily_vol = 0.002  # Volatilidade micro
+                upside_range = 0.003  # Targets muito pequenos
+                downside_range = 0.002  # Stops muito apertados
             elif profile == 'intraday':
-                daily_vol = 0.008
-                upside_range = 0.012
+                daily_vol = 0.010  # Volatilidade diária
+                upside_range = 0.018  # Targets intermediários
                 downside_range = 0.012
             elif profile == 'swing':
                 daily_vol = 0.015
@@ -5638,13 +5663,13 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
             'base_success_rate': 0.80,    # 80% sucesso
             'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
             'risk_per_trade': 0.8,        # 0.8% risco
-            'description': 'Scalping - Movimento dinâmico Alpha Vantage (1-5 períodos) + % configurável sidebar'
+            'description': 'Scalping - Movimento dinâmico Alpha Vantage (3 períodos micro) + % configurável sidebar'
         },
         'intraday': {
             'base_success_rate': 0.76,    # 76% sucesso
             'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
             'risk_per_trade': 1.2,        # 1.2% risco
-            'description': 'Intraday - Movimento dinâmico Alpha Vantage (5-15 períodos) + % configurável sidebar'
+            'description': 'Intraday - Movimento dinâmico Alpha Vantage (25 períodos da sessão) + % configurável sidebar'
         },
         'swing': {
             'base_success_rate': 0.78,    # 78% sucesso
@@ -5726,18 +5751,18 @@ def get_profile_characteristics(profile, stop_percentage=50, take_percentage=50)
     """Retorna características específicas do perfil para exibição"""
     characteristics = {
         'scalping': {
-            'stop_behavior': f'{stop_percentage}% do movimento contrário Alpha Vantage (1-5 períodos)',
-            'take_behavior': f'{take_percentage}% do movimento favorável Alpha Vantage (1-5 períodos)',
-            'risk_approach': 'Risco 0.8% da banca',
-            'timing': 'Análise Intraday Imediata',
-            'focus': 'Movimentos Curtos Alpha Vantage'
+            'stop_behavior': f'{stop_percentage}% movimento contrário Alpha Vantage (micro 3 períodos) | Limits: 0.1%-0.8%',
+            'take_behavior': f'{take_percentage}% movimento favorável Alpha Vantage (tick volatility x2.5) | Limits: 0.2%-1.2%', 
+            'risk_approach': 'Risco 0.8% da banca | Execuções ultra-rápidas',
+            'timing': 'Análise Micro-Intraday | 1 período à frente',
+            'focus': 'Volatilidade tick/minuto | Aceleração 1.3x'
         },
         'intraday': {
-            'stop_behavior': f'{stop_percentage}% do movimento contrário Alpha Vantage (5-15 períodos)',
-            'take_behavior': f'{take_percentage}% do movimento favorável Alpha Vantage (5-15 períodos)',
-            'risk_approach': 'Risco 1.2% da banca',
-            'timing': 'Análise Diária Balanceada',
-            'focus': 'Movimentos Diários Alpha Vantage'
+            'stop_behavior': f'{stop_percentage}% movimento contrário Alpha Vantage (sessão 25 períodos) | Limits: 0.3%-1.5%',
+            'take_behavior': f'{take_percentage}% movimento favorável Alpha Vantage (range sessão + volatility x4) | Limits: 0.5%-2.5%',
+            'risk_approach': 'Risco 1.2% da banca | Sustentação 1.1x',
+            'timing': 'Análise Sessão Diária | 5 períodos à frente',
+            'focus': 'Range diário completo | Volatilidade sustentada'
         },
         'swing': {
             'stop_behavior': f'{stop_percentage}% do movimento contrário Alpha Vantage (15-50 períodos)',
