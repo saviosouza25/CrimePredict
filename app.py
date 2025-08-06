@@ -660,7 +660,7 @@ def apply_theme_css():
         
         /* Additional selectbox styling for better visibility */
         .stSelectbox [data-baseweb="popover"] {
-            background: rgba(26,26,62,0.98) !important;
+            background: rgba(255,255,255,0.98) !important;
             backdrop-filter: blur(20px) !important;
             border: 2px solid rgba(0,245,255,0.4) !important;
             border-radius: 10px !important;
@@ -670,17 +670,17 @@ def apply_theme_css():
         /* Selectbox option text visibility */
         .stSelectbox [data-baseweb="popover"] div,
         .stSelectbox [data-baseweb="popover"] span {
-            color: rgba(255,255,255,0.95) !important;
-            font-weight: 500 !important;
+            color: #000000 !important;
+            font-weight: 600 !important;
             font-size: 0.9rem !important;
-            text-shadow: 0 0 5px rgba(0,245,255,0.2) !important;
+            text-shadow: none !important;
         }
         
         /* Selectbox selected option */
         .stSelectbox [data-baseweb="popover"] [aria-selected="true"] {
-            background: rgba(0,245,255,0.3) !important;
+            background: rgba(0,245,255,0.8) !important;
             color: #ffffff !important;
-            font-weight: 600 !important;
+            font-weight: 700 !important;
         }
         
         /* Sidebar headers */
@@ -721,20 +721,21 @@ def apply_theme_css():
         
         /* Select dropdown options - enhanced */
         .stSelectbox > div > div > div {
-            background: rgba(26,26,62,0.95) !important;
-            color: rgba(255,255,255,0.95) !important;
+            background: rgba(255,255,255,0.98) !important;
+            color: #000000 !important;
             backdrop-filter: blur(15px) !important;
-            border: 1px solid rgba(0,245,255,0.3) !important;
+            border: 1px solid rgba(0,245,255,0.4) !important;
             border-radius: 8px !important;
             font-size: 0.9rem !important;
-            font-weight: 500 !important;
+            font-weight: 600 !important;
         }
         
         /* Selectbox input text */
         .stSelectbox > div > div input {
-            color: rgba(255,255,255,0.95) !important;
+            color: #000000 !important;
             font-size: 0.9rem !important;
-            font-weight: 500 !important;
+            font-weight: 600 !important;
+            background: rgba(255,255,255,0.95) !important;
         }
         
         /* Password input field - dark background with white text */
