@@ -206,65 +206,43 @@ class ForexMultiAnalysis:
         }
     
     def _lstm_analysis(self, data: pd.DataFrame) -> Dict:
-        """Análise LSTM simplificada (implementação básica para Replit)"""
+        """Análise LSTM simplificada usando regressão linear para Replit"""
         try:
-            import tensorflow as tf
-            from tensorflow.keras.models import Sequential
-            from tensorflow.keras.layers import LSTM, Dense, Dropout
-            from sklearn.preprocessing import MinMaxScaler
+            from sklearn.linear_model import LinearRegression
             
-            # Preparar dados
-            scaler = MinMaxScaler()
-            scaled_data = scaler.fit_transform(data[['close']].values)
+            # Preparar dados para regressão linear simples
+            close_prices = data['close'].values
             
-            # Criar sequences
-            sequence_length = 60
-            if len(scaled_data) < sequence_length + 10:
+            if len(close_prices) < 10:
                 return {'prediction': 'Insufficient data', 'confidence': 0}
             
-            X, y = [], []
-            for i in range(sequence_length, len(scaled_data)):
-                X.append(scaled_data[i-sequence_length:i, 0])
-                y.append(scaled_data[i, 0])
+            # Usar últimos 20 pontos para treinar
+            lookback = min(20, len(close_prices) - 5)
+            X = np.arange(lookback).reshape(-1, 1)
+            y = close_prices[-lookback:]
             
-            X, y = np.array(X), np.array(y)
-            X = np.reshape(X, (X.shape[0], X.shape[1], 1))
+            # Treinar modelo simples
+            model = LinearRegression()
+            model.fit(X, y)
             
-            # Split data
-            split = int(0.8 * len(X))
-            X_train, X_test = X[:split], X[split:]
-            y_train, y_test = y[:split], y[split:]
+            # Predição para próximo ponto
+            next_point = model.predict([[lookback]])[0]
+            current_price = close_prices[-1]
             
-            # Modelo LSTM simples
-            model = Sequential([
-                LSTM(50, return_sequences=True, input_shape=(sequence_length, 1)),
-                Dropout(0.2),
-                LSTM(50, return_sequences=False),
-                Dropout(0.2),
-                Dense(1)
-            ])
+            price_change = (next_point - current_price) / current_price
             
-            model.compile(optimizer='adam', loss='mean_squared_error')
-            model.fit(X_train, y_train, batch_size=32, epochs=5, verbose=0)
+            # Calcular confiança baseada no R²
+            score = model.score(X, y)
+            confidence = min(85, max(45, score * 100))
             
-            # Predição
-            last_sequence = X_test[-1].reshape(1, sequence_length, 1)
-            prediction = model.predict(last_sequence, verbose=0)
-            
-            # Converter de volta para preço real
-            current_price = data['close'].iloc[-1]
-            predicted_price = scaler.inverse_transform(prediction)[0][0]
-            
-            price_change = (predicted_price - current_price) / current_price
-            confidence = min(85, max(50, abs(price_change) * 1000 + 50))
-            
-            direction = 'Up' if price_change > 0.001 else 'Down' if price_change < -0.001 else 'Sideways'
+            direction = 'Up' if price_change > 0.005 else 'Down' if price_change < -0.005 else 'Sideways'
             
             return {
                 'prediction': direction,
                 'confidence': confidence,
                 'price_change_percent': price_change * 100,
-                'predicted_price': predicted_price
+                'predicted_price': next_point,
+                'model_score': score
             }
             
         except Exception as e:
@@ -405,8 +383,9 @@ class ForexMultiAnalysis:
             adx = dx.rolling(window=period).mean()
             
             return adx.fillna(25)
-        except:
-            return pd.Series([25] * len(data), index=data.index)
+        except Exception:
+            # Fallback simples
+            return pd.Series([25.0] * len(data), index=data.index)
     
     def _calculate_macd(self, prices: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9) -> Tuple[pd.Series, pd.Series, pd.Series]:
         ema_fast = prices.ewm(span=fast).mean()

@@ -22,7 +22,7 @@ args = "Forex Analysis Server"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Multi-Pair Dashboard"
+args = "Multi-Pair Simple"
 
 [[workflows.workflow]]
 name = "Forex Analysis Server"
@@ -34,12 +34,12 @@ args = "streamlit run app.py --server.port 5000"
 waitForPort = 5000
 
 [[workflows.workflow]]
-name = "Multi-Pair Dashboard"
+name = "Multi-Pair Simple"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run forex_dashboard.py --server.port 5001"
+args = "streamlit run multi_pair_app.py --server.port 5001"
 waitForPort = 5001
 
 [[ports]]

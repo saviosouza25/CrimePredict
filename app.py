@@ -1054,16 +1054,23 @@ def main():
         ✅ **Dashboard Moderno**: Design 2024-2025 otimizado  
         
         **Para usar o sistema avançado:**
-        1. Execute: `streamlit run forex_dashboard.py --server.port 5000`
-        2. Ou use o botão abaixo para alternar
+        1. Sistema simplificado rodando na porta 5001
+        2. Use o botão abaixo para acessar
         """)
         
-        if st.button("🚀 Abrir Dashboard Multi-Pares", type="primary"):
+        if st.button("🚀 Abrir Sistema Multi-Pares", type="primary"):
             st.markdown("""
-            <script>
-            window.open('/forex_dashboard.py', '_blank');
-            </script>
-            """, unsafe_allow_html=True)
+            **✅ Sistema Multi-Pares está rodando!**
+            
+            Acesse em: http://localhost:5001 (ou porta 5001 do Replit)
+            
+            O sistema inclui:
+            - Análise técnica em tempo real
+            - Dados da Alpha Vantage API
+            - Métricas de risco e oportunidades
+            - Interface responsiva e moderna
+            """)
+            st.balloons()
 
     
     # Always show main header
