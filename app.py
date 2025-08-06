@@ -1864,10 +1864,22 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                     current_price, pair, sentiment_score, df_with_indicators, trading_style
                 )
                 
-                # Calculate individual analysis components
-                technical_analysis = get_technical_analysis_summary(df_with_indicators)
-                volume_analysis = analyze_volume_trend(df_with_indicators)
-                trend_analysis = get_trend_analysis_summary(df_with_indicators)
+                # Calculate individual analysis components with error handling
+                try:
+                    technical_analysis = get_technical_analysis_summary(df_with_indicators)
+                except Exception as e:
+                    technical_analysis = {'recommendation': 'NEUTRO', 'signals': []}
+                
+                try:
+                    volume_analysis = analyze_volume_trend(df_with_indicators)
+                except Exception as e:
+                    volume_analysis = {'direction': 'NEUTRO', 'volume_trend': 0}
+                
+                try:
+                    trend_analysis = get_trend_analysis_summary(df_with_indicators)
+                except Exception as e:
+                    trend_analysis = {'direction': 'LATERAL', 'strength': 'Fraca'}
+                
                 risk_analysis = {'risk_level': 'Moderado'}  # Simplified for now
                 
                 # Calculate AI/LSTM prediction if available
@@ -1879,18 +1891,27 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                         df_with_indicators, pair, sentiment_score, trading_style
                     )
                 except:
-                    pass
+                    ai_prediction = None
                 
                 # Calculate comprehensive probability based on all criteria
-                probability_analysis = calculate_scenario_probability({
-                    'unified': analysis_result,
-                    'technical': technical_analysis,
-                    'volume': volume_analysis,
-                    'trend': trend_analysis,
-                    'risk': risk_analysis,
-                    'sentiment': {'score': sentiment_score},
-                    'ai_prediction': ai_prediction
-                }, pair, trading_style)
+                try:
+                    probability_analysis = calculate_scenario_probability({
+                        'unified': analysis_result,
+                        'technical': technical_analysis,
+                        'volume': volume_analysis,
+                        'trend': trend_analysis,
+                        'risk': risk_analysis,
+                        'sentiment': {'score': sentiment_score},
+                        'ai_prediction': ai_prediction
+                    }, pair, trading_style)
+                except Exception as e:
+                    # Fallback probability analysis
+                    probability_analysis = {
+                        'scenario': analysis_result.get('direction', 'NEUTRO'),
+                        'probability': analysis_result.get('model_confidence', 0.5) * 100,
+                        'confidence_level': 'Média',
+                        'signal_breakdown': {'positive': 1, 'negative': 0, 'neutral': 1, 'total': 2}
+                    }
                 
                 # Calculate trading opportunity score
                 opportunity_score = calculate_opportunity_score(analysis_result, pair, trading_style)
@@ -1920,7 +1941,9 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                 all_results.append(pair_result)
                 
             except Exception as e:
-                st.warning(f"Erro ao analisar {pair}: {str(e)}")
+                st.error(f"Erro detalhado ao analisar {pair}: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
                 continue
         
         # Final processing
