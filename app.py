@@ -482,109 +482,280 @@ class CacheManager:
                     del st.session_state[key]
 
 def apply_theme_css():
-    """Apply theme-specific CSS based on current theme"""
-    current_theme = st.session_state.get('theme', 'light')
-    
-    # CSS para ocultar elementos de carregamento do Streamlit
-    hide_loading_css = """
+    """Apply futuristic AI-themed CSS styling"""
+    # Futuristic AI CSS with cyberpunk aesthetics
+    futuristic_css = """
     <style>
-        /* Ocultar spinner de carregamento no canto superior direito */
-        .stSpinner > div {
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        /* Global AI Theme */
+        .stApp {
+            background: linear-gradient(135deg, #0a0a23 0%, #1a1a3e 50%, #2d2d5f 100%) !important;
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif !important;
+        }
+        
+        .main .block-container {
+            background: transparent !important;
+            color: rgba(255,255,255,0.9) !important;
+            max-width: 1200px;
+            padding-top: 2rem;
+        }
+        
+        /* Futuristic Cards */
+        .metric-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)) !important;
+            backdrop-filter: blur(15px) !important;
+            border: 1px solid rgba(0,245,255,0.3) !important;
+            padding: 2rem !important;
+            border-radius: 16px !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 20px rgba(0,245,255,0.1) !important;
+            margin: 1.5rem 0 !important;
+            position: relative !important;
+            overflow: hidden !important;
+            color: white !important;
+        }
+        
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #00f5ff, #ff00f5, #f5ff00);
+            animation: glow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { box-shadow: 0 0 5px rgba(0,245,255,0.5); }
+            to { box-shadow: 0 0 25px rgba(255,0,245,0.8); }
+        }
+        
+        /* AI Headers */
+        h1, h2, h3, h4, h5, h6 {
+            color: #00f5ff !important;
+            text-shadow: 0 0 15px rgba(0,245,255,0.6) !important;
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 600 !important;
+        }
+        
+        h1 {
+            background: linear-gradient(135deg, #00f5ff, #ff00f5) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            font-size: 3rem !important;
+            text-align: center !important;
+            margin-bottom: 2rem !important;
+            animation: pulse 4s ease-in-out infinite alternate;
+        }
+        
+        @keyframes pulse {
+            from { text-shadow: 0 0 15px rgba(0,245,255,0.6); }
+            to { text-shadow: 0 0 25px rgba(255,0,245,0.8); }
+        }
+        
+        /* Futuristic Buttons */
+        .stButton > button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 12px !important;
+            padding: 1rem 2rem !important;
+            font-weight: 600 !important;
+            font-family: 'Inter', sans-serif !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1.5px !important;
+            position: relative !important;
+            overflow: hidden !important;
+            transition: all 0.4s ease !important;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+        }
+        
+        .stButton > button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.6s;
+        }
+        
+        .stButton > button:hover::before {
+            left: 100%;
+        }
+        
+        .stButton > button:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+            transform: translateY(-3px) !important;
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.5) !important;
+            border: 1px solid rgba(0,245,255,0.4) !important;
+        }
+        
+        /* Sidebar AI Design */
+        .css-1d391kg {
+            background: linear-gradient(180deg, #1a1a3e 0%, #0a0a23 100%) !important;
+            border-right: 2px solid rgba(0,245,255,0.4) !important;
+        }
+        
+        /* Input Fields with Glow */
+        .stSelectbox > div > div, .stNumberInput > div > div > input, .stTextInput > div > div > input {
+            background: rgba(255,255,255,0.1) !important;
+            border: 1px solid rgba(0,245,255,0.4) !important;
+            border-radius: 10px !important;
+            color: #00f5ff !important;
+            backdrop-filter: blur(10px) !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .stSelectbox > div > div:focus, .stNumberInput > div > div > input:focus {
+            border: 2px solid #00f5ff !important;
+            box-shadow: 0 0 20px rgba(0,245,255,0.3) !important;
+        }
+        
+        /* Futuristic Tabs */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 6px !important;
+            background: rgba(255,255,255,0.05) !important;
+            padding: 12px !important;
+            border-radius: 15px !important;
+            backdrop-filter: blur(15px) !important;
+            border: 1px solid rgba(0,245,255,0.2) !important;
+        }
+        
+        .stTabs [data-baseweb="tab"] {
+            background: rgba(255,255,255,0.1) !important;
+            border: 1px solid rgba(255,255,255,0.2) !important;
+            border-radius: 10px !important;
+            padding: 15px 30px !important;
+            color: #00f5ff !important;
+            font-weight: 500 !important;
+            transition: all 0.4s ease !important;
+            font-family: 'Inter', sans-serif !important;
+        }
+        
+        .stTabs [aria-selected="true"] {
+            background: linear-gradient(135deg, #667eea, #764ba2) !important;
+            color: white !important;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5) !important;
+            transform: translateY(-3px) !important;
+            border: 1px solid rgba(0,245,255,0.4) !important;
+        }
+        
+        /* Enhanced Metrics */
+        [data-testid="metric-container"] {
+            background: linear-gradient(145deg, rgba(0,245,255,0.15), rgba(255,0,245,0.15)) !important;
+            border: 1px solid rgba(0,245,255,0.4) !important;
+            border-radius: 12px !important;
+            padding: 1.5rem !important;
+            backdrop-filter: blur(15px) !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        [data-testid="metric-container"]:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 25px rgba(0,245,255,0.3) !important;
+        }
+        
+        [data-testid="metric-container"] > div > div {
+            color: #00f5ff !important;
+            font-family: 'Inter', sans-serif !important;
+        }
+        
+        /* Status Messages with Glow */
+        .stSuccess {
+            background: linear-gradient(135deg, rgba(0,255,127,0.2), rgba(0,255,127,0.1)) !important;
+            border: 1px solid rgba(0,255,127,0.5) !important;
+            color: #00ff7f !important;
+            border-radius: 10px !important;
+            backdrop-filter: blur(10px) !important;
+        }
+        
+        .stError {
+            background: linear-gradient(135deg, rgba(255,0,127,0.2), rgba(255,0,127,0.1)) !important;
+            border: 1px solid rgba(255,0,127,0.5) !important;
+            color: #ff007f !important;
+            border-radius: 10px !important;
+            backdrop-filter: blur(10px) !important;
+        }
+        
+        .stWarning {
+            background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.1)) !important;
+            border: 1px solid rgba(255,215,0,0.5) !important;
+            color: #ffd700 !important;
+            border-radius: 10px !important;
+            backdrop-filter: blur(10px) !important;
+        }
+        
+        .stInfo {
+            background: linear-gradient(135deg, rgba(0,245,255,0.2), rgba(0,245,255,0.1)) !important;
+            border: 1px solid rgba(0,245,255,0.5) !important;
+            color: #00f5ff !important;
+            border-radius: 10px !important;
+            backdrop-filter: blur(10px) !important;
+        }
+        
+        /* Text and Content */
+        .stMarkdown, p, span, div, label {
+            color: rgba(255,255,255,0.9) !important;
+            font-family: 'Inter', sans-serif !important;
+        }
+        
+        /* Expanders */
+        .streamlit-expanderHeader {
+            background: rgba(255,255,255,0.1) !important;
+            border: 1px solid rgba(0,245,255,0.4) !important;
+            border-radius: 10px !important;
+            color: #00f5ff !important;
+            backdrop-filter: blur(10px) !important;
+        }
+        
+        /* Charts with AI glow */
+        .js-plotly-plot {
+            background: rgba(255,255,255,0.05) !important;
+            border-radius: 15px !important;
+            border: 2px solid rgba(0,245,255,0.3) !important;
+            box-shadow: 0 0 30px rgba(0,245,255,0.2) !important;
+        }
+        
+        /* Futuristic Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #00f5ff, #ff00f5);
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,245,255,0.5);
+        }
+        
+        /* Loading Animations */
+        @keyframes matrix {
+            0% { opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { opacity: 0.3; }
+        }
+        
+        .loading {
+            animation: matrix 2s infinite;
+        }
+        
+        /* Hide default spinners */
+        .stSpinner > div, div[data-testid="stSpinner"], .stStatus {
             display: none !important;
-        }
-        
-        /* Ocultar indicador de running no header */
-        .stApp > header [data-testid="stHeader"] .stSpinner {
-            display: none !important;
-        }
-        
-        /* Ocultar status de "Running" */
-        .stStatus {
-            display: none !important;
-        }
-        
-        /* Ocultar todos os spinners do sistema */
-        div[data-testid="stSpinner"] {
-            display: none !important;
-        }
-        
-        /* Ocultar loading overlay */
-        .stLoadingOverlay {
-            display: none !important;
-        }
-        
-        /* Indicador de carregamento personalizado */
-        .custom-loader {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 40px;
-            height: 40px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            z-index: 9999;
-            display: none;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Mostrar loader personalizado quando necessário */
-        .show-custom-loader .custom-loader {
-            display: block !important;
         }
     </style>
     """
-    st.markdown(hide_loading_css, unsafe_allow_html=True)
-    
-    if current_theme == 'dark':
-        st.markdown("""
-        <style>
-            .stApp {
-                background-color: #0e1117 !important;
-                color: #ffffff !important;
-            }
-            .main .block-container {
-                background-color: #0e1117 !important;
-                color: #ffffff !important;
-            }
-            .stSelectbox > div > div {
-                background-color: #262730 !important;
-                color: #ffffff !important;
-            }
-            .stSlider > div > div > div {
-                background-color: #667eea !important;
-            }
-            .stMarkdown {
-                color: #ffffff !important;
-            }
-            .metric-card {
-                background: linear-gradient(135deg, #1e1e1e, #2d2d2d) !important;
-                border: 1px solid #444 !important;
-                color: #ffffff !important;
-            }
-        </style>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <style>
-            .stApp {
-                background-color: #ffffff !important;
-                color: #000000 !important;
-            }
-            .main .block-container {
-                background-color: #ffffff !important;
-            }
-            .metric-card {
-                background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
-                border: 1px solid #dee2e6 !important;
-            }
-        </style>
-        """, unsafe_allow_html=True)
+    st.markdown(futuristic_css, unsafe_allow_html=True)
 
 def check_authentication():
     """Check if user is authenticated"""
@@ -971,13 +1142,70 @@ def main():
 def display_main_header():
     """Display the main platform header"""
     st.markdown("""
-    <div class="main-header" style="text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 15px; margin-bottom: 2rem; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3); color: white;">
-        <h1 style="color: white; margin-bottom: 0.5rem; font-size: 2.5rem;">
-            📊 Plataforma Avançada de Análise Forex
-        </h1>
-        <p style="color: rgba(255,255,255,0.9); font-size: 1.2em; margin: 0;">
-            Previsões Forex com IA e Análise em Tempo Real
-        </p>
+    <div style="text-align: center; margin-bottom: 3rem; position: relative;">
+        <div style="
+            background: linear-gradient(135deg, rgba(0,245,255,0.1), rgba(255,0,245,0.1));
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(0,245,255,0.3);
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.3), 0 0 40px rgba(0,245,255,0.2);
+            position: relative;
+            overflow: hidden;
+        ">
+            <div style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: linear-gradient(90deg, #00f5ff, #ff00f5, #f5ff00);
+                animation: glow 3s ease-in-out infinite alternate;
+            "></div>
+            <h1 style='
+                background: linear-gradient(135deg, #00f5ff, #ff00f5);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                font-size: 3.5rem;
+                font-weight: 700;
+                text-shadow: 0 0 30px rgba(0,245,255,0.8);
+                margin-bottom: 1rem;
+                font-family: Inter, sans-serif;
+            '>
+                🤖 FOREX AI NEURAL PLATFORM
+            </h1>
+            <div style="
+                background: linear-gradient(90deg, #00f5ff, #ff00f5, #f5ff00);
+                height: 3px;
+                width: 400px;
+                margin: 0 auto 1.5rem auto;
+                border-radius: 2px;
+                animation: glow 2s ease-in-out infinite alternate;
+            "></div>
+            <p style='
+                color: rgba(255,255,255,0.9);
+                font-size: 1.3rem;
+                font-weight: 400;
+                text-shadow: 0 0 15px rgba(0,245,255,0.4);
+                font-family: Inter, sans-serif;
+                margin-bottom: 1rem;
+            '>
+                🧠 Advanced Neural Networks • ⚡ Real-Time Analysis • 🎯 Predictive Intelligence
+            </p>
+            <div style="
+                display: flex;
+                justify-content: center;
+                gap: 2rem;
+                margin-top: 1.5rem;
+                font-size: 0.9rem;
+                color: rgba(0,245,255,0.8);
+            ">
+                <span>✨ LSTM Deep Learning</span>
+                <span>📊 Multi-Timeframe Analysis</span>
+                <span>🎯 Smart Risk Management</span>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
