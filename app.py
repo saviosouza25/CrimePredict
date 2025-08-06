@@ -2336,28 +2336,43 @@ def analyze_single_pair_for_multi(pair, interval, horizon, lookback_period, mc_s
     """Análise completa de um par individual para o sistema multi-pares"""
     
     try:
-        # 1. Obter dados usando a função existente do sistema
+        # 1. Obter dados usando o DataService existente
         try:
-            # Para crypto
+            # Determinar se é crypto ou forex
             if any(crypto in pair for crypto in ['BTC', 'ETH', 'ADA', 'SOL']):
-                price_data = fetch_crypto_data(pair, interval)
+                # Para crypto
+                price_data = services['data_service'].fetch_forex_data(pair, interval, 'compact', 'crypto')
             else:
-                # Para forex
-                price_data = fetch_forex_data_for_analysis(pair, interval, lookback_period)
+                # Para forex - converter formato do par
+                pair_symbol = pair.replace('/', '')  # EUR/USD -> EURUSD
+                price_data = services['data_service'].fetch_forex_data(pair_symbol, interval, 'compact', 'forex')
             
-            if price_data is None or len(price_data) < 50:
+            if price_data is None or len(price_data) < 30:
                 return None
                 
         except Exception as e:
-            # Fallback: usar análise básica se não conseguir dados específicos
+            # Fallback com dados básicos se serviço não funcionar
             try:
-                price_data = fetch_forex_data_for_analysis(pair.replace('/', ''), interval, lookback_period)
-                if price_data is None or len(price_data) < 50:
+                # Tentar formato alternativo
+                alt_pair = pair.replace('/', '') if '/' in pair else pair
+                price_data = get_basic_forex_data(alt_pair, interval)
+                if price_data is None or len(price_data) < 30:
                     return None
             except:
                 return None
         
-        current_price = float(price_data.iloc[-1]['4. close'])
+        # Obter preço atual - adaptar à estrutura de dados real
+        try:
+            if '4. close' in price_data.columns:
+                current_price = float(price_data.iloc[-1]['4. close'])
+            elif 'close' in price_data.columns:
+                current_price = float(price_data.iloc[-1]['close'])
+            else:
+                # Tentar encontrar coluna de fechamento
+                close_col = [col for col in price_data.columns if 'close' in col.lower()][0]
+                current_price = float(price_data.iloc[-1][close_col])
+        except:
+            return None
         
         # 2. Executar análises usando serviços existentes
         try:
@@ -2375,7 +2390,7 @@ def analyze_single_pair_for_multi(pair, interval, horizon, lookback_period, mc_s
             technical_analysis = technical_service.analyze_technical_indicators(price_data)
         except:
             # Usar análise técnica simples
-            technical_analysis = run_basic_technical_analysis(price_data)
+            technical_analysis = generate_basic_technical_analysis(price_data)
         
         try:
             # Análise de Sentimento
@@ -2383,7 +2398,12 @@ def analyze_single_pair_for_multi(pair, interval, horizon, lookback_period, mc_s
             sentiment_service = AdvancedSentimentService()
             sentiment_analysis = sentiment_service.analyze_market_sentiment(pair)
         except:
-            sentiment_analysis = {'compound_score': 0.0}  # Neutro
+            # Usar serviço de sentimento básico
+            try:
+                sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
+                sentiment_analysis = {'compound_score': sentiment_score}
+            except:
+                sentiment_analysis = {'compound_score': 0.0}  # Neutro
         
         try:
             # Análise IA/LSTM
@@ -2428,10 +2448,58 @@ def analyze_single_pair_for_multi(pair, interval, horizon, lookback_period, mc_s
     except Exception as e:
         return None
 
+def get_basic_forex_data(pair, interval):
+    """Função fallback para obter dados básicos de forex usando Alpha Vantage diretamente"""
+    try:
+        API_KEY = st.secrets.get("ALPHA_VANTAGE_API_KEY", "demo")
+        if API_KEY == "demo":
+            return None
+            
+        url = 'https://www.alphavantage.co/query'
+        params = {
+            'function': 'FX_INTRADAY',
+            'from_symbol': pair[:3],
+            'to_symbol': pair[3:],
+            'interval': interval,
+            'outputsize': 'compact',
+            'apikey': API_KEY
+        }
+        
+        response = requests.get(url, params=params, timeout=15)
+        if response.status_code != 200:
+            return None
+            
+        data = response.json()
+        
+        # Verificar se há dados válidos
+        time_series_key = f'Time Series FX ({interval})'
+        if time_series_key not in data:
+            return None
+            
+        df = pd.DataFrame.from_dict(data[time_series_key], orient='index')
+        df.index = pd.to_datetime(df.index)
+        df = df.sort_index()
+        df = df.astype(float)
+        
+        return df
+        
+    except Exception as e:
+        return None
+
 def generate_simple_ai_prediction(price_data):
     """Gera predição simples de IA baseada em tendência dos preços"""
     try:
-        closes = price_data['4. close'].astype(float)
+        # Tentar diferentes colunas de fechamento
+        close_col = None
+        for col in ['4. close', 'close', '4. Close']:
+            if col in price_data.columns:
+                close_col = col
+                break
+        
+        if close_col is None:
+            return {'prediction': 'LATERAL', 'confidence': 50, 'trend_change': 0}
+            
+        closes = price_data[close_col].astype(float)
         
         # Calcular tendência simples
         recent_avg = closes.tail(5).mean()
@@ -2459,6 +2527,47 @@ def generate_simple_ai_prediction(price_data):
             'prediction': 'LATERAL',
             'confidence': 50,
             'trend_change': 0
+        }
+
+def generate_basic_technical_analysis(price_data):
+    """Gera análise técnica básica para fallback"""
+    try:
+        # Tentar encontrar coluna de fechamento
+        close_col = None
+        for col in ['4. close', 'close', '4. Close']:
+            if col in price_data.columns:
+                close_col = col
+                break
+        
+        if close_col is None:
+            return {'overall_strength': 0, 'volatility': 0.5}
+            
+        closes = price_data[close_col].astype(float)
+        
+        # Calcular SMA simples
+        sma_short = closes.tail(10).mean()
+        sma_long = closes.tail(20).mean()
+        
+        # Calcular força da tendência
+        if sma_short > sma_long:
+            strength = min(0.8, (sma_short - sma_long) / sma_long * 100)
+        else:
+            strength = max(-0.8, (sma_short - sma_long) / sma_long * 100)
+        
+        # Calcular volatilidade simples
+        volatility = closes.tail(10).std() / closes.tail(10).mean()
+        
+        return {
+            'overall_strength': strength,
+            'volatility': min(1.0, volatility * 100),
+            'sma_short': sma_short,
+            'sma_long': sma_long
+        }
+        
+    except:
+        return {
+            'overall_strength': 0,
+            'volatility': 0.5
         }
 
 def calculate_unified_predictions(liquidity_analysis, technical_analysis, sentiment_analysis, ai_analysis):
