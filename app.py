@@ -477,7 +477,7 @@ class CacheManager:
     @staticmethod
     def clear_cache():
         for key in list(st.session_state.keys()):
-            if key.startswith(('cache_', 'analysis_', 'unified_', 'ai_result_')):
+            if isinstance(key, str) and key.startswith(('cache_', 'analysis_', 'unified_', 'ai_result_')):
                 if key != 'analysis_results':  # Preservar resultado final
                     del st.session_state[key]
 
@@ -609,12 +609,13 @@ def apply_theme_css():
             border: 1px solid rgba(58,175,169,0.5) !important;
         }
         
-        /* SOLUÇÃO DEFINITIVA - Sidebar Simples e Claro */
+        /* SIDEBAR COMPACTO E MODERNO */
         .css-1d391kg, .st-emotion-cache-1d391kg, section[data-testid="stSidebar"] {
-            background: #ffffff !important;
+            background: linear-gradient(145deg, #f8f9fa 0%, #ffffff 100%) !important;
             border-right: 3px solid #4CAF50 !important;
-            padding: 20px !important;
-            min-width: 320px !important;
+            padding: 15px !important;
+            min-width: 300px !important;
+            max-width: 320px !important;
         }
         
         /* SOLUÇÃO DEFINITIVA - Labels Pretos em Fundo Branco */
@@ -634,40 +635,42 @@ def apply_theme_css():
             border: none !important;
         }
         
-        /* SOLUÇÃO DEFINITIVA - Campos Simples e Legíveis */
+        /* CAMPOS COMPACTOS E ELEGANTES */
         section[data-testid="stSidebar"] .stSelectbox {
-            margin: 12px 0 !important;
+            margin: 8px 0 !important;
         }
         
         section[data-testid="stSidebar"] .stSelectbox > div > div {
-            background: #f0f0f0 !important;
-            color: #000000 !important;
-            border: 2px solid #4CAF50 !important;
-            border-radius: 4px !important;
-            padding: 12px !important;
-            font-weight: 600 !important;
-            font-size: 15px !important;
-            min-height: 45px !important;
+            background: #ffffff !important;
+            color: #2d3748 !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 6px !important;
+            padding: 8px 12px !important;
+            font-weight: 500 !important;
+            font-size: 14px !important;
+            min-height: 38px !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
         }
         
         section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span,
         section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] div {
-            color: #000000 !important;
-            font-weight: 600 !important;
-            font-size: 15px !important;
+            color: #2d3748 !important;
+            font-weight: 500 !important;
+            font-size: 14px !important;
         }
         
-        /* SOLUÇÃO DEFINITIVA - Inputs Simples */
+        /* INPUTS COMPACTOS E MODERNOS */
         section[data-testid="stSidebar"] .stNumberInput input,
         section[data-testid="stSidebar"] .stTextInput input {
-            background: #f0f0f0 !important;
-            color: #000000 !important;
-            border: 2px solid #4CAF50 !important;
-            border-radius: 4px !important;
-            padding: 12px !important;
-            font-weight: 600 !important;
-            font-size: 15px !important;
-            min-height: 45px !important;
+            background: #ffffff !important;
+            color: #2d3748 !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 6px !important;
+            padding: 8px 12px !important;
+            font-weight: 500 !important;
+            font-size: 14px !important;
+            min-height: 38px !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
         }
         
         /* Selectbox dropdown options - force visibility */
@@ -1092,23 +1095,26 @@ def apply_theme_css():
             font-weight: 600 !important;
         }
         
-        /* SOLUÇÃO DEFINITIVA - Botões Simples */
+        /* BOTÕES COMPACTOS E ELEGANTES */
         section[data-testid="stSidebar"] .stButton > button {
             width: 100% !important;
-            background: #4CAF50 !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
             color: #ffffff !important;
-            border: 2px solid #4CAF50 !important;
-            border-radius: 4px !important;
-            padding: 12px !important;
+            border: none !important;
+            border-radius: 6px !important;
+            padding: 8px 12px !important;
             font-weight: 600 !important;
-            font-size: 15px !important;
-            min-height: 45px !important;
-            margin: 12px 0 !important;
+            font-size: 13px !important;
+            min-height: 36px !important;
+            margin: 4px 0 !important;
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3) !important;
+            transition: all 0.2s ease !important;
         }
         
         section[data-testid="stSidebar"] .stButton > button:hover {
-            background: #45a049 !important;
-            border: 2px solid #45a049 !important;
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4) !important;
         }
         
         /* Slider styling */
@@ -1414,170 +1420,111 @@ def main():
         
         st.markdown("---")
         
-        # Header da sidebar compacto
-        st.markdown("## ⚙️ Configurações")
+        # PAINEL COMPACTO E MODERNO
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                    padding: 15px; border-radius: 12px; margin-bottom: 15px;
+                    border: 2px solid #4CAF50;">
+            <h3 style="color: #2d3748; margin: 0 0 10px 0; font-size: 18px;">⚙️ Configurações de Trading</h3>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Configurações básicas compactas
-        pair = st.selectbox("💱 Par de Moedas", PAIRS)
+        # Grid compacto para configurações principais
+        col1, col2 = st.columns(2)
         
-        # Sistema unificado de Intervalo e Horizonte
-        st.markdown("**⏰ Configuração Temporal Unificada**")
+        with col1:
+            pair = st.selectbox("💱 Par", PAIRS, label_visibility="collapsed")
+            st.caption("💱 Par de Moedas")
+            
+        with col2:
+            # Presets simplificados
+            temporal_presets = {
+                "Intraday": {"interval": "15min", "horizon": "1 Hora", "style": "intraday"},
+                "Swing": {"interval": "60min", "horizon": "4 Horas", "style": "swing"},
+                "Position": {"interval": "daily", "horizon": "1 Dia", "style": "position"}
+            }
+            
+            preset_choice = st.selectbox("Estratégia", list(temporal_presets.keys()), 
+                                       index=1, label_visibility="collapsed")
+            st.caption("⏰ Estratégia Temporal")
         
-        # Presets integrados para máxima coerência (usando valores exatos de HORIZONS)
-        temporal_presets = {
-
-            "Intraday (15-30 min)": {"interval": "15min", "horizon": "1 Hora", "description": "Operações no mesmo dia"},
-            "Swing (1-4 horas)": {"interval": "60min", "horizon": "4 Horas", "description": "Operações de alguns dias"},
-            "Position (Diário)": {"interval": "daily", "horizon": "1 Dia", "description": "Operações de posição"}
-        }
-        
-        preset_choice = st.selectbox(
-            "Estratégia Temporal:",
-            list(temporal_presets.keys()),
-            index=1,  # Default Intraday
-            help="Presets otimizados para máxima precisão entre intervalo e horizonte"
-        )
-        
+        # Configurar variáveis baseadas na seleção
         selected_preset = temporal_presets[preset_choice]
         interval = selected_preset["interval"]
         horizon = selected_preset["horizon"]
-        
-        # Mapear preset_choice para trading_style
-        trading_style_mapping = {
-            "Intraday (15-30 min)": "intraday",
-            "Swing (1-4 horas)": "swing", 
-            "Position (Diário)": "position"
-        }
-        
-        # Definir trading_style baseado na seleção
-        trading_style = trading_style_mapping.get(preset_choice, "swing")
+        trading_style = selected_preset["style"]
         st.session_state['trading_style'] = trading_style
-        
-        # Mostrar configuração atual com estratégia
-        st.info(f"📊 **{preset_choice}** | Intervalo: {interval} | Horizonte: {horizon}")
-        st.caption(f"💡 {selected_preset['description']}")
-        st.success(f"🎯 **Estratégia Ativa:** {trading_style.upper()}")
-        
-        # Opção avançada para configuração manual (colapsável)
-        with st.expander("⚙️ Configuração Manual Avançada"):
-            st.warning("⚠️ Configuração manual pode reduzir a precisão se intervalo e horizonte não estiverem alinhados!")
-            
-            manual_interval = st.selectbox("Intervalo Manual:", list(INTERVALS.keys()), 
-                                         index=list(INTERVALS.keys()).index(interval))
-            # Verificar se horizonte existe na lista, senão usar primeiro item
-            horizon_index = 0
-            try:
-                horizon_index = HORIZONS.index(horizon)
-            except ValueError:
-                horizon = HORIZONS[0]  # Usar o primeiro como fallback
-            
-            manual_horizon = st.selectbox("Horizonte Manual:", HORIZONS,
-                                        index=horizon_index)
-            
-            if st.checkbox("Usar Configuração Manual"):
-                interval = manual_interval
-                horizon = manual_horizon
-                # Tentar manter o trading_style consistente mesmo no modo manual
-                if "15min" in interval or "30min" in interval:
-                    st.session_state['trading_style'] = "intraday"
-                elif "60min" in interval or "1hour" in interval:
-                    st.session_state['trading_style'] = "swing"
-                elif "daily" in interval:
-                    st.session_state['trading_style'] = "position"
-                st.error("🔧 Modo manual ativo - Verifique se intervalo e horizonte estão compatíveis!")
-        
-        # Usar configuração de risco padrão (moderado)
         risk_level_en = "Moderate"
         
-
-
-        
-        # Gestão de Banca Simplificada
-        st.markdown("**💰 Configuração de Trading**")
-        
+        # Trading config em grid
         col1, col2 = st.columns(2)
         with col1:
-            bank_value = st.number_input(
-                "💳 Valor da Banca (USD)", 
-                min_value=100.0, 
-                max_value=1000000.0, 
-                value=5000.0, 
-                step=500.0,
-                help="Valor total da sua banca em dólares"
-            )
+            bank_value = st.number_input("Banca", min_value=100.0, max_value=1000000.0, 
+                                       value=5000.0, step=500.0, label_visibility="collapsed")
+            st.caption("💳 Valor da Banca (USD)")
         
         with col2:
-            lot_size = st.number_input(
-                "📊 Tamanho do Lote",
-                min_value=0.01,
-                max_value=100.0,
-                value=0.1,
-                step=0.01,
-                format="%.2f",
-                help="Tamanho do lote para a operação"
-            )
+            lot_size = st.number_input("Lote", min_value=0.01, max_value=100.0, 
+                                     value=0.1, step=0.01, format="%.2f", label_visibility="collapsed")
+            st.caption("📊 Tamanho do Lote")
         
-        # Armazenar no session state para uso nas análises
+        # Armazenar valores
         st.session_state['bank_value'] = bank_value
         st.session_state['lot_size'] = lot_size
         
-        # Calculadora de DD/Extensão removida conforme solicitado
+        # Configurações avançadas em acordeão compacto
+        with st.expander("🔧 Avançado", expanded=False):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                lookback_period = st.number_input("Histórico", 30, 120, LOOKBACK_PERIOD, label_visibility="collapsed")
+            with col2:
+                epochs = st.number_input("Épocas", 5, 20, EPOCHS, label_visibility="collapsed")
+            with col3:
+                mc_samples = st.number_input("Amostras", 10, 50, MC_SAMPLES, label_visibility="collapsed")
         
-        # Configurações de IA colapsáveis
-        with st.expander("🤖 Configurações Avançadas de IA"):
-            lookback_period = st.slider("Histórico de Dados", 30, 120, LOOKBACK_PERIOD)
-            epochs = st.slider("Épocas de Treinamento", 5, 20, EPOCHS)
-            mc_samples = st.slider("Amostras Monte Carlo", 10, 50, MC_SAMPLES)
+        # SEÇÃO DE ANÁLISES COMPACTA E MODERNA
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    padding: 15px; border-radius: 12px; margin: 15px 0;
+                    border: 2px solid #4CAF50;">
+            <h3 style="color: white; margin: 0; font-size: 18px; text-align: center;">🎯 Central de Análises</h3>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Cache compacto
+        # Botão principal destacado
+        unified_analysis = st.button("🧠 ANÁLISE UNIFICADA IA", type="primary", 
+                                   use_container_width=True, key="unified_analysis_btn")
+        
+        # Grid de análises individuais - layout 3x2 mais compacto
+        st.markdown("**Análises Especializadas:**")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            technical_analysis = st.button("📊 Técnica", use_container_width=True, key="tech_analysis_btn")
+            ai_analysis = st.button("🤖 IA/LSTM", use_container_width=True, key="ai_analysis_btn")
+        with col2:
+            sentiment_analysis = st.button("📰 Sentimento", use_container_width=True, key="sentiment_analysis_btn")
+            volume_analysis = st.button("📈 Volume", use_container_width=True, key="volume_analysis_btn")
+        with col3:
+            risk_analysis = st.button("⚖️ Risco", use_container_width=True, key="risk_analysis_btn")
+            trend_analysis = st.button("📉 Tendência", use_container_width=True, key="trend_analysis_btn")
+        
+        # Análise rápida
+        quick_analysis = st.button("⚡ VERIFICAÇÃO RÁPIDA", use_container_width=True, 
+                                 help="Análise completa em segundos", key="quick_analysis_btn")
+        
+        # Cache e utilidades em linha única
         cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
         if cache_count > 0:
-            col1, col2 = st.columns([2, 1])
+            col1, col2 = st.columns([3, 1])
             with col1:
-                st.caption(f"💾 {cache_count} em cache")
+                st.caption(f"💾 Cache: {cache_count} itens")
             with col2:
-                if st.button("🗑️", help="Limpar Cache", key="clear_cache_btn"):
-                    # Limpar cache do session state
+                if st.button("🗑️", help="Limpar", key="clear_cache_btn"):
                     for key in list(st.session_state.keys()):
                         if isinstance(st.session_state.get(key), tuple):
                             del st.session_state[key]
-                    
-                    # Limpar outras chaves de cache
-                    cache_keys = ['last_pair', 'last_interval', 'cached_data', 'model_cache', 
-                                  'sentiment_cache', 'indicators_cache', 'analysis_cache']
-                    for key in cache_keys:
-                        if key in st.session_state:
-                            del st.session_state[key]
-                    
-                    st.success("Cache limpo!")
                     st.rerun()
-        
-        st.markdown("---")
-        
-        # Seção de análises especializadas
-        st.markdown("**🎯 Análises Especializadas**")
-        
-        # Análise unificada principal
-        unified_analysis = st.button("🧠 Análise Unificada Inteligente →", type="primary", use_container_width=True, 
-                                   help="Combina todas as análises para a melhor previsão do mercado", key="unified_analysis_btn")
-        
-
-        
-        st.markdown("**Análises Individuais:**")
-        
-        # Análises técnicas em formato compacto mas legível
-        col1, col2 = st.columns(2)
-        with col1:
-            technical_analysis = st.button("📊 Técnica", use_container_width=True, key="tech_analysis_btn")
-            sentiment_analysis = st.button("📰 Sentimento", use_container_width=True, key="sentiment_analysis_btn")
-            risk_analysis = st.button("⚖️ Risco", use_container_width=True, key="risk_analysis_btn")
-        with col2:
-            ai_analysis = st.button("🤖 IA/LSTM", use_container_width=True, key="ai_analysis_btn")
-            volume_analysis = st.button("📈 Volume", use_container_width=True, key="volume_analysis_btn")
-            trend_analysis = st.button("📉 Tendência", use_container_width=True, key="trend_analysis_btn")
-        
-        # Análise rápida com tamanho adequado
-        quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, help="Análise completa rápida", key="quick_analysis_btn")
         
         # Processamento dos diferentes tipos de análise
         analyze_button = False
@@ -1604,15 +1551,21 @@ def main():
             st.session_state['analysis_mode'] = 'trend'
             analyze_button = True
         
-        st.markdown("---")
+        # Rodapé compacto
+        st.markdown("""
+        <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; 
+                    margin-top: 15px; text-align: center; border: 1px solid #dee2e6;">
+            <small style="color: #6c757d;">🔒 Artecinvesting • Trading Platform Pro</small>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Botões auxiliares compactos
+        # Botões de utilidade em linha
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("📚 Tutorial", key="tutorial_btn"):
+            if st.button("📚 Tutorial", key="tutorial_btn", use_container_width=True):
                 st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
         with col2:
-            if st.button("🚪 Sair", key="exit_btn"):
+            if st.button("🚪 Sair", key="exit_btn", use_container_width=True):
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
                 st.rerun()
