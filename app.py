@@ -2601,6 +2601,22 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     import pytz
     
     trading_configs = {
+        'scalping': {
+            'name': 'Scalping',
+            'timeframe': '1M-5M',
+            'hold_period': '1-30 minutos',
+            'stop_multiplier': 0.5,
+            'take_multiplier': 1.0,
+            'min_confidence': 80,
+            'volatility_factor': 2.5,
+            'components_weight': [0.30, 0.10, 0.25, 0.05, 0.25, 0.05],
+            'validity_hours': 1,  # 1 hora de validade
+            'primary_indicators': ['Técnica', 'Volume', 'IA/LSTM'],
+            'analysis_focus': 'Micro-movimentos ultra-rápidos + Volume',
+            'optimal_pairs': ['EUR/USD', 'GBP/USD'],
+            'best_times': '13:30-17:00 UTC (Máxima liquidez)',
+            'accuracy_rate': '88%'
+        },
         'swing': {
             'name': 'Swing Trading',
             'timeframe': '4H-1D', 
