@@ -294,9 +294,9 @@ def calculate_confluent_levels_global(current_price, predicted_price, pair_name,
     # 1. VARIAÇÃO REAL DO MERCADO POR PERÍODO (dados históricos Alpha Vantage)
     market_variation_data = {
         '5 Minutos': {
-            'typical_move_atr': 0.3,    # Scalping: movimentos típicos de 30% ATR
-            'max_adverse_atr': 0.8,     # Máximo movimento adverso antes de reversão
-            'profit_target_atr': 0.6    # Alvo típico realizável em scalping
+            'typical_move_atr': 0.25,   # Scalping otimizado: movimentos de 25% ATR (mais conservador)
+            'max_adverse_atr': 0.6,     # Stop apertado: 60% ATR máximo (era 80%)
+            'profit_target_atr': 0.4    # Take conservador: 40% ATR (era 60%) para maior hit rate
         },
         '15 Minutos': {
             'typical_move_atr': 0.6,    # Intraday: movimentos de 60% ATR
@@ -805,9 +805,34 @@ def main():
                     key="take_percentage_slider"
                 )
             
-            # Armazenar no session state
-            st.session_state['stop_percentage'] = stop_percentage
-            st.session_state['take_percentage'] = take_percentage
+            # Otimização automática para Scalping
+            current_trading_style = st.session_state.get('trading_style', 'swing')
+            
+            if current_trading_style == 'scalping':
+                # Parâmetros otimizados para scalping ultra-agressivo
+                st.info("⚡ **MODO SCALPING ATIVO**: Parâmetros otimizados para operações de 1-5 minutos")
+                
+                # Override para scalping: stops mais apertados, takes mais conservadores
+                scalping_stop = min(25, stop_percentage)  # Máximo 25% do movimento contrário
+                scalping_take = min(35, take_percentage)  # Máximo 35% do movimento favorável
+                
+                # Mostrar ajuste automático
+                if scalping_stop != stop_percentage or scalping_take != take_percentage:
+                    st.warning(f"🔧 **Ajuste Automático Scalping**: Stop {stop_percentage}% → {scalping_stop}% | Take {take_percentage}% → {scalping_take}%")
+                
+                st.session_state['stop_percentage'] = scalping_stop
+                st.session_state['take_percentage'] = scalping_take
+                
+                # Atualizar variáveis locais para exibição
+                stop_percentage = scalping_stop
+                take_percentage = scalping_take
+                
+                # Mensagem educativa sobre scalping
+                st.success("✅ **Scalping Otimizado**: Stops apertados (máx 25%) + Takes conservadores (máx 35%) = Maior frequência de acertos")
+            else:
+                # Armazenar normalmente para outros estilos
+                st.session_state['stop_percentage'] = stop_percentage
+                st.session_state['take_percentage'] = take_percentage
             
             # Mostrar configuração atual
             col1, col2 = st.columns(2)
@@ -819,17 +844,39 @@ def main():
             # Calcular Risk/Reward ratio
             rr_ratio = take_percentage / stop_percentage if stop_percentage > 0 else 1.0
             
-            # Feedback visual baseado na configuração
-            if stop_percentage < 30 and take_percentage < 30:
-                st.warning("⚠️ **Ultra Conservador**: Ambos muito próximos - alta chance de acerto, baixo R/R")
-            elif stop_percentage > 80 or take_percentage > 80:
-                st.warning("🚀 **Ultra Agressivo**: Targets muito distantes - baixa chance de acerto, alto R/R")
-            elif rr_ratio > 2.0:
-                st.success(f"✅ **Favor Take**: R/R = {rr_ratio:.1f} - Risco menor que recompensa")
-            elif rr_ratio < 0.5:
-                st.error(f"❌ **Favor Stop**: R/R = {rr_ratio:.1f} - Risco maior que recompensa")
+            # Feedback visual baseado na configuração e no estilo de trading
+            if current_trading_style == 'scalping':
+                # Critérios específicos para scalping
+                if stop_percentage <= 20 and take_percentage <= 30:
+                    st.success("🎯 **SCALPING PERFEITO**: Stop apertado + Take conservador = Ideal para operações rápidas")
+                elif stop_percentage <= 25 and take_percentage <= 35:
+                    st.success("✅ **SCALPING OTIMIZADO**: Dentro dos parâmetros ideais para scalping")
+                elif stop_percentage > 30:
+                    st.error("❌ **STOP MUITO AMPLO**: Para scalping, mantenha stop ≤ 25% (recomendado ≤ 20%)")
+                elif take_percentage > 40:
+                    st.warning("⚠️ **TAKE MUITO AMBICIOSO**: Para scalping, mantenha take ≤ 35% (recomendado ≤ 30%)")
+                else:
+                    st.info("📊 **SCALPING ACEITÁVEL**: Pode funcionar, mas considere ajustar para parâmetros mais agressivos")
+                
+                # R/R específico para scalping
+                if 0.8 <= rr_ratio <= 1.5:
+                    st.success(f"⚡ **R/R IDEAL SCALPING**: {rr_ratio:.1f} - Perfeito para alta frequência")
+                elif rr_ratio < 0.8:
+                    st.warning(f"📉 **R/R BAIXO**: {rr_ratio:.1f} - Considere aumentar take ou diminuir stop")
+                else:
+                    st.warning(f"📈 **R/R ALTO**: {rr_ratio:.1f} - Pode reduzir frequência de acertos no scalping")
             else:
-                st.success(f"✅ **Equilibrado**: R/R = {rr_ratio:.1f} - Configuração balanceada")
+                # Feedback padrão para outros estilos
+                if stop_percentage < 30 and take_percentage < 30:
+                    st.warning("⚠️ **Ultra Conservador**: Ambos muito próximos - alta chance de acerto, baixo R/R")
+                elif stop_percentage > 80 or take_percentage > 80:
+                    st.warning("🚀 **Ultra Agressivo**: Targets muito distantes - baixa chance de acerto, alto R/R")
+                elif rr_ratio > 2.0:
+                    st.success(f"✅ **Favor Take**: R/R = {rr_ratio:.1f} - Risco menor que recompensa")
+                elif rr_ratio < 0.5:
+                    st.error(f"❌ **Favor Stop**: R/R = {rr_ratio:.1f} - Risco maior que recompensa")
+                else:
+                    st.success(f"✅ **Equilibrado**: R/R = {rr_ratio:.1f} - Configuração balanceada")
             
             # Mostrar Risk/Reward como métrica
             st.metric("Risk/Reward Ratio", f"{rr_ratio:.2f}", help="Take % ÷ Stop % = Relação Risco/Recompensa")
@@ -838,7 +885,7 @@ def main():
         with st.expander("⏰ Configuração Temporal Unificada", expanded=False):
             # Presets integrados para máxima coerência (usando valores exatos de HORIZONS)
             temporal_presets = {
-
+                "Scalping (1-5 min)": {"interval": "5min", "horizon": "5 Minutos", "description": "Operações ultra-rápidas de 1-5 minutos"},
                 "Intraday (15-30 min)": {"interval": "15min", "horizon": "1 Hora", "description": "Operações no mesmo dia"},
                 "Swing (1-4 horas)": {"interval": "60min", "horizon": "4 Horas", "description": "Operações de alguns dias"},
                 "Position (Diário)": {"interval": "daily", "horizon": "1 Dia", "description": "Operações de posição"}
@@ -858,6 +905,7 @@ def main():
             
             # Mapear preset_choice para trading_style
             trading_style_mapping = {
+                "Scalping (1-5 min)": "scalping",
                 "Intraday (15-30 min)": "intraday",
                 "Swing (1-4 horas)": "swing", 
                 "Position (Diário)": "position"
