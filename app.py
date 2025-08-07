@@ -2382,48 +2382,7 @@ def display_scalping_strategic_setup(pair, execution, result):
             for instruction in execution['execution_instructions']:
                 st.write(f"• {instruction}")
         
-        # Resumo final com calculadora em tempo real integrada
-        st.markdown("### 📈 Resumo da Operação (Tempo Real)")
-        
-        # Calculadora usando valores estáticos do session state (sem widgets interativos)
-        st.markdown("**📊 Resumo Financeiro Baseado no Lote Configurado**")
-        
-        # Pegar valores da sidebar sem criar novos widgets
-        current_lot = st.session_state.get('lot_size', 0.1)
-        current_bank = st.session_state.get('bank_value', 5000.0)
-        
-        # Calcular valores baseados no lote atual
-        primary = execution['primary_setup']
-        profit_distance_pips = abs(primary['take_profit'] - primary['entry_price']) * 10000
-        loss_distance_pips = abs(primary['entry_price'] - primary['stop_loss']) * 10000
-        pip_value = current_lot * 10.0
-        
-        # Valores em USD
-        potential_profit = profit_distance_pips * pip_value / 10
-        risk_amount = loss_distance_pips * pip_value / 10
-        volume_usd = current_lot * 100000 * execution['current_price']
-        
-        # Mostrar métricas sem widgets interativos
-        metrics_col1, metrics_col2, metrics_col3, metrics_col4 = st.columns(4)
-        
-        with metrics_col1:
-            st.metric("🛑 Risco", f"${risk_amount:.2f}", f"{(risk_amount/current_bank)*100:.1f}% da banca")
-            
-        with metrics_col2:
-            st.metric("💰 Lucro Potencial", f"${potential_profit:.2f}", f"{(potential_profit/current_bank)*100:.1f}% da banca")
-            
-        with metrics_col3:
-            st.metric("📊 Lote Atual", f"{current_lot:.2f}", f"${pip_value:.1f}/pip")
-            
-        with metrics_col4:
-            st.metric("💵 Volume Total", f"${volume_usd:,.0f}", f"Banca: ${current_bank:,.0f}")
-        
-        # R/R final
-        if loss_distance_pips > 0:
-            current_rr = profit_distance_pips / loss_distance_pips
-            st.success(f"⚖️ **Risk/Reward:** 1:{current_rr:.1f} | **Risco:** ${risk_amount:.2f} | **Lucro:** ${potential_profit:.2f}")
-        
-        st.info("💡 Para alterar o lote, use a 'Calculadora de Lote' na sidebar esquerda - os valores acima são atualizados automaticamente")
+
 
 def display_execution_positions(results):
     """Exibir posições de execução detalhadas"""
