@@ -38,6 +38,79 @@ except ImportError as e:
     st.error("📡 Sistema requer conexão real com Alpha Vantage API - dados simulados não são permitidos")
     st.stop()  # Stop execution - no mock services allowed
 
+# FUNÇÃO GLOBAL: Gerenciar setups ativos com validação temporal
+def manage_active_setups(pair, new_setup=None, check_validity=True):
+    """
+    Gerencia setups ativos com validação temporal para evitar sinais conflitantes
+    """
+    if 'active_setups' not in st.session_state:
+        st.session_state.active_setups = {}
+    
+    brasilia_tz = pytz.timezone('America/Sao_Paulo')
+    now_brasilia = datetime.now(brasilia_tz)
+    pair_key = str(pair)
+    
+    # Verificar se existe setup ativo para o par
+    if pair_key in st.session_state.active_setups:
+        active_setup = st.session_state.active_setups[pair_key]
+        setup_time = active_setup.get('created_at')
+        validity_minutes = active_setup.get('validity_minutes', 45)
+        
+        if setup_time:
+            # Calcular tempo restante
+            time_elapsed = (now_brasilia - setup_time).total_seconds() / 60
+            time_remaining = validity_minutes - time_elapsed
+            
+            # Se ainda válido, retornar setup existente
+            if time_remaining > 0 and check_validity:
+                active_setup['time_remaining'] = int(time_remaining)
+                active_setup['status'] = 'ATIVO'
+                return active_setup
+            else:
+                # Setup expirou, remover
+                del st.session_state.active_setups[pair_key]
+    
+    # Se novo setup fornecido, armazenar
+    if new_setup:
+        new_setup['created_at'] = now_brasilia
+        new_setup['pair'] = pair_key
+        new_setup['status'] = 'NOVO'
+        st.session_state.active_setups[pair_key] = new_setup
+        return new_setup
+    
+    return None
+
+def check_setup_invalidation(pair, current_price, stop_loss, take_profit):
+    """
+    Verifica se setup deve ser invalidado por atingir stop/take
+    """
+    pair_key = str(pair)
+    if pair_key in st.session_state.active_setups:
+        setup = st.session_state.active_setups[pair_key]
+        direction = setup.get('direction', '').upper()
+        
+        # Verificar se stop ou take foi atingido
+        if direction == 'COMPRA':
+            if current_price <= stop_loss:
+                setup['status'] = 'STOP_ATINGIDO'
+                setup['invalidated_at'] = datetime.now(pytz.timezone('America/Sao_Paulo'))
+                return True
+            elif current_price >= take_profit:
+                setup['status'] = 'TAKE_ATINGIDO'
+                setup['invalidated_at'] = datetime.now(pytz.timezone('America/Sao_Paulo'))
+                return True
+        elif direction == 'VENDA':
+            if current_price >= stop_loss:
+                setup['status'] = 'STOP_ATINGIDO'
+                setup['invalidated_at'] = datetime.now(pytz.timezone('America/Sao_Paulo'))
+                return True
+            elif current_price <= take_profit:
+                setup['status'] = 'TAKE_ATINGIDO'
+                setup['invalidated_at'] = datetime.now(pytz.timezone('America/Sao_Paulo'))
+                return True
+    
+    return False
+
 # FUNÇÃO GLOBAL: Calcular probabilidades REAIS de mercado
 def calculate_realistic_drawdown_and_extensions(current_price, pair_name, horizon, risk_level, sentiment_score, lstm_confidence):
     """
@@ -2232,17 +2305,41 @@ def display_scalping_strategic_setup(pair, execution, result):
     
     with st.expander(f"⚡ **{pair}** - SCALPING ESTRATÉGICO {direction_icon} (Score: {result['opportunity_score']:.1f})"):
         
-        # Header estratégico
+        # Header estratégico com status de setup ativo
+        status_message = execution.get('status_message', '')
+        setup_status = execution.get('status', 'NOVO')
+        time_remaining = execution.get('time_remaining', execution.get('validity_time', 0))
+        
+        # Definir cor e ícone baseado no status
+        if setup_status == 'ATIVO':
+            status_color = "#FF9800"  # Laranja para ativo
+            status_icon = "⏰"
+        else:
+            status_color = direction_color
+            status_icon = "🆕"
+        
         st.markdown(f"""
         <div style="background: linear-gradient(90deg, {direction_color}15, {direction_color}25); 
                     padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid {direction_color};">
             <h4 style="margin: 0; color: {direction_color};">🎯 SETUP ESTRATÉGICO - {execution['direction']}</h4>
-            <p style="margin: 0.3rem 0 0 0; color: #666;">
-                Preço Atual: <strong>{execution['current_price']:.5f}</strong> | 
-                Validade: <strong>{execution['validity_time']} min</strong> | 
-                Expira: <strong>{execution['expiry_timestamp']}</strong> |
-                Taxa de Sucesso: <strong style="color: {direction_color};">{execution['expected_success_rate']:.0f}%</strong>
-            </p>
+            <div style="display: flex; align-items: center; gap: 1rem; margin: 0.3rem 0 0 0;">
+                <span style="background: {status_color}20; color: {status_color}; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">
+                    {status_icon} {setup_status}
+                </span>
+                <span style="color: #666;">
+                    Preço Atual: <strong>{execution['current_price']:.5f}</strong>
+                </span>
+                <span style="color: #666;">
+                    Tempo: <strong>{time_remaining} min</strong>
+                </span>
+                <span style="color: #666;">
+                    Expira: <strong>{execution['expiry_timestamp']}</strong>
+                </span>
+                <span style="color: #666;">
+                    Taxa: <strong style="color: {direction_color};">{execution['expected_success_rate']:.0f}%</strong>
+                </span>
+            </div>
+            {f'<p style="margin: 0.5rem 0 0 0; color: {status_color}; font-weight: bold;">{status_message}</p>' if status_message else ''}
         </div>
         """, unsafe_allow_html=True)
         
@@ -5701,10 +5798,29 @@ def run_profile_specific_analysis(current_price, pair, sentiment_score, df_with_
     return analysis_result
 
 def generate_scalping_strategic_levels(df, analysis_result, pair, current_price, confidence, signal_strength, sentiment_score, bank_value):
-    """Gera níveis estratégicos de entrada para scalping com tempo de validade"""
+    """Gera níveis estratégicos de entrada para scalping com tempo de validade e validação de setup ativo"""
     from datetime import datetime, timedelta
     
     try:
+        # VERIFICAR SE JÁ EXISTE SETUP ATIVO VÁLIDO
+        existing_setup = manage_active_setups(pair, check_validity=True)
+        if existing_setup and existing_setup['status'] == 'ATIVO':
+            # Setup ainda válido - retornar com informações atualizadas
+            time_remaining = existing_setup.get('time_remaining', 0)
+            
+            # Verificar se stop/take foi atingido
+            stop_loss = existing_setup.get('primary_setup', {}).get('stop_loss', 0)
+            take_profit = existing_setup.get('primary_setup', {}).get('take_profit', 0)
+            
+            invalidated = check_setup_invalidation(pair, current_price, stop_loss, take_profit)
+            if invalidated:
+                # Setup foi invalidado, prosseguir com novo setup
+                pass
+            else:
+                # Setup ainda válido - retornar com status atualizado
+                existing_setup['current_price'] = current_price
+                existing_setup['status_message'] = f"⏰ SETUP ATIVO - {time_remaining} min restantes"
+                return existing_setup
         # Análise técnica para identificar níveis estratégicos
         if len(df) < 10:
             # Dados insuficientes - usar níveis básicos
@@ -5848,6 +5964,10 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
             'stop_pct': abs(entry_level - stop_level) / entry_level * 100,
             'tp_pct': abs(take_level - entry_level) / entry_level * 100
         }
+        
+        # ARMAZENAR NOVO SETUP ATIVO NO SISTEMA
+        strategic_result['validity_minutes'] = validity_minutes
+        manage_active_setups(pair, new_setup=strategic_result, check_validity=False)
         
         return strategic_result
         

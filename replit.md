@@ -75,6 +75,10 @@ Preferred communication style: Simple, everyday language.
 - **Multi-Timeframe Analysis**: Integrated multi-timeframe analysis for enhanced trend identification accuracy
 - **Strategic Scalping System**: Evolved from immediate execution to strategic entry levels with dual setups (pullback/breakout) and time validity (15-45 minutes)
 - **UI Simplification**: Removed "Características do Perfil" section from all trader format displays for cleaner interface
+- **Active Setup Validation System (Aug 2025)**: Implemented temporal validation to prevent conflicting signals during setup validity periods
+- **Real-Time Calculator Updates**: Lot calculator now updates all values instantly when parameters change
+- **Brazil Timezone Integration**: All expiry times now use Brasília timezone (GMT-3) for accurate local timing
+- **Setup Status Management**: Active setups now show remaining time and prevent new conflicting signals until expiration or invalidation
 
 # External Dependencies
 
