@@ -5623,14 +5623,16 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     """Calcula movimento previsto por perfil baseado em análise Alpha Vantage específica"""
     
     try:
-        # Para perfis não-scalping, deixar Alpha Vantage calcular 100% baseado em dados reais
-        if stop_percentage is None or take_percentage is None:
-            # Sistema calculará automaticamente baseado em:
-            # - Volatilidade histórica real do par
-            # - Probabilidade de sucesso baseada em dados Alpha Vantage
-            # - Análise específica do perfil temporal
-            # - Sem valores predefinidos - 100% dinâmico
-            pass  # Valores serão calculados abaixo baseados em análise real
+        # Garantir que variáveis não sejam None
+        if df is None or len(df) == 0:
+            raise ValueError("DataFrame vazio ou None")
+            
+        # Inicializar variáveis padrão para evitar None
+        daily_vol = 0.01
+        upside_movement = 0.01
+        downside_movement = 0.01
+        upside_range = 0.01
+        downside_range = 0.01
         
         # Análise Alpha Vantage específica por perfil operacional
         if len(df) >= 50:  # Dados suficientes para análise robusta
@@ -5823,12 +5825,12 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     
     # Determinar movimento previsto específico do perfil baseado em Alpha Vantage
     if signal_strength > 0:  # Sinal de Compra
-        predicted_movement = upside_range * config['movement_factor']
-        opposite_movement = downside_range * config['movement_factor']
+        predicted_movement = (upside_range or 0.01) * config['movement_factor']
+        opposite_movement = (downside_range or 0.01) * config['movement_factor']
         movement_direction = "Alta"
     else:  # Sinal de Venda
-        predicted_movement = downside_range * config['movement_factor']
-        opposite_movement = upside_range * config['movement_factor']
+        predicted_movement = (downside_range or 0.01) * config['movement_factor']
+        opposite_movement = (upside_range or 0.01) * config['movement_factor']
         movement_direction = "Baixa"
     
     # SISTEMA 100% DINÂMICO: 
@@ -5837,20 +5839,24 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     
     if profile == 'scalping':
         # SCALPING: Usar percentuais fixos otimizados
-        stop_distance = opposite_movement * (stop_percentage / 100.0)
-        tp_distance = predicted_movement * (take_percentage / 100.0)
+        stop_distance = (opposite_movement or 0.01) * (stop_percentage / 100.0)
+        tp_distance = (predicted_movement or 0.01) * (take_percentage / 100.0)
     else:
         # OUTROS PERFIS: 100% Alpha Vantage - sem percentuais, baseado na volatilidade real
         # Stop: baseado na probabilidade histórica de movimento adverso
-        stop_distance = opposite_movement * 0.85  # 85% do movimento adverso histórico real
+        stop_distance = (opposite_movement or 0.01) * 0.85  # 85% do movimento adverso histórico real
         # Take: baseado no potencial de movimento favorável histórico
-        tp_distance = predicted_movement * 0.72   # 72% do movimento favorável histórico real
+        tp_distance = (predicted_movement or 0.01) * 0.72   # 72% do movimento favorável histórico real
     
     # Sem ajustes artificiais - apenas dados Alpha Vantage puros com seus controles %
     
     # Risk management baseado na taxa de sucesso real calculada
     success_rate = config['base_success_rate'] + (confidence - 0.5) * 0.1  # Ajuste menor
     risk_percentage = config['risk_per_trade']  # Risco fixo por perfil
+    
+    # Garantir que stop_distance e tp_distance não sejam None
+    stop_distance = stop_distance or 0.01
+    tp_distance = tp_distance or 0.01
     
     # Limites específicos por perfil para garantir diferenças reais
     if profile == 'scalping':
@@ -5866,8 +5872,12 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         stop_final = max(0.015, min(0.080, stop_distance))  # 1.5% a 8.0% (muito amplo)
         tp_final = max(0.030, min(0.150, tp_distance))      # 3.0% a 15.0% (muito agressivo)
     
+    # Garantir que variáveis finais não sejam None ou zero
+    stop_final = stop_final or 0.01
+    tp_final = tp_final or 0.01
+    
     # R/R real calculado baseado nos dados
-    real_rr = tp_final / stop_final if stop_final > 0 else 1.0
+    real_rr = tp_final / stop_final if (stop_final and stop_final > 0) else 1.0
     
     return {
         'stop_distance_pct': stop_final,
@@ -5879,11 +5889,11 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         'volatility_analyzed': daily_vol * 100,  # Volatilidade real analisada
         'data_points_used': len(df),
         'probability_calculation': f"Análise {profile.title()} com {len(df)} períodos Alpha Vantage",
-        'stop_reasoning': f"Stop: {'85% volatilidade histórica real' if profile != 'scalping' else f'{stop_percentage}% movimento contrário'} = {stop_distance*100:.3f}%",
-        'take_reasoning': f"Take: {'72% potencial favorável real' if profile != 'scalping' else f'{take_percentage}% movimento favorável'} = {tp_distance*100:.3f}%",
+        'stop_reasoning': f"Stop: {'85% volatilidade histórica real' if profile != 'scalping' else f'{stop_percentage}% movimento contrário'} = {(stop_distance or 0.01)*100:.3f}%",
+        'take_reasoning': f"Take: {'72% potencial favorável real' if profile != 'scalping' else f'{take_percentage}% movimento favorável'} = {(tp_distance or 0.01)*100:.3f}%",
         'movement_direction': movement_direction,
-        'base_movement_pct': predicted_movement * 100,
-        'opposite_movement_pct': opposite_movement * 100,
+        'base_movement_pct': (predicted_movement or 0.01) * 100,
+        'opposite_movement_pct': (opposite_movement or 0.01) * 100,
         'profile_analysis_window': f"{window if 'window' in locals() else 'completo'} períodos"
     }
 
