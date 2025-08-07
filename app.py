@@ -2697,52 +2697,6 @@ def display_execution_positions(results):
                     st.error(f"❌ **RECOMENDAÇÃO: NÃO EXECUTAR** - {decision_result['reason']}")
                     st.warning(f"⚠️ **Confluência:** {decision_result['confluence_score']:.1f}% | **Critérios Atendidos:** {decision_result['criteria_met']}/3")
             
-            st.divider()
-            
-            # === BLOCO 4: CALCULADORA DE LOTE INTEGRADA ===
-            with st.container():
-                st.markdown("### 💵 Calculadora de Lote Integrada")
-                
-                # Calcular valores em dólares baseados na calculadora de lote
-                bank_value = st.session_state.get('bank_value', 5000.0)
-                lot_size = st.session_state.get('lot_size', 0.1)
-                
-                # Calcular valor do pip baseado no par
-                pair_str = str(pair)
-                if 'JPY' in pair_str:
-                    pip_value_per_lot = 10.0
-                # Gold removed from analysis
-                else:
-                    pip_value_per_lot = 10.0
-                
-                # Calcular valores monetários
-                stop_usd = execution['stop_distance_pips'] * pip_value_per_lot * lot_size
-                take_usd = execution['tp_distance_pips'] * pip_value_per_lot * lot_size
-                stop_pct_bank = (stop_usd / bank_value) * 100
-                take_pct_bank = (take_usd / bank_value) * 100
-                
-                calc_col1, calc_col2 = st.columns(2)
-                
-                with calc_col1:
-                    st.write(f"• **Stop Loss:** ${stop_usd:.2f} ({stop_pct_bank:.2f}% da banca)")
-                    st.write(f"• **Take Profit:** ${take_usd:.2f} ({take_pct_bank:.2f}% da banca)")
-                    
-                with calc_col2:
-                    st.write(f"• **Lote Usado:** {lot_size} | **Banca:** ${bank_value:,.0f}")
-                    st.write(f"• **Valor do Pip:** ${pip_value_per_lot:.1f} por lote")
-                
-                # Análise Alpha Vantage específica do perfil
-                if execution.get('movement_direction'):
-                    st.write(f"• **Movimento {execution['movement_direction']}:** {execution.get('base_movement_pct', 0):.3f}%")
-                    if execution.get('opposite_movement_pct'):
-                        direction_opp = "Baixa" if execution['movement_direction'] == "Alta" else "Alta"
-                        st.write(f"• **Movimento {direction_opp}:** {execution.get('opposite_movement_pct', 0):.3f}%")
-                if execution.get('profile_analysis_window'):
-                    st.write(f"• **Janela Análise:** {execution['profile_analysis_window']}")
-                if execution.get('data_points_used'):
-                    st.write(f"• **Total Dados:** {execution['data_points_used']} períodos Alpha")
-            
-
             if 'optimization_method' in execution:
                 st.success(f"**🎯 {execution['optimization_method']}**")
                 
