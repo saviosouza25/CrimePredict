@@ -2962,7 +2962,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
     rsi = latest.get('rsi', 50)
     macd = latest.get('macd', 0)
     sma_20 = latest.get('sma_20', current_price)
-    ema_12 = latest.get('ema_12', current_price)
+    ema_20 = latest.get('ema_20', current_price)
     bb_upper = latest.get('bb_upper', current_price * 1.02)
     bb_lower = latest.get('bb_lower', current_price * 0.98)
     
@@ -4020,6 +4020,10 @@ def add_technical_indicators(df):
     # SMA (Médias Móveis Simples)
     df_copy['sma_20'] = df_copy['close'].rolling(window=20).mean()  # 20 períodos
     df_copy['sma_50'] = df_copy['close'].rolling(window=50).mean()  # 50 períodos
+    
+    # EMA (Médias Móveis Exponenciais) - Configuração otimizada para Intraday
+    df_copy['ema_20'] = df_copy['close'].ewm(span=20).mean()  # EMA 20 (rápida)
+    df_copy['ema_200'] = df_copy['close'].ewm(span=200).mean()  # EMA 200 (lenta)
     
     return df_copy
 
@@ -6590,16 +6594,16 @@ def calculate_trend_analysis(df_with_indicators):
                 signals.append(-0.6)  # Downtrend
             confidences.append(0.7)
         
-        # EMA Trend
-        if 'ema_12' in df_with_indicators.columns and 'ema_26' in df_with_indicators.columns:
-            ema_12 = df_with_indicators['ema_12'].iloc[-1]
-            ema_26 = df_with_indicators['ema_26'].iloc[-1]
+        # EMA Trend - Configuração otimizada 20/200 para Intraday
+        if 'ema_20' in df_with_indicators.columns and 'ema_200' in df_with_indicators.columns:
+            ema_20 = df_with_indicators['ema_20'].iloc[-1]
+            ema_200 = df_with_indicators['ema_200'].iloc[-1]
             
-            if ema_12 > ema_26:
-                signals.append(0.5)  # Short-term uptrend
+            if ema_20 > ema_200:
+                signals.append(0.7)  # Uptrend mais confiável
             else:
-                signals.append(-0.5)  # Short-term downtrend
-            confidences.append(0.6)
+                signals.append(-0.7)  # Downtrend mais confiável
+            confidences.append(0.8)  # Maior confiança com EMA 20/200
         
         # Price vs SMA
         if 'sma_20' in df_with_indicators.columns:
