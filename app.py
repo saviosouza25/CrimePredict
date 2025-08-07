@@ -6,6 +6,7 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import datetime
 from datetime import datetime, timedelta
+import pytz
 import requests
 import time
 import warnings
@@ -5747,8 +5748,10 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
         else:  # Baixa volatilidade
             validity_minutes = 45
             
-        # Tempo de expiração
-        expiry_time = datetime.now() + timedelta(minutes=validity_minutes)
+        # Tempo de expiração em horário de Brasília
+        brasilia_tz = pytz.timezone('America/Sao_Paulo')
+        now_brasilia = datetime.now(brasilia_tz)
+        expiry_time = now_brasilia + timedelta(minutes=validity_minutes)
         
         # Usar tamanho da posição da calculadora de lote
         position_size = st.session_state.get('lot_size', 0.1)  # Usar valor da sidebar
