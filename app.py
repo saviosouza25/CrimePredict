@@ -794,12 +794,12 @@ def main():
                 
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.metric("Stop Loss", "20% movimento contrário", help="Fixo e otimizado para scalping")
+                    st.metric("Stop Loss", "8 pips (0.08%)", help="Fixo e otimizado para scalping real")
                 with col2:
-                    st.metric("Take Profit", "30% movimento favorável", help="Fixo e otimizado para scalping")
+                    st.metric("Take Profit", "12 pips (0.12%)", help="Fixo e otimizado para scalping real")
                 
                 # Calcular e mostrar R/R
-                rr_ratio = 1.5  # 30/20 = 1.5
+                rr_ratio = 1.5  # 12/8 = 1.5
                 st.metric("Risk/Reward Ratio", f"{rr_ratio:.1f}", help="Relação ideal para scalping de alta frequência")
                 
                 st.info("⚡ **Estratégia**: Stops apertados + Takes conservadores = Alta taxa de acerto")
@@ -5745,13 +5745,14 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
             entry_level = current_price * (1 - pullback_distance)
             # Garantir que use o suporte se for mais conservador
             entry_level = max(micro_support, entry_level)
-            stop_level = entry_level * (1 - 0.003)  # Stop 0.3% abaixo da entrada
-            take_level = min(micro_resistance, entry_level * (1 + 0.005))  # Take próximo à resistência
+            # SCALPING REAL: Stops e takes pequenos
+            stop_level = entry_level * (1 - 0.0008)  # Stop 8 pips (0.08%)
+            take_level = entry_level * (1 + 0.0012)  # Take 12 pips (0.12%)
             
             # Entrada alternativa em breakout
             breakout_entry = micro_resistance * 1.0002  # Entrada acima da resistência
-            breakout_stop = micro_resistance * 0.9998   # Stop abaixo da resistência
-            breakout_take = breakout_entry * (1 + 0.006)  # Take 0.6% acima
+            breakout_stop = micro_resistance * 0.9992   # Stop 8 pips abaixo da resistência
+            breakout_take = breakout_entry * (1 + 0.0012)  # Take 12 pips acima
             
         else:
             # SETUP DE VENDA  
@@ -5760,13 +5761,14 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
             entry_level = current_price * (1 + pullback_distance)
             # Garantir que use a resistência se for mais conservador
             entry_level = min(micro_resistance, entry_level)
-            stop_level = entry_level * (1 + 0.003)  # Stop 0.3% acima da entrada
-            take_level = max(micro_support, entry_level * (1 - 0.005))  # Take próximo ao suporte
+            # SCALPING REAL: Stops e takes pequenos
+            stop_level = entry_level * (1 + 0.0008)  # Stop 8 pips (0.08%)
+            take_level = entry_level * (1 - 0.0012)  # Take 12 pips (0.12%)
             
             # Entrada alternativa em breakout
             breakout_entry = micro_support * 0.9998  # Entrada abaixo do suporte
-            breakout_stop = micro_support * 1.0002   # Stop acima do suporte  
-            breakout_take = breakout_entry * (1 - 0.006)  # Take 0.6% abaixo
+            breakout_stop = micro_support * 1.0008   # Stop 8 pips acima do suporte  
+            breakout_take = breakout_entry * (1 - 0.0012)  # Take 12 pips abaixo
         
         # Calcular tempo de validade baseado na volatilidade
         if volatility > 0.002:  # Alta volatilidade
