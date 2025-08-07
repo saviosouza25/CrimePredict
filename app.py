@@ -1689,11 +1689,11 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
         status_text.text("🔍 Iniciando análise de todos os pares disponíveis...")
         progress_bar.progress(10)
         
-        # Get trading style and analysis type
-        trading_style = st.session_state.get('trading_style', 'swing')
-        
         # Parse analysis type to determine which analyses to run
         analysis_config = parse_analysis_type(analysis_type or 'Swing (Todas com Pesos Equilibrados)')
+        
+        # Get trading style from analysis configuration (not from session state)
+        trading_style = analysis_config['profile']
         
         status_text.text(f"🎯 Usando configuração: {analysis_config['description']}")
         progress_bar.progress(15)
@@ -2399,8 +2399,15 @@ def display_execution_positions(results):
                 
             # Detalhes dos cálculos Alpha Vantage baseados nas porcentagens configuradas
             if execution.get('stop_reasoning') or execution.get('take_reasoning'):
-                stop_pct = st.session_state.get('stop_percentage', 50)
-                take_pct = st.session_state.get('take_percentage', 50)
+                # Verificar trading style para exibir valores corretos
+                trading_style = st.session_state.get('trading_style', 'swing')
+                if trading_style == 'scalping':
+                    stop_pct = 20
+                    take_pct = 30
+                else:
+                    stop_pct = st.session_state.get('stop_percentage', 50)
+                    take_pct = st.session_state.get('take_percentage', 50)
+                
                 st.markdown(f"**📊 Cálculo: Stop em {stop_pct}% | Take em {take_pct}% do Movimento Provável:**")
                 st.info(f"**Metodologia:** Stop = {stop_pct}% movimento contrário | Take = {take_pct}% movimento favorável")
                 if execution.get('stop_reasoning'):
