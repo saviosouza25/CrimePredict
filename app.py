@@ -1054,16 +1054,13 @@ def main():
             
             st.markdown("**Análises Individuais:**")
             
-            # Análises técnicas em colunas
-            col1, col2 = st.columns(2)
-            with col1:
-                technical_analysis = st.button("📊 Técnica", use_container_width=True, key="technical_btn")
-                sentiment_analysis = st.button("📰 Sentimento", use_container_width=True, key="sentiment_btn")
-                risk_analysis = st.button("⚖️ Risco", use_container_width=True, key="risk_btn")
-            with col2:
-                ai_analysis = st.button("🤖 IA/LSTM", use_container_width=True, key="ai_btn")
-                volume_analysis = st.button("📈 Volume", use_container_width=True, key="volume_btn")
-                trend_analysis = st.button("📉 Tendência", use_container_width=True, key="trend_btn")
+            # Análises empilhadas verticalmente para melhor visualização
+            technical_analysis = st.button("📊 Análise Técnica", use_container_width=True, key="technical_btn")
+            trend_analysis = st.button("📉 Análise de Tendência", use_container_width=True, key="trend_btn")
+            sentiment_analysis = st.button("📰 Análise de Sentimento", use_container_width=True, key="sentiment_btn")
+            ai_analysis = st.button("🤖 Análise IA/LSTM", use_container_width=True, key="ai_btn")
+            volume_analysis = st.button("📈 Análise de Volume", use_container_width=True, key="volume_btn")
+            risk_analysis = st.button("⚖️ Análise de Risco", use_container_width=True, key="risk_btn")
             
             # Análise rápida
             quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, key="quick_analysis_btn")
@@ -2256,14 +2253,11 @@ def display_multi_pair_results():
     # Header
     st.markdown("## 🌍 Análise Multi-Pares - Oportunidades de Trading")
     
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Total de Pares Analisados", len(results))
-    with col2:
-        st.metric("Estratégia", trading_style.title())
-    with col3:
-        valid_results = [r for r in results if r['opportunity_score'] > 60]
-        st.metric("Oportunidades Válidas", len(valid_results))
+    # Métricas empilhadas verticalmente
+    st.metric("Total de Pares Analisados", len(results))
+    st.metric("Estratégia de Trading", trading_style.title())
+    valid_results = [r for r in results if r['opportunity_score'] > 60]
+    st.metric("Oportunidades Válidas", len(valid_results))
     
     st.caption(f"Última atualização: {timestamp.strftime('%d/%m/%Y %H:%M:%S')}")
     
@@ -2336,23 +2330,20 @@ def display_multi_pair_results():
     with tab3:
         display_detailed_summary(filtered_results)
     
-    # Action buttons
+    # Botões de ação empilhados
     st.markdown("---")
-    col1, col2, col3 = st.columns(3)
+    st.markdown("### 🔧 Ações Disponíveis")
     
-    with col1:
-        if st.button("🔄 Nova Análise Multi-Pares"):
-            del st.session_state['multi_pair_results']
-            st.rerun()
+    if st.button("🔄 Nova Análise Multi-Pares", use_container_width=True):
+        del st.session_state['multi_pair_results']
+        st.rerun()
     
-    with col2:
-        if st.button("📊 Análise Individual"):
-            del st.session_state['multi_pair_results']
-            st.rerun()
+    if st.button("📊 Análise Individual", use_container_width=True):
+        del st.session_state['multi_pair_results']
+        st.rerun()
     
-    with col3:
-        if st.button("💾 Exportar Resultados"):
-            st.info("Funcionalidade de exportação em desenvolvimento")
+    if st.button("💾 Exportar Resultados", use_container_width=True):
+        st.info("Funcionalidade de exportação em desenvolvimento")
 
 def display_opportunity_ranking(results):
     """Exibir ranking de oportunidades"""
@@ -6837,14 +6828,12 @@ def display_alpha_vantage_trend_results(analysis: Dict):
     </div>
     """, unsafe_allow_html=True)
     
-    # Key metrics
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("🎯 Força da Tendência", f"{trend_signals.get('strength', 0)*100:.0f}%")
-    with col2:
-        st.metric("📊 Indicadores Ativos", f"{trend_signals.get('indicators_count', 0)}")
-    with col3:
-        st.metric("✅ Taxa de Acordo", f"{trend_signals.get('agreement_rate', 0)*100:.0f}%")
+    # Métricas principais empilhadas
+    st.markdown("### 📊 Métricas da Análise")
+    
+    st.metric("🎯 Força da Tendência", f"{trend_signals.get('strength', 0)*100:.0f}%")
+    st.metric("📊 Indicadores Ativos", f"{trend_signals.get('indicators_count', 0)}")
+    st.metric("✅ Taxa de Acordo entre Indicadores", f"{trend_signals.get('agreement_rate', 0)*100:.0f}%")
     
     # Detailed indicators
     st.markdown("### 📈 Indicadores Técnicos Alpha Vantage")
@@ -6878,13 +6867,9 @@ def display_alpha_vantage_trend_results(analysis: Dict):
     if risk_mgmt:
         st.markdown("### 🛡️ Gestão de Risco")
         
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("💰 Tamanho Posição", f"{risk_mgmt.get('position_size', 0):.1f}%")
-        with col2:
-            st.metric("🛑 Stop Loss", f"{risk_mgmt.get('stop_loss_pips', 0)} pips")
-        with col3:
-            st.metric("🎯 Take Profit", f"{risk_mgmt.get('take_profit_pips', 0)} pips")
+        st.metric("💰 Tamanho da Posição", f"{risk_mgmt.get('position_size', 0):.1f}%")
+        st.metric("🛑 Stop Loss", f"{risk_mgmt.get('stop_loss_pips', 0)} pips")
+        st.metric("🎯 Take Profit", f"{risk_mgmt.get('take_profit_pips', 0)} pips")
     
     # Execution plan
     execution_plan = analysis.get('execution_plan', {})
