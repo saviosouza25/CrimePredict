@@ -1005,7 +1005,29 @@ def main():
             st.session_state['bank_value'] = bank_value
             st.session_state['lot_size'] = lot_size
             
-            st.info("💡 **Calculadora de Lote:** Agora integrada no 'Resumo da Operação' de cada análise para atualização em tempo real sem recarregar a página.")
+            # Calculadora em tempo real para todos os cálculos
+            st.markdown("**⚡ Calculadora em Tempo Real**")
+            
+            # Calcular valores de exemplo baseado no lote atual
+            example_stop_pips = 8  # 8 pips de stop (scalping)
+            example_take_pips = 12  # 12 pips de take (scalping)
+            pip_value = lot_size * 10.0  # Valor do pip
+            
+            # Valores em USD
+            risk_usd = example_stop_pips * pip_value / 10
+            profit_usd = example_take_pips * pip_value / 10
+            volume_example = lot_size * 100000 * 1.1000  # Exemplo com EUR/USD 1.1000
+            
+            # Mostrar em colunas
+            preview_col1, preview_col2, preview_col3 = st.columns(3)
+            with preview_col1:
+                st.metric("🛑 Risco (8 pips)", f"${risk_usd:.2f}")
+            with preview_col2:
+                st.metric("💰 Lucro (12 pips)", f"${profit_usd:.2f}")
+            with preview_col3:
+                st.metric("📊 Volume", f"${volume_example:,.0f}")
+                
+            st.caption("💡 Valores de exemplo que se atualizam automaticamente quando você modifica o lote ou banca acima")
             
             # Separador visual
             st.divider()
@@ -2363,82 +2385,45 @@ def display_scalping_strategic_setup(pair, execution, result):
         # Resumo final com calculadora em tempo real integrada
         st.markdown("### 📈 Resumo da Operação (Tempo Real)")
         
-        # Container estável para calculadora em tempo real
-        with st.container():
-            st.markdown("**⚖️ Calculadora de Lote (Tempo Real)**")
-            
-            # Usar slider ao invés de number_input para evitar recarregamento
-            calc_control_col, calc_info_col = st.columns([1, 3])
-            
-            with calc_control_col:
-                current_lot = st.session_state.get('lot_size', 0.1)
-                
-                # Slider para lote (mais estável que number_input)
-                new_lot_size = st.slider(
-                    "Lote",
-                    min_value=0.01,
-                    max_value=5.0,
-                    value=current_lot,
-                    step=0.01,
-                    format="%.2f",
-                    key=f"lot_slider_{pair}",
-                    help="Deslize para ajustar o lote"
-                )
-                
-                # Campo de entrada manual opcional
-                manual_lot = st.number_input(
-                    "Entrada Manual",
-                    min_value=0.01,
-                    max_value=100.0,
-                    value=new_lot_size,
-                    step=0.01,
-                    format="%.2f",
-                    key=f"manual_lot_{pair}",
-                    help="Digite valor exato"
-                )
-                
-                # Usar o valor do manual se foi alterado
-                if manual_lot != new_lot_size:
-                    new_lot_size = manual_lot
-                
-                # Atualizar session state sem trigger de recarregamento
-                st.session_state['lot_size'] = new_lot_size
-            
-            with calc_info_col:
-                st.markdown("**📊 Valores Calculados (Atualização Automática)**")
-                
-                # Calcular valores baseados no lote atualizado
-                primary = execution['primary_setup']
-                profit_distance_pips = abs(primary['take_profit'] - primary['entry_price']) * 10000
-                loss_distance_pips = abs(primary['entry_price'] - primary['stop_loss']) * 10000
-                pip_value = new_lot_size * 10.0
-                
-                # Valores em USD
-                potential_profit = profit_distance_pips * pip_value / 10
-                risk_amount = loss_distance_pips * pip_value / 10
-                volume_usd = new_lot_size * 100000 * execution['current_price']
-                
-                # Mostrar métricas atualizadas em linha
-                metrics_col1, metrics_col2, metrics_col3, metrics_col4 = st.columns(4)
-                
-                with metrics_col1:
-                    st.metric("🛑 Risco", f"${risk_amount:.2f}")
-                    
-                with metrics_col2:
-                    st.metric("💰 Lucro", f"${potential_profit:.2f}")
-                    
-                with metrics_col3:
-                    st.metric("📊 Posição", f"{new_lot_size:.2f}")
-                    
-                with metrics_col4:
-                    st.metric("💵 Volume", f"${volume_usd:,.0f}")
-                
-                # R/R atualizado
-                if loss_distance_pips > 0:
-                    current_rr = profit_distance_pips / loss_distance_pips
-                    st.success(f"⚖️ **R/R:** 1:{current_rr:.1f} | **Risco:** ${risk_amount:.2f} | **Lucro:** ${potential_profit:.2f}")
+        # Calculadora usando valores estáticos do session state (sem widgets interativos)
+        st.markdown("**📊 Resumo Financeiro Baseado no Lote Configurado**")
         
-        st.caption("💡 Use o slider ou entrada manual acima para ajustar o lote em tempo real")
+        # Pegar valores da sidebar sem criar novos widgets
+        current_lot = st.session_state.get('lot_size', 0.1)
+        current_bank = st.session_state.get('bank_value', 5000.0)
+        
+        # Calcular valores baseados no lote atual
+        primary = execution['primary_setup']
+        profit_distance_pips = abs(primary['take_profit'] - primary['entry_price']) * 10000
+        loss_distance_pips = abs(primary['entry_price'] - primary['stop_loss']) * 10000
+        pip_value = current_lot * 10.0
+        
+        # Valores em USD
+        potential_profit = profit_distance_pips * pip_value / 10
+        risk_amount = loss_distance_pips * pip_value / 10
+        volume_usd = current_lot * 100000 * execution['current_price']
+        
+        # Mostrar métricas sem widgets interativos
+        metrics_col1, metrics_col2, metrics_col3, metrics_col4 = st.columns(4)
+        
+        with metrics_col1:
+            st.metric("🛑 Risco", f"${risk_amount:.2f}", f"{(risk_amount/current_bank)*100:.1f}% da banca")
+            
+        with metrics_col2:
+            st.metric("💰 Lucro Potencial", f"${potential_profit:.2f}", f"{(potential_profit/current_bank)*100:.1f}% da banca")
+            
+        with metrics_col3:
+            st.metric("📊 Lote Atual", f"{current_lot:.2f}", f"${pip_value:.1f}/pip")
+            
+        with metrics_col4:
+            st.metric("💵 Volume Total", f"${volume_usd:,.0f}", f"Banca: ${current_bank:,.0f}")
+        
+        # R/R final
+        if loss_distance_pips > 0:
+            current_rr = profit_distance_pips / loss_distance_pips
+            st.success(f"⚖️ **Risk/Reward:** 1:{current_rr:.1f} | **Risco:** ${risk_amount:.2f} | **Lucro:** ${potential_profit:.2f}")
+        
+        st.info("💡 Para alterar o lote, use a 'Calculadora de Lote' na sidebar esquerda - os valores acima são atualizados automaticamente")
 
 def display_execution_positions(results):
     """Exibir posições de execução detalhadas"""
