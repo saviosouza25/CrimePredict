@@ -2274,13 +2274,16 @@ def display_scalping_strategic_setup(pair, execution, result):
         
         # Resumo final
         st.markdown("### 📈 Resumo da Operação")
-        summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
+        summary_col1, summary_col2, summary_col3, summary_col4, summary_col5 = st.columns(5)
         
         # Calcular potencial de lucro baseado no lote da sidebar
         primary = execution['primary_setup']
         profit_distance_pips = abs(primary['take_profit'] - primary['entry_price']) * 10000  # Pips de lucro reais
         pip_value = execution['position_size'] * 10.0  # Valor do pip para o lote escolhido
         potential_profit = profit_distance_pips * pip_value / 10  # Lucro em USD
+        
+        # Calcular volume em dólares
+        volume_usd = execution['position_size'] * 100000 * execution['current_price']  # Volume total da operação
         
         with summary_col1:
             st.metric("Taxa de Sucesso", f"{execution['expected_success_rate']:.0f}%")
@@ -2293,6 +2296,9 @@ def display_scalping_strategic_setup(pair, execution, result):
             
         with summary_col4:
             st.metric("Posição", f"{execution['position_size']:.2f} lotes")
+            
+        with summary_col5:
+            st.metric("Volume USD", f"${volume_usd:,.0f}")
 
 def display_execution_positions(results):
     """Exibir posições de execução detalhadas"""
