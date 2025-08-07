@@ -2910,10 +2910,10 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
             'take_multiplier': 1.6,
             'min_confidence': 50,
             'volatility_factor': 1.0,
-            'components_weight': [0.70, 0.15, 0.10, 0.02, 0.02, 0.01],  # Técnica DOMINANTE 70% (EMAs 20/200), outros secundários
+            'components_weight': [0.55, 0.20, 0.15, 0.05, 0.03, 0.02],  # Técnica 55% (EMAs dominantes) + Confluência 45%
             'validity_hours': 4,
             'primary_indicators': ['EMA 20/200 H1 (DOMINANTE)', 'RSI H1', 'Volume H1', 'MACD H1'],
-            'analysis_focus': 'EMA 20/200 DOMINANTE H1 + RSI + Volume (análise técnica tradicional)',
+            'analysis_focus': 'EMA 20/200 H1 (dominante) + Confluência RSI/Volume/MACD (análise tradicional)',
             'optimal_pairs': ['EUR/USD', 'GBP/USD'],
             'best_times': '13:30-17:00 UTC (Sobreposição Londres/NY)',
             'accuracy_rate': '88%'  # Maior precisão com foco técnico
@@ -6574,12 +6574,13 @@ def calculate_technical_analysis(df_with_indicators, trading_style='swing'):
                 ema_signal = -0.8  # Sinal forte de VENDA
             ema_confidence = 0.9  # Alta confiança
             
-            # Para INTRADAY: EMAs são DOMINANTES (peso multiplicado)
+            # Para INTRADAY: EMAs dominantes mas permitindo confluência
             if trading_style == 'intraday':
-                # Triplicar o peso das EMAs para dominar outros indicadores
-                for _ in range(3):  
-                    signals.append(ema_signal)
-                    confidences.append(ema_confidence)
+                # Duplicar o peso das EMAs (dominante mas não absoluto)
+                signals.append(ema_signal)
+                signals.append(ema_signal)  # Peso extra para ser dominante
+                confidences.append(ema_confidence)
+                confidences.append(ema_confidence)
             else:
                 # Para outros perfis: EMAs com peso normal
                 signals.append(ema_signal)
