@@ -2276,10 +2276,11 @@ def display_scalping_strategic_setup(pair, execution, result):
         st.markdown("### 📈 Resumo da Operação")
         summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
         
-        # Calcular potencial de lucro
+        # Calcular potencial de lucro baseado no lote da sidebar
         primary = execution['primary_setup']
-        profit_distance_pips = primary['pips_to_entry'] * (primary['risk_reward_ratio'] / 1.0)  # Converter R/R em pips de lucro
-        potential_profit = execution['risk_amount'] * primary['risk_reward_ratio']  # Lucro baseado no R/R
+        profit_distance_pips = abs(primary['take_profit'] - primary['entry_price']) * 10000  # Pips de lucro reais
+        pip_value = execution['position_size'] * 10.0  # Valor do pip para o lote escolhido
+        potential_profit = profit_distance_pips * pip_value / 10  # Lucro em USD
         
         with summary_col1:
             st.metric("Taxa de Sucesso", f"{execution['expected_success_rate']:.0f}%")
@@ -5760,10 +5761,13 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
         # Tempo de expiração
         expiry_time = datetime.now() + timedelta(minutes=validity_minutes)
         
-        # Calcular tamanho da posição
-        risk_amount = bank_value * 0.006  # 0.6% de risco
+        # Usar tamanho da posição da calculadora de lote
+        position_size = st.session_state.get('lot_size', 0.1)  # Usar valor da sidebar
+        
+        # Calcular risco real baseado no lote escolhido
         entry_distance_pips = abs(entry_level - stop_level) * 10000
-        position_size = risk_amount / max(entry_distance_pips, 1) if entry_distance_pips > 0 else 0.01
+        pip_value = position_size * 10.0  # Valor do pip para o lote escolhido
+        risk_amount = entry_distance_pips * pip_value / 10  # Risco real em USD
         
         # Calcular potencial R/R
         profit_distance = abs(take_level - entry_level) * 10000
