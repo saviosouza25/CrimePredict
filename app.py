@@ -910,7 +910,7 @@ def main():
                     "💳 Valor da Banca (USD)", 
                     min_value=100.0, 
                     max_value=1000000.0, 
-                    value=5000.0, 
+                    value=st.session_state.get('bank_value', 5000.0), 
                     step=500.0,
                     help="Valor total da sua banca em dólares",
                     key="bank_value_input"
@@ -921,7 +921,7 @@ def main():
                     "📊 Tamanho do Lote",
                     min_value=0.01,
                     max_value=100.0,
-                    value=0.1,
+                    value=st.session_state.get('lot_size', 0.1),
                     step=0.01,
                     format="%.2f",
                     help="Tamanho do lote para a operação",
@@ -932,8 +932,35 @@ def main():
             st.session_state['bank_value'] = bank_value
             st.session_state['lot_size'] = lot_size
             
-            # Calculadora de DD/Extensão Independente
-            st.markdown("**🧮 Calculadora de DD/Extensão**")
+            # Calculadora em tempo real para scalping
+            st.markdown("**⚡ Previsão Scalping em Tempo Real**")
+            
+            # Calcular valores de scalping baseado no lote atual
+            scalping_stop_pips = 8  # 8 pips de stop
+            scalping_take_pips = 12  # 12 pips de take
+            pip_value = lot_size * 10.0  # Valor do pip
+            
+            # Valores em USD
+            risk_usd = scalping_stop_pips * pip_value / 10
+            profit_usd = scalping_take_pips * pip_value / 10
+            volume_example = lot_size * 100000 * 1.1000  # Exemplo com EUR/USD 1.1000
+            
+            # Mostrar em colunas
+            calc_col1, calc_col2, calc_col3 = st.columns(3)
+            with calc_col1:
+                st.metric("🛑 Risco (8 pips)", f"${risk_usd:.2f}")
+            with calc_col2:
+                st.metric("💰 Lucro (12 pips)", f"${profit_usd:.2f}")
+            with calc_col3:
+                st.metric("📊 Volume", f"${volume_example:,.0f}")
+                
+            st.caption("💡 Valores atualizados automaticamente baseados no lote selecionado")
+            
+            # Separador visual
+            st.divider()
+            
+            # Calculadora de DD/Extensão com atualização em tempo real
+            st.markdown("**🧮 Calculadora de DD/Extensão (Tempo Real)**")
             
             # Usar análise mais recente se disponível
             if st.session_state.get('analysis_results'):
@@ -946,31 +973,30 @@ def main():
                     pair_str = str(pair)  # Garantir que é string
                     if 'JPY' in pair_str:
                         pip_value_per_lot = 10.0
-                    # Gold removed from analysis
                     else:
                         pip_value_per_lot = 10.0
                     
-                    # Calcular valores em dólares
+                    # Calcular valores em dólares (ATUALIZAÇÃO EM TEMPO REAL)
                     dd_usd = drawdown_pips * pip_value_per_lot * lot_size
                     ext_usd = extension_pips * pip_value_per_lot * lot_size
                     dd_pct = (dd_usd / bank_value) * 100
                     ext_pct = (ext_usd / bank_value) * 100
                     
-                    col1, col2 = st.columns(2)
-                    with col1:
+                    dd_col1, dd_col2 = st.columns(2)
+                    with dd_col1:
                         st.metric(
                             "📉 Drawdown Máximo",
                             f"${dd_usd:.2f}",
                             f"{dd_pct:.2f}% da banca"
                         )
-                    with col2:
+                    with dd_col2:
                         st.metric(
                             "📈 Extensão Máxima", 
                             f"${ext_usd:.2f}",
                             f"{ext_pct:.2f}% da banca"
                         )
                     
-                    st.caption(f"💡 Baseado em DD: {drawdown_pips} pips | Extensão: {extension_pips} pips")
+                    st.caption(f"💡 DD: {drawdown_pips} pips | Extensão: {extension_pips} pips | Atualização automática")
                 else:
                     st.info("🔍 Execute uma análise para ver os cálculos de DD/Extensão")
             else:
