@@ -2354,14 +2354,7 @@ def display_execution_positions(results):
                     stop_pct = st.session_state.get('stop_percentage', 50)
                     take_pct = st.session_state.get('take_percentage', 50)
                 
-                st.markdown(f"**📊 Cálculo: Stop em {stop_pct}% | Take em {take_pct}% do Movimento Provável:**")
-                st.info(f"**Metodologia:** Stop = {stop_pct}% movimento contrário | Take = {take_pct}% movimento favorável")
-                if execution.get('stop_reasoning'):
-                    st.write(f"• {execution['stop_reasoning']}")
-                if execution.get('take_reasoning'):
-                    st.write(f"• {execution['take_reasoning']}")
-                if execution.get('probability_calculation'):
-                    st.write(f"• {execution['probability_calculation']}")
+                # Informações detalhadas de cálculo removidas conforme solicitado
                 
             if 'profile_description' in execution:
                 st.info(f"**📋 {execution['profile_description']}**")
