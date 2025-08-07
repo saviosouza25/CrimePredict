@@ -3642,7 +3642,19 @@ def run_technical_analysis(current_price, df_with_indicators):
     sma_signal = (current_price - sma_20) / sma_20 if sma_20 > 0 else 0
     
     # Forças dos sinais técnicos (IDÊNTICO À UNIFICADA)
-    rsi_signal = 0.5 - (rsi / 100)  # RSI invertido (alta = negativo)
+    # RSI Lógica CORRETA: > 50 = COMPRA, < 50 = VENDA
+    if rsi > 70:
+        rsi_signal = -0.3  # Sobrecomprado (cuidado)
+    elif rsi > 60:
+        rsi_signal = -0.1  # Levemente sobrecomprado  
+    elif rsi > 50:
+        rsi_signal = 0.2   # COMPRA (momentum positivo)
+    elif rsi > 40:
+        rsi_signal = 0.1   # COMPRA fraca
+    elif rsi > 30:
+        rsi_signal = 0.3   # COMPRA (sobrevenda)
+    else:
+        rsi_signal = 0.5   # COMPRA forte (sobrevenda extrema)
     macd_signal = macd * 50  # MACD amplificado
     bb_signal = (bb_position - 0.5) * 0.4  # Bollinger normalizado
     
@@ -6529,9 +6541,13 @@ def calculate_technical_analysis(df_with_indicators, trading_style='swing'):
             elif latest_rsi > 70:
                 signals.append(-0.7)  # Strong sell
             elif latest_rsi > 60:
-                signals.append(-0.3)  # Weak sell
+                signals.append(-0.1)  # Weak sell (sobrecomprado leve)
+            elif latest_rsi > 50:
+                signals.append(0.2)   # COMPRA (momentum positivo)
+            elif latest_rsi > 40:
+                signals.append(0.1)   # COMPRA fraca
             else:
-                signals.append(0)  # Neutral
+                signals.append(0)     # Neutral
             confidences.append(0.8)
         
         # MACD Signal
