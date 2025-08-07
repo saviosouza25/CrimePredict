@@ -2228,7 +2228,8 @@ def display_scalping_strategic_setup(pair, execution, result):
             <p style="margin: 0.3rem 0 0 0; color: #666;">
                 Preço Atual: <strong>{execution['current_price']:.5f}</strong> | 
                 Validade: <strong>{execution['validity_time']} min</strong> | 
-                Expira: <strong>{execution['expiry_timestamp']}</strong>
+                Expira: <strong>{execution['expiry_timestamp']}</strong> |
+                Taxa de Sucesso: <strong style="color: {direction_color};">{execution['expected_success_rate']:.0f}%</strong>
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -2274,7 +2275,7 @@ def display_scalping_strategic_setup(pair, execution, result):
         
         # Resumo final
         st.markdown("### 📈 Resumo da Operação")
-        summary_col1, summary_col2, summary_col3, summary_col4, summary_col5 = st.columns(5)
+        summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
         
         # Calcular potencial de lucro baseado no lote da sidebar
         primary = execution['primary_setup']
@@ -2286,18 +2287,15 @@ def display_scalping_strategic_setup(pair, execution, result):
         volume_usd = execution['position_size'] * 100000 * execution['current_price']  # Volume total da operação
         
         with summary_col1:
-            st.metric("Taxa de Sucesso", f"{execution['expected_success_rate']:.0f}%")
-            
-        with summary_col2:
             st.metric("Risco", f"${execution['risk_amount']:.2f}")
             
-        with summary_col3:
+        with summary_col2:
             st.metric("Potencial Lucro", f"${potential_profit:.2f}")
             
-        with summary_col4:
+        with summary_col3:
             st.metric("Posição", f"{execution['position_size']:.2f} lotes")
             
-        with summary_col5:
+        with summary_col4:
             st.metric("Volume USD", f"${volume_usd:,.0f}")
 
 def display_execution_positions(results):
