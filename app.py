@@ -1867,8 +1867,17 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     
     # Calculate probability-optimized parameters for >75% success rate
     # Get user-defined percentages from session state
-    stop_percentage = st.session_state.get('stop_percentage', 50)
-    take_percentage = st.session_state.get('take_percentage', 50)
+    # Verificar trading style para definir valores corretos
+    trading_style = st.session_state.get('trading_style', 'swing')
+    
+    if trading_style == 'scalping':
+        # Valores fixos otimizados para scalping
+        stop_percentage = 20
+        take_percentage = 30
+    else:
+        # Valores padrão ou personalizados para outros estilos
+        stop_percentage = st.session_state.get('stop_percentage', 50)
+        take_percentage = st.session_state.get('take_percentage', 50)
     
     prob_params = calculate_success_probability_parameters(
         df, confidence, profile, signal_strength, stop_percentage, take_percentage
@@ -5910,8 +5919,17 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         'profile_analysis_window': f"{window if 'window' in locals() else 'completo'} períodos"
     }
 
-def get_profile_characteristics(profile, stop_percentage=50, take_percentage=50):
+def get_profile_characteristics(profile, stop_percentage=None, take_percentage=None):
     """Retorna características específicas do perfil para exibição"""
+    # Se não fornecido, usar valores baseados no trading style
+    if stop_percentage is None or take_percentage is None:
+        trading_style = st.session_state.get('trading_style', 'swing')
+        if trading_style == 'scalping':
+            stop_percentage = 20
+            take_percentage = 30
+        else:
+            stop_percentage = st.session_state.get('stop_percentage', 50)
+            take_percentage = st.session_state.get('take_percentage', 50)
     characteristics = {
         'scalping': {
             'stop_behavior': f'{stop_percentage}% movimento contrário Alpha Vantage (micro 3 períodos) | Limits: 0.1%-0.8%',
