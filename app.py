@@ -205,6 +205,87 @@ def calculate_real_success_rate(analysis_result, confidence, signal_strength, se
         # Fallback conservador em caso de erro
         return 70.0
 
+def evaluate_unified_execution_decision(alpha_score, qualitative_score, historical_success):
+    """
+    Avalia decisão unificada de execução baseada nos 3 tipos de confluência:
+    1. Score Alpha Vantage (confiança dinâmica)
+    2. Avaliação qualitativa (setup técnico)
+    3. Taxa de sucesso histórico
+    """
+    criteria_met = 0
+    reasons = []
+    
+    # Critério 1: Score Alpha Vantage (peso: 40%)
+    alpha_passed = alpha_score >= 75.0
+    if alpha_passed:
+        criteria_met += 1
+        reasons.append("Score Alpha Vantage forte")
+    elif alpha_score >= 65.0:
+        criteria_met += 0.5
+        reasons.append("Score Alpha Vantage moderado")
+    else:
+        reasons.append("Score Alpha Vantage baixo")
+    
+    # Critério 2: Avaliação qualitativa (peso: 35%)
+    qualitative_passed = qualitative_score >= 85.0
+    if qualitative_passed:
+        criteria_met += 1
+        reasons.append("Setup técnico excelente")
+    elif qualitative_score >= 70.0:
+        criteria_met += 0.5
+        reasons.append("Setup técnico bom")
+    else:
+        reasons.append("Setup técnico regular")
+    
+    # Critério 3: Taxa histórica (peso: 25%)
+    historical_passed = historical_success >= 65.0
+    if historical_passed:
+        criteria_met += 1
+        reasons.append("Taxa histórica alta")
+    elif historical_success >= 55.0:
+        criteria_met += 0.5
+        reasons.append("Taxa histórica média")
+    else:
+        reasons.append("Taxa histórica baixa")
+    
+    # Calcular confluência ponderada
+    confluence_score = (
+        (alpha_score * 0.40) +
+        (qualitative_score * 0.35) +
+        (historical_success * 0.25)
+    )
+    
+    # Lógica de decisão
+    # Para EXECUTAR: pelo menos 2 critérios completos OU 75%+ de confluência
+    execute_decision = criteria_met >= 2.0 or confluence_score >= 75.0
+    
+    # Determinar razão principal
+    if execute_decision:
+        if criteria_met >= 2.5:
+            main_reason = "Todos os critérios fortemente atendidos"
+        elif criteria_met >= 2.0:
+            main_reason = "Maioria dos critérios atendidos"
+        else:
+            main_reason = f"Alta confluência ({confluence_score:.1f}%)"
+    else:
+        if criteria_met < 1.0:
+            main_reason = "Critérios insuficientes"
+        elif confluence_score < 65.0:
+            main_reason = "Confluência baixa"
+        else:
+            main_reason = "Critérios parcialmente atendidos"
+    
+    return {
+        'execute': execute_decision,
+        'criteria_met': criteria_met,
+        'confluence_score': confluence_score,
+        'reason': main_reason,
+        'details': reasons,
+        'alpha_weight': alpha_score * 0.40,
+        'qualitative_weight': qualitative_score * 0.35,
+        'historical_weight': historical_success * 0.25
+    }
+
 # FUNÇÃO GLOBAL: Calcular probabilidades REAIS de mercado
 def calculate_realistic_drawdown_and_extensions(current_price, pair_name, horizon, risk_level, sentiment_score, lstm_confidence):
     """
@@ -2573,6 +2654,48 @@ def display_execution_positions(results):
                     
                     # Aviso sobre mínimo recomendado
                     st.markdown("<small style='color: #888888; font-size: 0.8em;'>📊 Recomendado: Taxa de Sucesso > 65% para operações seguras</small>", unsafe_allow_html=True)
+            
+            st.divider()
+            
+            # === BLOCO 3: DECISÃO UNIFICADA DE EXECUÇÃO ===
+            with st.container():
+                st.markdown("### 🎯 Análise Confluente de Execução")
+                
+                # Obter os 3 tipos de avaliação
+                alpha_score = result.get('confidence', 0.0) * 100  # Score Alpha Vantage
+                qualitative_score = result.get('opportunity_score', 0.0)  # Avaliação qualitativa
+                historical_success = execution.get('expected_success_rate', 0.0)  # Taxa histórica
+                
+                # Lógica de decisão unificada
+                decision_result = evaluate_unified_execution_decision(
+                    alpha_score, qualitative_score, historical_success
+                )
+                
+                # Exibir as 3 métricas
+                decision_col1, decision_col2, decision_col3 = st.columns(3)
+                
+                with decision_col1:
+                    alpha_color = "🟢" if alpha_score >= 75 else "🟡" if alpha_score >= 65 else "🔴"
+                    st.metric("🔍 Score Alpha Vantage", f"{alpha_score:.1f}%", 
+                             delta=f"{alpha_color} {'Forte' if alpha_score >= 75 else 'Moderado' if alpha_score >= 65 else 'Fraco'}")
+                
+                with decision_col2:
+                    qual_color = "🟢" if qualitative_score >= 85 else "🟡" if qualitative_score >= 70 else "🔴"
+                    st.metric("⭐ Avaliação Qualitativa", f"{qualitative_score:.1f}/100", 
+                             delta=f"{qual_color} {'Excelente' if qualitative_score >= 85 else 'Bom' if qualitative_score >= 70 else 'Regular'}")
+                
+                with decision_col3:
+                    hist_color = "🟢" if historical_success >= 65 else "🟡" if historical_success >= 55 else "🔴"
+                    st.metric("📊 Taxa Histórica", f"{historical_success:.1f}%", 
+                             delta=f"{hist_color} {'Alto' if historical_success >= 65 else 'Médio' if historical_success >= 55 else 'Baixo'}")
+                
+                # Decisão final
+                if decision_result['execute']:
+                    st.success(f"✅ **RECOMENDAÇÃO: EXECUTAR** - {decision_result['reason']}")
+                    st.success(f"🎯 **Confluência:** {decision_result['confluence_score']:.1f}% | **Critérios Atendidos:** {decision_result['criteria_met']}/3")
+                else:
+                    st.error(f"❌ **RECOMENDAÇÃO: NÃO EXECUTAR** - {decision_result['reason']}")
+                    st.warning(f"⚠️ **Confluência:** {decision_result['confluence_score']:.1f}% | **Critérios Atendidos:** {decision_result['criteria_met']}/3")
             
             st.divider()
             
