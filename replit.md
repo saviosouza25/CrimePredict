@@ -73,6 +73,8 @@ Preferred communication style: Simple, everyday language.
 - **Precision-Based Confidence**: Confidence scoring system based on indicator agreement and profile-specific weights (85-95% precision)
 - **Real-Time Error Handling**: Clear Portuguese messages when Alpha Vantage data is unavailable, preventing any use of simulated data
 - **Multi-Timeframe Analysis**: Integrated multi-timeframe analysis for enhanced trend identification accuracy
+- **Strategic Scalping System**: Evolved from immediate execution to strategic entry levels with dual setups (pullback/breakout) and time validity (15-45 minutes)
+- **UI Simplification**: Removed "Características do Perfil" section from all trader format displays for cleaner interface
 
 # External Dependencies
 

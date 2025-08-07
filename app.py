@@ -1815,6 +1815,9 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     # Verificar trading style para definir valores corretos
     trading_style = st.session_state.get('trading_style', 'swing')
     
+    # Get basic bank value first
+    bank_value = st.session_state.get('bank_value', 10000)  # Default $10,000
+    
     if trading_style == 'scalping':
         # SCALPING ESTRATÉGICO: Calcular níveis técnicos de entrada ao invés de entrada imediata
         return generate_scalping_strategic_levels(
@@ -1829,9 +1832,6 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     prob_params = calculate_success_probability_parameters(
         df, confidence, profile, signal_strength, stop_percentage, take_percentage
     )
-    
-    # Get basic bank value
-    bank_value = st.session_state.get('bank_value', 10000)  # Default $10,000
     
     # Calculate stop loss and take profit based on PROBABILITY ANALYSIS (not ATR)
     entry_price = current_price
@@ -2373,24 +2373,6 @@ def display_execution_positions(results):
                     ]
                     for item in probability_data:
                         st.write(f"• {item}")
-            
-            st.divider()
-            
-            # === BLOCO 3: CARACTERÍSTICAS DO PERFIL ===
-            with st.container():
-                st.markdown("### 🔧 Características do Perfil")
-                if 'profile_characteristics' in execution:
-                    characteristics = execution['profile_characteristics']
-                    char_col1, char_col2 = st.columns(2)
-                    
-                    with char_col1:
-                        st.write(f"• **Stops:** {characteristics['stop_behavior']}")
-                        st.write(f"• **Takes:** {characteristics['take_behavior']}")
-                        st.write(f"• **Risco:** {characteristics['risk_approach']}")
-                        
-                    with char_col2:
-                        st.write(f"• **Timing:** {characteristics['timing']}")
-                        st.write(f"• **Foco:** {characteristics['focus']}")
             
             st.divider()
             
