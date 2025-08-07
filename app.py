@@ -2662,8 +2662,8 @@ def display_execution_positions(results):
                 st.markdown("### 🎯 Análise Confluente de Execução")
                 
                 # Obter os 3 tipos de avaliação
-                alpha_score = result.get('confidence', 0.0) * 100  # Score Alpha Vantage
-                qualitative_score = result.get('opportunity_score', 0.0)  # Avaliação qualitativa
+                alpha_score = execution.get('confidence', execution.get('expected_success_rate', 75.0))  # Score Alpha Vantage
+                qualitative_score = result.get('opportunity_score', 0.0)  # Score Técnico Composto
                 historical_success = execution.get('expected_success_rate', 0.0)  # Taxa histórica
                 
                 # Lógica de decisão unificada
@@ -2681,7 +2681,7 @@ def display_execution_positions(results):
                 
                 with decision_col2:
                     qual_color = "🟢" if qualitative_score >= 85 else "🟡" if qualitative_score >= 70 else "🔴"
-                    st.metric("⭐ Avaliação Qualitativa", f"{qualitative_score:.1f}/100", 
+                    st.metric("⭐ Score Técnico Composto", f"{qualitative_score:.1f}/100", 
                              delta=f"{qual_color} {'Excelente' if qualitative_score >= 85 else 'Bom' if qualitative_score >= 70 else 'Regular'}")
                 
                 with decision_col3:
