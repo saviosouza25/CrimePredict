@@ -6322,7 +6322,56 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     # Sem ajustes artificiais - apenas dados Alpha Vantage puros com seus controles %
     
     # Risk management baseado na taxa de sucesso real calculada
-    success_rate = config['base_success_rate'] + (confidence - 0.5) * 0.1  # Ajuste menor
+    # Calcular taxa dinâmica baseada em confluência de fatores
+    base_rate = config['base_success_rate'] * 100  # Converter para %
+    adjustments = 0
+    
+    # Ajustar baseado na confiança (peso maior)
+    if confidence > 0.8:
+        adjustments += 12
+    elif confidence > 0.65:
+        adjustments += 8
+    elif confidence > 0.5:
+        adjustments += 4
+    else:
+        adjustments -= 5
+    
+    # Ajustar baseado na força do sinal
+    signal_abs = abs(signal_strength)
+    if signal_abs > 0.7:
+        adjustments += 8
+    elif signal_abs > 0.5:
+        adjustments += 5
+    elif signal_abs > 0.3:
+        adjustments += 2
+    else:
+        adjustments -= 3
+    
+    # Ajustar baseado na volatilidade
+    if 0.008 <= daily_vol <= 0.020:
+        adjustments += 5  # Volatilidade ideal
+    elif daily_vol > 0.030:
+        adjustments -= 8  # Muito volátil
+    elif daily_vol < 0.005:
+        adjustments -= 5  # Pouco volátil
+    
+    # Ajustar baseado no R/R
+    rr_ratio = tp_final / stop_final if stop_final > 0 else 1.5
+    if rr_ratio >= 1.8:
+        adjustments += 5
+    elif rr_ratio >= 1.4:
+        adjustments += 3
+    elif rr_ratio >= 1.1:
+        adjustments += 1
+    else:
+        adjustments -= 10
+    
+    # Calcular taxa final dinâmica
+    dynamic_success_rate = base_rate + adjustments
+    dynamic_success_rate = max(45.0, min(95.0, dynamic_success_rate))  # Limitar entre 45-95%
+    
+    success_rate = dynamic_success_rate / 100  # Converter para decimal
+    
     risk_percentage = config['risk_per_trade']  # Risco fixo por perfil
     
     # Garantir que stop_distance e tp_distance não sejam None
@@ -6353,7 +6402,7 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     return {
         'stop_distance_pct': stop_final,
         'tp_distance_pct': tp_final,
-        'success_rate_target': success_rate * 100,
+        'success_rate_target': dynamic_success_rate,  # Usar taxa dinâmica calculada
         'banca_risk': risk_percentage,
         'description': config['description'],
         'risk_reward_actual': real_rr,
