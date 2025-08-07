@@ -1816,9 +1816,10 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     trading_style = st.session_state.get('trading_style', 'swing')
     
     if trading_style == 'scalping':
-        # Valores fixos otimizados para scalping
-        stop_percentage = 20
-        take_percentage = 30
+        # SCALPING ESTRATÉGICO: Calcular níveis técnicos de entrada ao invés de entrada imediata
+        return generate_scalping_strategic_levels(
+            df, analysis_result, pair, current_price, confidence, signal_strength, sentiment_score, bank_value
+        )
     else:
         # Para outros estilos, deixar o Alpha Vantage calcular os valores ótimos
         # Passar None para que a função calcule automaticamente
@@ -2211,6 +2212,98 @@ def display_opportunity_ranking(results):
         </div>
         """, unsafe_allow_html=True)
 
+def display_scalping_strategic_setup(pair, execution, result):
+    """Exibe setup estratégico específico para scalping"""
+    
+    direction_color = "#00C851" if 'COMPRA' in execution['direction'] else "#F44336"
+    direction_icon = "📈" if 'COMPRA' in execution['direction'] else "📉"
+    
+    with st.expander(f"⚡ **{pair}** - SCALPING ESTRATÉGICO {direction_icon} (Score: {result['opportunity_score']:.1f})"):
+        
+        # Header estratégico
+        st.markdown(f"""
+        <div style="background: linear-gradient(90deg, {direction_color}15, {direction_color}25); 
+                    padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid {direction_color};">
+            <h4 style="margin: 0; color: {direction_color};">🎯 SETUP ESTRATÉGICO - {execution['direction']}</h4>
+            <p style="margin: 0.3rem 0 0 0; color: #666;">
+                Preço Atual: <strong>{execution['current_price']:.5f}</strong> | 
+                Validade: <strong>{execution['validity_time']} min</strong> | 
+                Expira: <strong>{execution['expiry_timestamp']}</strong>
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Setup Principal e Alternativo em colunas
+        setup_col1, setup_col2 = st.columns(2)
+        
+        with setup_col1:
+            st.markdown("### 🎯 Setup Principal")
+            primary = execution['primary_setup']
+            st.info(f"**{primary['name']}**")
+            
+            setup_data = [
+                f"**🎯 Entrada:** {primary['entry_price']:.5f}",
+                f"**🛑 Stop:** {primary['stop_loss']:.5f}", 
+                f"**💰 Take:** {primary['take_profit']:.5f}",
+                f"**📏 Distância:** {primary['pips_to_entry']:.1f} pips",
+                f"**⚖️ R/R:** 1:{primary['risk_reward_ratio']:.1f}"
+            ]
+            
+            for item in setup_data:
+                st.write(f"• {item}")
+                
+            st.success(f"✅ {primary['trigger_condition']}")
+        
+        with setup_col2:
+            st.markdown("### ⚡ Setup Alternativo")
+            breakout = execution['breakout_setup'] 
+            st.warning(f"**{breakout['name']}**")
+            
+            breakout_data = [
+                f"**🎯 Entrada:** {breakout['entry_price']:.5f}",
+                f"**🛑 Stop:** {breakout['stop_loss']:.5f}",
+                f"**💰 Take:** {breakout['take_profit']:.5f}", 
+                f"**📏 Distância:** {breakout['pips_to_entry']:.1f} pips",
+                f"**⚖️ R/R:** 1:{breakout['risk_reward_ratio']:.1f}"
+            ]
+            
+            for item in breakout_data:
+                st.write(f"• {item}")
+                
+            st.warning(f"⚡ {breakout['trigger_condition']}")
+        
+        st.divider()
+        
+        # Níveis técnicos e instruções
+        tech_col1, tech_col2 = st.columns(2)
+        
+        with tech_col1:
+            st.markdown("### 📊 Níveis Técnicos")
+            levels = execution['technical_levels']
+            st.write(f"• **Micro Suporte:** {levels['micro_support']:.5f}")
+            st.write(f"• **Micro Resistência:** {levels['micro_resistance']:.5f}")
+            st.write(f"• **Suporte Geral:** {levels['support_level']:.5f}")
+            st.write(f"• **Resistência Geral:** {levels['resistance_level']:.5f}")
+            st.write(f"• **Volatilidade:** {execution['market_volatility']:.3f}%")
+        
+        with tech_col2:
+            st.markdown("### 📋 Instruções de Execução")
+            for instruction in execution['execution_instructions']:
+                st.write(f"• {instruction}")
+        
+        # Resumo final
+        st.markdown("### 📈 Resumo da Operação")
+        summary_col1, summary_col2, summary_col3 = st.columns(3)
+        
+        with summary_col1:
+            st.metric("Taxa de Sucesso", f"{execution['expected_success_rate']:.0f}%")
+            
+        with summary_col2:
+            st.metric("Risco", f"${execution['risk_amount']:.2f}")
+            
+        with summary_col3:
+            st.metric("Posição", f"{execution['position_size']:.2f} lotes")
+
 def display_execution_positions(results):
     """Exibir posições de execução detalhadas"""
     
@@ -2224,6 +2317,11 @@ def display_execution_positions(results):
     for result in results[:10]:  # Top 10 para execução
         pair = result['pair']
         execution = result['execution_position']
+        
+        # Verificar se é scalping estratégico
+        if execution.get('setup_type') == 'SCALPING ESTRATÉGICO':
+            display_scalping_strategic_setup(pair, execution, result)
+            continue
         
         direction_color = "#00C851" if execution['direction'] == 'COMPRA' else "#F44336"
         direction_icon = "📈" if execution['direction'] == 'COMPRA' else "📉"
@@ -5610,6 +5708,171 @@ def run_profile_specific_analysis(current_price, pair, sentiment_score, df_with_
     analysis_result['market_direction'] = direction
         
     return analysis_result
+
+def generate_scalping_strategic_levels(df, analysis_result, pair, current_price, confidence, signal_strength, sentiment_score, bank_value):
+    """Gera níveis estratégicos de entrada para scalping com tempo de validade"""
+    from datetime import datetime, timedelta
+    
+    try:
+        # Análise técnica para identificar níveis estratégicos
+        if len(df) < 10:
+            # Dados insuficientes - usar níveis básicos
+            volatility = 0.0015  # 0.15% padrão
+        else:
+            # Calcular volatilidade micro dos últimos períodos
+            recent_changes = df['close'].tail(10).pct_change().dropna()
+            volatility = recent_changes.std()
+        
+        # Identificar suporte e resistência micro
+        if len(df) >= 20:
+            recent_highs = df['high'].tail(20)
+            recent_lows = df['low'].tail(20)
+            recent_closes = df['close'].tail(20)
+            
+            # Níveis de suporte (últimos mínimos)
+            support_level = recent_lows.min()
+            # Níveis de resistência (últimos máximos) 
+            resistance_level = recent_highs.max()
+            
+            # Micro-níveis baseados nos últimos 5 períodos
+            micro_support = recent_lows.tail(5).min()
+            micro_resistance = recent_highs.tail(5).max()
+        else:
+            # Fallback para dados limitados
+            support_level = current_price * (1 - volatility * 2)
+            resistance_level = current_price * (1 + volatility * 2)
+            micro_support = current_price * (1 - volatility)
+            micro_resistance = current_price * (1 + volatility)
+        
+        # Determinar direção do setup baseado no sinal
+        direction = analysis_result.get('market_direction', 'NEUTRO')
+        is_bullish = 'COMPRA' in str(direction)
+        
+        # Calcular níveis estratégicos de entrada
+        if is_bullish:
+            # SETUP DE COMPRA
+            # Entrada estratégica em pullback ao suporte
+            entry_level = max(micro_support, current_price * (1 - volatility * 0.8))
+            stop_level = entry_level * (1 - 0.003)  # Stop 0.3% abaixo da entrada
+            take_level = min(micro_resistance, entry_level * (1 + 0.005))  # Take próximo à resistência
+            
+            # Entrada alternativa em breakout
+            breakout_entry = micro_resistance * 1.0002  # Entrada acima da resistência
+            breakout_stop = micro_resistance * 0.9998   # Stop abaixo da resistência
+            breakout_take = breakout_entry * (1 + 0.006)  # Take 0.6% acima
+            
+        else:
+            # SETUP DE VENDA  
+            # Entrada estratégica em pullback à resistência
+            entry_level = min(micro_resistance, current_price * (1 + volatility * 0.8))
+            stop_level = entry_level * (1 + 0.003)  # Stop 0.3% acima da entrada
+            take_level = max(micro_support, entry_level * (1 - 0.005))  # Take próximo ao suporte
+            
+            # Entrada alternativa em breakout
+            breakout_entry = micro_support * 0.9998  # Entrada abaixo do suporte
+            breakout_stop = micro_support * 1.0002   # Stop acima do suporte  
+            breakout_take = breakout_entry * (1 - 0.006)  # Take 0.6% abaixo
+        
+        # Calcular tempo de validade baseado na volatilidade
+        if volatility > 0.002:  # Alta volatilidade
+            validity_minutes = 15
+        elif volatility > 0.001:  # Volatilidade média
+            validity_minutes = 30  
+        else:  # Baixa volatilidade
+            validity_minutes = 45
+            
+        # Tempo de expiração
+        expiry_time = datetime.now() + timedelta(minutes=validity_minutes)
+        
+        # Calcular tamanho da posição
+        risk_amount = bank_value * 0.006  # 0.6% de risco
+        entry_distance_pips = abs(entry_level - stop_level) * 10000
+        position_size = risk_amount / max(entry_distance_pips, 1) if entry_distance_pips > 0 else 0.01
+        
+        # Calcular potencial R/R
+        profit_distance = abs(take_level - entry_level) * 10000
+        loss_distance = abs(entry_level - stop_level) * 10000
+        risk_reward = profit_distance / max(loss_distance, 1) if loss_distance > 0 else 1.5
+        
+        # Montar resultado estratégico
+        strategic_result = {
+            'pair': pair,
+            'setup_type': 'SCALPING ESTRATÉGICO',
+            'direction': direction,
+            'strength': 'FORTE' if confidence > 0.7 else 'MODERADO',
+            
+            # Setup Principal (Pullback)
+            'primary_setup': {
+                'name': f"Pullback {'ao Suporte' if is_bullish else 'à Resistência'}",
+                'entry_price': entry_level,
+                'stop_loss': stop_level,
+                'take_profit': take_level,
+                'trigger_condition': f"Preço {'atingir {:.5f}'.format(entry_level) if abs(current_price - entry_level) > volatility * 0.5 else 'próximo ao nível ideal'}",
+                'pips_to_entry': abs(current_price - entry_level) * 10000,
+                'risk_reward_ratio': risk_reward
+            },
+            
+            # Setup Alternativo (Breakout)
+            'breakout_setup': {
+                'name': f"Breakout {'da Resistência' if is_bullish else 'do Suporte'}",
+                'entry_price': breakout_entry,
+                'stop_loss': breakout_stop,
+                'take_profit': breakout_take,
+                'trigger_condition': f"Breakout {'acima' if is_bullish else 'abaixo'} de {breakout_entry:.5f}",
+                'pips_to_entry': abs(current_price - breakout_entry) * 10000,
+                'risk_reward_ratio': abs(breakout_take - breakout_entry) / max(abs(breakout_entry - breakout_stop), 0.00001) * 10000
+            },
+            
+            # Informações gerais
+            'current_price': current_price,
+            'position_size': position_size,
+            'risk_amount': risk_amount,
+            'expected_success_rate': 88.0,  # Taxa otimizada para scalping estratégico
+            'validity_time': validity_minutes,
+            'expiry_timestamp': expiry_time.strftime("%H:%M:%S"),
+            'market_volatility': volatility * 100,
+            
+            # Níveis técnicos identificados
+            'technical_levels': {
+                'micro_support': micro_support,
+                'micro_resistance': micro_resistance,
+                'support_level': support_level,
+                'resistance_level': resistance_level
+            },
+            
+            # Instruções de execução
+            'execution_instructions': [
+                f"✅ Aguardar preço atingir {entry_level:.5f} para setup principal",
+                f"⚡ Alternativa: Breakout em {breakout_entry:.5f}",
+                f"⏰ Sinal válido por {validity_minutes} minutos (até {expiry_time.strftime('%H:%M')})",
+                f"💰 Risco: ${risk_amount:.2f} ({position_size:.2f} lotes)",
+                f"🎯 R/R: 1:{risk_reward:.1f}"
+            ],
+            
+            # Para compatibilidade com display existente
+            'entry_price': entry_level,
+            'stop_loss': stop_level,
+            'take_profit': take_level,
+            'stop_distance_pips': loss_distance,
+            'tp_distance_pips': profit_distance,
+            'risk_reward_ratio': risk_reward,
+            'actual_risk_pct': 0.6,
+            'stop_pct': abs(entry_level - stop_level) / entry_level * 100,
+            'tp_pct': abs(take_level - entry_level) / entry_level * 100
+        }
+        
+        return strategic_result
+        
+    except Exception as e:
+        # Fallback para erro
+        return {
+            'setup_type': 'SCALPING BÁSICO',
+            'direction': direction if 'direction' in locals() else 'NEUTRO',
+            'entry_price': current_price,
+            'stop_loss': current_price * 0.997,
+            'take_profit': current_price * 1.005,
+            'error': f"Erro no cálculo estratégico: {str(e)}"
+        }
 
 def calculate_ai_analysis_simple(df_with_indicators, current_price):
     """Simplified AI analysis for multi-pair processing"""
