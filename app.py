@@ -805,64 +805,10 @@ def main():
                 st.info("⚡ **Estratégia**: Stops apertados + Takes conservadores = Alta taxa de acerto")
                 st.success("✅ **R/R Ideal**: 1.5 - Perfeito para operações de alta frequência")
         else:
-            # Para outros estilos, manter a interface de configuração
-            with st.expander("📊 Parâmetros de Risco Personalizáveis", expanded=False):
-                st.info("🎯 **Sistema 100% Dinâmico**: Stop/Take baseados apenas em análises Alpha Vantage reais + seus % personalizáveis")
-                # Controles separados para Stop Loss e Take Profit
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.markdown("**🛡️ Stop Loss**")
-                    stop_percentage = st.slider(
-                        "% do Movimento Contrário",
-                        min_value=10,
-                        max_value=100,
-                        value=50,
-                        step=5,
-                        help="% do movimento contrário calculado pelo Alpha Vantage para Stop Loss (Sistema 100% Dinâmico)",
-                        key="stop_percentage_slider"
-                    )
-                    
-                with col2:
-                    st.markdown("**🎯 Take Profit**")
-                    take_percentage = st.slider(
-                        "% do Movimento Favorável",
-                        min_value=10,
-                        max_value=100,
-                        value=50,
-                        step=5,
-                        help="% do movimento favorável calculado pelo Alpha Vantage para Take Profit (Sistema 100% Dinâmico)",
-                        key="take_percentage_slider"
-                    )
-                
-                # Armazenar no session state
-                st.session_state['stop_percentage'] = stop_percentage
-                st.session_state['take_percentage'] = take_percentage
-                
-                # Mostrar configuração atual
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("Stop Loss", f"{stop_percentage}% movimento contrário", help="Baseado na análise Alpha Vantage")
-                with col2:
-                    st.metric("Take Profit", f"{take_percentage}% movimento favorável", help="Baseado na análise Alpha Vantage")
-                
-                # Calcular Risk/Reward ratio
-                rr_ratio = take_percentage / stop_percentage if stop_percentage > 0 else 1.0
-                
-                # Feedback visual padrão para outros estilos
-                if stop_percentage < 30 and take_percentage < 30:
-                    st.warning("⚠️ **Ultra Conservador**: Ambos muito próximos - alta chance de acerto, baixo R/R")
-                elif stop_percentage > 80 or take_percentage > 80:
-                    st.warning("🚀 **Ultra Agressivo**: Targets muito distantes - baixa chance de acerto, alto R/R")
-                elif rr_ratio > 2.0:
-                    st.success(f"✅ **Favor Take**: R/R = {rr_ratio:.1f} - Risco menor que recompensa")
-                elif rr_ratio < 0.5:
-                    st.error(f"❌ **Favor Stop**: R/R = {rr_ratio:.1f} - Risco maior que recompensa")
-                else:
-                    st.success(f"✅ **Equilibrado**: R/R = {rr_ratio:.1f} - Configuração balanceada")
-                
-                # Mostrar Risk/Reward como métrica
-                st.metric("Risk/Reward Ratio", f"{rr_ratio:.2f}", help="Take % ÷ Stop % = Relação Risco/Recompensa")
+            # Para outros estilos, não mostrar interface - usar cálculos automáticos do Alpha Vantage
+            # Os parâmetros serão definidos automaticamente com base na análise de probabilidade real
+            # Não armazenar valores fixos no session state - deixar para o Alpha Vantage calcular
+            pass
         
         # Sistema unificado de Intervalo e Horizonte em expander colapsável
         with st.expander("⏰ Configuração Temporal Unificada", expanded=False):
@@ -1866,7 +1812,6 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         })
     
     # Calculate probability-optimized parameters for >75% success rate
-    # Get user-defined percentages from session state
     # Verificar trading style para definir valores corretos
     trading_style = st.session_state.get('trading_style', 'swing')
     
@@ -1875,9 +1820,10 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         stop_percentage = 20
         take_percentage = 30
     else:
-        # Valores padrão ou personalizados para outros estilos
-        stop_percentage = st.session_state.get('stop_percentage', 50)
-        take_percentage = st.session_state.get('take_percentage', 50)
+        # Para outros estilos, deixar o Alpha Vantage calcular os valores ótimos
+        # Passar None para que a função calcule automaticamente
+        stop_percentage = None  # Será calculado pelo Alpha Vantage baseado no perfil
+        take_percentage = None  # Será calculado pelo Alpha Vantage baseado no perfil
     
     prob_params = calculate_success_probability_parameters(
         df, confidence, profile, signal_strength, stop_percentage, take_percentage
@@ -5677,6 +5623,23 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     """Calcula movimento previsto por perfil baseado em análise Alpha Vantage específica"""
     
     try:
+        # Para perfis não-scalping, calcular percentuais ótimos automaticamente
+        if stop_percentage is None or take_percentage is None:
+            # Calcular valores ótimos baseados na análise Alpha Vantage
+            if profile == 'intraday':
+                stop_percentage = 35  # Stops moderados para intraday
+                take_percentage = 65  # Takes maiores para capturar movimentos da sessão
+            elif profile == 'swing':
+                stop_percentage = 40  # Stops mais amplos para swing
+                take_percentage = 80  # Takes maiores para capturar tendências
+            elif profile == 'position':
+                stop_percentage = 25  # Stops mais apertados para position (fundamentos)
+                take_percentage = 120 # Takes muito maiores para movimentos de longo prazo
+            else:
+                # Valores padrão se perfil não reconhecido
+                stop_percentage = 50
+                take_percentage = 50
+        
         # Análise Alpha Vantage específica por perfil operacional
         if len(df) >= 50:  # Dados suficientes para análise robusta
             price_changes = df['close'].pct_change().dropna()
@@ -5928,15 +5891,23 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
 
 def get_profile_characteristics(profile, stop_percentage=None, take_percentage=None):
     """Retorna características específicas do perfil para exibição"""
-    # Se não fornecido, usar valores baseados no trading style
+    # Se não fornecido, usar valores baseados no perfil (não no session_state)
     if stop_percentage is None or take_percentage is None:
-        trading_style = st.session_state.get('trading_style', 'swing')
-        if trading_style == 'scalping':
+        if profile == 'scalping':
             stop_percentage = 20
             take_percentage = 30
+        elif profile == 'intraday':
+            stop_percentage = 35
+            take_percentage = 65
+        elif profile == 'swing':
+            stop_percentage = 40
+            take_percentage = 80
+        elif profile == 'position':
+            stop_percentage = 25
+            take_percentage = 120
         else:
-            stop_percentage = st.session_state.get('stop_percentage', 50)
-            take_percentage = st.session_state.get('take_percentage', 50)
+            stop_percentage = 50
+            take_percentage = 50
     characteristics = {
         'scalping': {
             'stop_behavior': f'{stop_percentage}% movimento contrário Alpha Vantage (micro 3 períodos) | Limits: 0.1%-0.8%',
