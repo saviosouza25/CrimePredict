@@ -1099,75 +1099,106 @@ def main():
             st.session_state['bank_value'] = bank_value
             st.session_state['lot_size'] = lot_size
             
-            # Calculadora em tempo real para todos os cálculos
-            st.markdown("**⚡ Calculadora em Tempo Real**")
+            # Calculadora Independente de Risco/Retorno
+            st.markdown("**🧮 Calculadora de Risco/Retorno**")
             
-            # Calcular valores de exemplo baseado no lote atual
-            example_stop_pips = 8  # 8 pips de stop (scalping)
-            example_take_pips = 12  # 12 pips de take (scalping)
-            pip_value = lot_size * 10.0  # Valor do pip
+            # Campos para inserir preços manuais
+            calc_col1, calc_col2, calc_col3 = st.columns(3)
+            
+            with calc_col1:
+                entry_price = st.number_input(
+                    "📍 Preço de Entrada",
+                    min_value=0.00001,
+                    max_value=100.0,
+                    value=1.10000,
+                    step=0.00001,
+                    format="%.5f",
+                    help="Preço onde você entrará na operação",
+                    key="calc_entry_price"
+                )
+                
+            with calc_col2:
+                stop_price = st.number_input(
+                    "🛑 Stop Loss",
+                    min_value=0.00001,
+                    max_value=100.0,
+                    value=1.09920,
+                    step=0.00001,
+                    format="%.5f",
+                    help="Preço do stop loss",
+                    key="calc_stop_price"
+                )
+                
+            with calc_col3:
+                take_price = st.number_input(
+                    "🎯 Take Profit",
+                    min_value=0.00001,
+                    max_value=100.0,
+                    value=1.10120,
+                    step=0.00001,
+                    format="%.5f",
+                    help="Preço do take profit",
+                    key="calc_take_price"
+                )
+            
+            # Calcular valores baseados nos preços inseridos
+            stop_pips = abs(entry_price - stop_price) * 10000
+            take_pips = abs(take_price - entry_price) * 10000
+            pip_value = lot_size * 10.0  # Valor do pip para o lote
             
             # Valores em USD
-            risk_usd = example_stop_pips * pip_value / 10
-            profit_usd = example_take_pips * pip_value / 10
-            volume_example = lot_size * 100000 * 1.1000  # Exemplo com EUR/USD 1.1000
+            risk_usd = stop_pips * pip_value / 10
+            profit_usd = take_pips * pip_value / 10
+            rr_ratio = profit_usd / risk_usd if risk_usd > 0 else 0
+            volume_usd = lot_size * 100000 * entry_price
             
-            # Mostrar em colunas
-            preview_col1, preview_col2, preview_col3 = st.columns(3)
-            with preview_col1:
-                st.metric("🛑 Risco (8 pips)", f"${risk_usd:.2f}")
-            with preview_col2:
-                st.metric("💰 Lucro (12 pips)", f"${profit_usd:.2f}")
-            with preview_col3:
-                st.metric("📊 Volume", f"${volume_example:,.0f}")
+            # Mostrar resultados
+            result_col1, result_col2, result_col3, result_col4 = st.columns(4)
+            
+            with result_col1:
+                st.metric("🛑 Risco", f"${risk_usd:.2f}", f"{stop_pips:.1f} pips")
+            with result_col2:
+                st.metric("💰 Lucro", f"${profit_usd:.2f}", f"{take_pips:.1f} pips")
+            with result_col3:
+                st.metric("⚖️ R/R", f"1:{rr_ratio:.2f}")
+            with result_col4:
+                st.metric("📊 Volume", f"${volume_usd:,.0f}")
                 
-            st.caption("💡 Valores de exemplo que se atualizam automaticamente quando você modifica o lote ou banca acima")
+            st.caption("💡 Calculadora independente - modifique os preços acima para calcular risco/retorno")
             
             # Separador visual
             st.divider()
             
-            # Calculadora de DD/Extensão com atualização em tempo real
-            st.markdown("**🧮 Calculadora de DD/Extensão (Tempo Real)**")
+            # Calculadora de Percentual da Banca
+            st.markdown("**📊 Impacto na Banca**")
             
-            # Usar análise mais recente se disponível
-            if st.session_state.get('analysis_results'):
-                results = st.session_state['analysis_results']
-                if 'drawdown_pips' in results and 'extension_pips' in results:
-                    drawdown_pips = results['drawdown_pips']
-                    extension_pips = results['extension_pips']
-                    
-                    # Calcular valor do pip baseado no par selecionado
-                    pair_str = str(pair)  # Garantir que é string
-                    if 'JPY' in pair_str:
-                        pip_value_per_lot = 10.0
-                    else:
-                        pip_value_per_lot = 10.0
-                    
-                    # Calcular valores em dólares (ATUALIZAÇÃO EM TEMPO REAL)
-                    dd_usd = drawdown_pips * pip_value_per_lot * lot_size
-                    ext_usd = extension_pips * pip_value_per_lot * lot_size
-                    dd_pct = (dd_usd / bank_value) * 100
-                    ext_pct = (ext_usd / bank_value) * 100
-                    
-                    dd_col1, dd_col2 = st.columns(2)
-                    with dd_col1:
-                        st.metric(
-                            "📉 Drawdown Máximo",
-                            f"${dd_usd:.2f}",
-                            f"{dd_pct:.2f}% da banca"
-                        )
-                    with dd_col2:
-                        st.metric(
-                            "📈 Extensão Máxima", 
-                            f"${ext_usd:.2f}",
-                            f"{ext_pct:.2f}% da banca"
-                        )
-                    
-                    st.caption(f"💡 DD: {drawdown_pips} pips | Extensão: {extension_pips} pips | Atualização automática")
-                else:
-                    st.info("🔍 Execute uma análise para ver os cálculos de DD/Extensão")
+            # Calcular percentuais
+            risk_percent = (risk_usd / bank_value) * 100 if bank_value > 0 else 0
+            profit_percent = (profit_usd / bank_value) * 100 if bank_value > 0 else 0
+            
+            impact_col1, impact_col2 = st.columns(2)
+            with impact_col1:
+                st.metric(
+                    "📉 Risco da Banca",
+                    f"{risk_percent:.2f}%",
+                    f"${risk_usd:.2f}"
+                )
+            with impact_col2:
+                st.metric(
+                    "📈 Ganho da Banca", 
+                    f"{profit_percent:.2f}%",
+                    f"${profit_usd:.2f}"
+                )
+            
+            # Alertas de risco
+            if risk_percent > 5:
+                st.error("⚠️ RISCO ALTO: Mais de 5% da banca em risco!")
+            elif risk_percent > 2:
+                st.warning("⚠️ Risco moderado: Entre 2-5% da banca")
             else:
-                st.info("🔍 Execute uma análise para ver os cálculos de DD/Extensão")
+                st.success("✅ Risco baixo: Menos de 2% da banca")
+            
+            st.caption("💡 Recomendação: Máximo 2% de risco por operação")
         
         # Configurações de IA colapsáveis
         with st.expander("🤖 Configurações Avançadas de IA"):
