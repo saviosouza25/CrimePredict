@@ -5729,8 +5729,8 @@ def parse_analysis_type(analysis_type_str: str) -> Dict:
             'profile': 'intraday', 
             'description': 'Intraday: Análise Técnica Tradicional H1',
             'analyses': ['technical', 'trend', 'volume'],  # Removido sentiment - foco técnico
-            'weights': {'technical': 0.45, 'trend': 0.20, 'volume': 0.25, 'sentiment': 0.05, 'ai_lstm': 0.03, 'risk': 0.02},
-            'focus': 'RSI + EMA + Volume tradicional para operações H1',
+            'weights': {'technical': 0.55, 'trend': 0.20, 'volume': 0.15, 'sentiment': 0.05, 'ai_lstm': 0.03, 'risk': 0.02},
+            'focus': 'EMA 20/200 H1 (dominante 55%) + Confluência RSI/Volume (tradicional)',
             'timeframe': 'H1 (Principal)',
             'priority_indicators': ['RSI H1', 'EMA H1', 'Volume H1', 'MACD H1', 'Bollinger H1']
         }
