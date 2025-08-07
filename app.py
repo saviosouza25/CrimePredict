@@ -2274,7 +2274,12 @@ def display_scalping_strategic_setup(pair, execution, result):
         
         # Resumo final
         st.markdown("### 📈 Resumo da Operação")
-        summary_col1, summary_col2, summary_col3 = st.columns(3)
+        summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
+        
+        # Calcular potencial de lucro
+        primary = execution['primary_setup']
+        profit_distance_pips = primary['pips_to_entry'] * (primary['risk_reward_ratio'] / 1.0)  # Converter R/R em pips de lucro
+        potential_profit = execution['risk_amount'] * primary['risk_reward_ratio']  # Lucro baseado no R/R
         
         with summary_col1:
             st.metric("Taxa de Sucesso", f"{execution['expected_success_rate']:.0f}%")
@@ -2283,6 +2288,9 @@ def display_scalping_strategic_setup(pair, execution, result):
             st.metric("Risco", f"${execution['risk_amount']:.2f}")
             
         with summary_col3:
+            st.metric("Potencial Lucro", f"${potential_profit:.2f}")
+            
+        with summary_col4:
             st.metric("Posição", f"{execution['position_size']:.2f} lotes")
 
 def display_execution_positions(results):
