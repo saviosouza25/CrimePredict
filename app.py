@@ -2560,7 +2560,7 @@ def display_execution_positions(results):
             
             with main_col2:
                 with st.container():
-                    st.markdown("### 💰 Análise Probabilística Alpha Vantage")
+                    st.markdown("### 💰 Análise probabilística histórica")
                     probability_data = [
                         f"**Taxa de Sucesso:** {execution['expected_success_rate']:.1f}%",
                         f"**Stop Loss:** {execution.get('stop_pct', 0):.3f}% ({execution['stop_distance_pips']:.1f} pips)",
@@ -2570,6 +2570,9 @@ def display_execution_positions(results):
                     ]
                     for item in probability_data:
                         st.write(f"• {item}")
+                    
+                    # Aviso sobre mínimo recomendado
+                    st.markdown("<small style='color: #888888; font-size: 0.8em;'>📊 Recomendado: Taxa de Sucesso > 65% para operações seguras</small>", unsafe_allow_html=True)
             
             st.divider()
             
