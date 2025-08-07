@@ -208,23 +208,23 @@ def calculate_real_success_rate(analysis_result, confidence, signal_strength, se
 def evaluate_unified_execution_decision(alpha_score, qualitative_score, historical_success):
     """
     Avalia decisão unificada de execução baseada nos 3 tipos de confluência:
-    1. Score Alpha Vantage (confiança dinâmica)
+    1. Score IA (confiança dinâmica)
     2. Avaliação qualitativa (setup técnico)
     3. Taxa de sucesso histórico
     """
     criteria_met = 0
     reasons = []
     
-    # Critério 1: Score Alpha Vantage (peso: 40%)
+    # Critério 1: Score IA (peso: 40%)
     alpha_passed = alpha_score >= 75.0
     if alpha_passed:
         criteria_met += 1
-        reasons.append("Score Alpha Vantage forte")
+        reasons.append("Score IA forte")
     elif alpha_score >= 65.0:
         criteria_met += 0.5
-        reasons.append("Score Alpha Vantage moderado")
+        reasons.append("Score IA moderado")
     else:
-        reasons.append("Score Alpha Vantage baixo")
+        reasons.append("Score IA baixo")
     
     # Critério 2: Avaliação qualitativa (peso: 35%)
     qualitative_passed = qualitative_score >= 85.0
@@ -2662,7 +2662,7 @@ def display_execution_positions(results):
                 st.markdown("### 🎯 Análise Confluente de Execução")
                 
                 # Obter os 3 tipos de avaliação
-                alpha_score = execution.get('confidence', execution.get('expected_success_rate', 75.0))  # Score Alpha Vantage
+                alpha_score = execution.get('confidence', execution.get('expected_success_rate', 75.0))  # Score IA
                 qualitative_score = result.get('opportunity_score', 0.0)  # Score Técnico Composto
                 historical_success = execution.get('expected_success_rate', 0.0)  # Taxa histórica
                 
@@ -2676,7 +2676,7 @@ def display_execution_positions(results):
                 
                 with decision_col1:
                     alpha_color = "🟢" if alpha_score >= 75 else "🟡" if alpha_score >= 65 else "🔴"
-                    st.metric("🔍 Score Alpha Vantage", f"{alpha_score:.1f}%", 
+                    st.metric("🔍 Score IA", f"{alpha_score:.1f}%", 
                              delta=f"{alpha_color} {'Forte' if alpha_score >= 75 else 'Moderado' if alpha_score >= 65 else 'Fraco'}")
                 
                 with decision_col2:
