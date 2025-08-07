@@ -6355,18 +6355,7 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     elif daily_vol < 0.003:
         adjustments -= 3  # Pouco volátil (penalidade menor)
     
-    # Ajustar baseado no R/R
-    rr_ratio = tp_final / stop_final if stop_final > 0 else 1.5
-    if rr_ratio >= 1.8:
-        adjustments += 5
-    elif rr_ratio >= 1.4:
-        adjustments += 3
-    elif rr_ratio >= 1.1:
-        adjustments += 1
-    else:
-        adjustments -= 10
-    
-    # Calcular taxa final dinâmica
+    # Calcular taxa inicial dinâmica (sem R/R ainda)
     dynamic_success_rate = base_rate + adjustments
     dynamic_success_rate = max(45.0, min(95.0, dynamic_success_rate))  # Limitar entre 45-95%
     
@@ -6398,6 +6387,22 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     # Garantir que variáveis finais não sejam None ou zero
     stop_final = stop_final or 0.01
     tp_final = tp_final or 0.01
+    
+    # AGORA calcular ajuste baseado no R/R (após stop_final e tp_final serem definidos)
+    rr_ratio = tp_final / stop_final if stop_final > 0 else 1.5
+    rr_adjustment = 0
+    if rr_ratio >= 1.8:
+        rr_adjustment += 5
+    elif rr_ratio >= 1.4:
+        rr_adjustment += 3
+    elif rr_ratio >= 1.1:
+        rr_adjustment += 1
+    else:
+        rr_adjustment -= 10
+    
+    # Aplicar ajuste do R/R à taxa final
+    dynamic_success_rate = min(95.0, max(45.0, dynamic_success_rate + rr_adjustment))
+    success_rate = dynamic_success_rate / 100
     
     # R/R real calculado baseado nos dados
     real_rr = tp_final / stop_final if (stop_final and stop_final > 0) else 1.0
