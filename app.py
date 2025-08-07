@@ -1991,8 +1991,8 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         })
     
     # Calculate probability-optimized parameters for >75% success rate
-    # Verificar trading style para definir valores corretos
-    trading_style = st.session_state.get('trading_style', 'swing')
+    # Usar o trading_style passado como parâmetro (não do session_state)
+    # Isso garante que cada perfil use suas configurações específicas
     
     # Get basic bank value first
     bank_value = st.session_state.get('bank_value', 10000)  # Default $10,000
@@ -6184,10 +6184,15 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
                     up_move = (future_high - entry_price) / entry_price
                     down_move = (entry_price - future_low) / entry_price
                     
-                    # Sistema dinâmico: usar % configurados na sidebar ao invés de 50% fixo
-                    # Remove percentual fixo de 50% - usa configuração do usuário
-                    target_up = upside_movement * (take_percentage / 100.0)
-                    target_down = downside_movement * (stop_percentage / 100.0)
+                    # Sistema dinâmico: usar % configurados para scalping ou Alpha Vantage para outros
+                    if profile == 'scalping' and take_percentage is not None and stop_percentage is not None:
+                        # Para scalping usar % configurados
+                        target_up = upside_movement * (take_percentage / 100.0)
+                        target_down = downside_movement * (stop_percentage / 100.0)
+                    else:
+                        # Para outros perfis usar Alpha Vantage automático (75% upside, 50% downside)
+                        target_up = upside_movement * 0.75
+                        target_down = downside_movement * 0.50
                     
                     if up_move >= target_up:
                         successful_ups += 1

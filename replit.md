@@ -79,6 +79,9 @@ Preferred communication style: Simple, everyday language.
 - **Real-Time Calculator Updates**: Lot calculator now updates all values instantly when parameters change
 - **Brazil Timezone Integration**: All expiry times now use Brasília timezone (GMT-3) for accurate local timing
 - **Setup Status Management**: Active setups now show remaining time and prevent new conflicting signals until expiration or invalidation
+- **Fixed Trading Profile Differentiation (Aug 2025)**: Corrected critical bug where all trading profiles were using scalping parameters. Now each profile (Scalping, Intraday, Swing, Position) uses its specific stop/take/timeframe configurations
+- **Dynamic Success Rate Calculation**: Replaced fixed 88% success rate with real-time calculation based on technical indicator confluence (45-95% range)
+- **Profile-Specific Parameter Isolation**: Ensured scalping strategic levels only apply to scalping profile, while other profiles use Alpha Vantage automatic calculations
 
 # External Dependencies
 
