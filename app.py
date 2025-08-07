@@ -2085,27 +2085,27 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
             'philosophy': 'Velocidade + Volume + Precisão Cirúrgica'
         },
         'intraday': {
-            # Intraday: Equilibrio entre frequência e qualidade
-            'execute_now': 40,      # Score 40+ = EXECUTAR (moderado)
-            'wait_5_15min': 55,     # Score 55+ = Aguardar pouco
-            'wait_30_60min': 70,    # Score 70+ = Aguardar moderado
-            'wait_2_4h': 80,        # Score 80+ = Aguardar mais
+            # Intraday: REDUZIDO para facilitar sinais
+            'execute_now': 20,      # Score 20+ = EXECUTAR (era 40 - REDUZIDO)
+            'wait_5_15min': 35,     # Score 35+ = Aguardar pouco (era 55)
+            'wait_30_60min': 50,    # Score 50+ = Aguardar moderado (era 70)
+            'wait_2_4h': 65,        # Score 65+ = Aguardar mais (era 80)
             'philosophy': 'Equilibrio Frequência/Qualidade'
         },
         'swing': {
-            # Swing: Prioriza qualidade sobre frequência
-            'execute_now': 55,      # Score 55+ = EXECUTAR (seletivo)
-            'wait_5_15min': 70,     # Score 70+ = Aguardar pouco
-            'wait_30_60min': 80,    # Score 80+ = Aguardar moderado  
-            'wait_2_4h': 90,        # Score 90+ = Condições ideais
+            # Swing: REDUZIDO para facilitar sinais
+            'execute_now': 25,      # Score 25+ = EXECUTAR (era 55 - REDUZIDO)
+            'wait_5_15min': 40,     # Score 40+ = Aguardar pouco (era 70)
+            'wait_30_60min': 55,    # Score 55+ = Aguardar moderado (era 80)
+            'wait_2_4h': 70,        # Score 70+ = Condições ideais (era 90)
             'philosophy': 'Qualidade > Frequência'
         },
         'position': {
-            # Position: Muito seletivo, espera condições ideais
-            'execute_now': 70,      # Score 70+ = EXECUTAR (muito seletivo)
-            'wait_5_15min': 80,     # Score 80+ = Aguardar pouco
-            'wait_30_60min': 90,    # Score 90+ = Quase perfeito
-            'wait_2_4h': 95,        # Score 95+ = Setup perfeito
+            # Position: REDUZIDO para facilitar sinais
+            'execute_now': 30,      # Score 30+ = EXECUTAR (era 70 - REDUZIDO)
+            'wait_5_15min': 45,     # Score 45+ = Aguardar pouco (era 80)
+            'wait_30_60min': 60,    # Score 60+ = Quase perfeito (era 90)
+            'wait_2_4h': 75,        # Score 75+ = Setup perfeito (era 95)
             'philosophy': 'Máxima Seletividade'
         }
     }
@@ -2892,7 +2892,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
             'hold_period': '3-7 dias',
             'stop_multiplier': 1.5,
             'take_multiplier': 3.0,
-            'min_confidence': 70,
+            'min_confidence': 45,  # REDUZIDO: era 70
             'volatility_factor': 1.2,
             'components_weight': [0.20, 0.20, 0.15, 0.15, 0.15, 0.15],
             'validity_hours': 72,  # 3 dias de validade
@@ -2908,7 +2908,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
             'hold_period': '1-8 horas', 
             'stop_multiplier': 0.8,
             'take_multiplier': 1.6,
-            'min_confidence': 75,
+            'min_confidence': 50,  # REDUZIDO: era 75
             'volatility_factor': 1.0,
             'components_weight': [0.25, 0.15, 0.20, 0.10, 0.20, 0.10],
             'validity_hours': 4,  # 4 horas de validade
@@ -2924,7 +2924,7 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
             'hold_period': '1-4 semanas',
             'stop_multiplier': 2.5,
             'take_multiplier': 7.5,
-            'min_confidence': 65,
+            'min_confidence': 40,  # REDUZIDO: era 65
             'volatility_factor': 1.5,
             'components_weight': [0.15, 0.25, 0.10, 0.20, 0.15, 0.15],
             'validity_hours': 168,  # 1 semana de validade
@@ -6271,19 +6271,19 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
             'description': 'Scalping Ultra-Responsivo - Detecção micro-momentum + Volatilidade instantânea (3-5 períodos)'
         },
         'intraday': {
-            'base_success_rate': 0.76,    # 76% sucesso
+            'base_success_rate': 0.65,    # 65% sucesso (REDUZIDO para gerar mais sinais)
             'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
             'risk_per_trade': 1.2,        # 1.2% risco
             'description': 'Intraday - 100% Alpha Vantage: Stop/Take calculados automaticamente pela volatilidade real'
         },
         'swing': {
-            'base_success_rate': 0.78,    # 78% sucesso
+            'base_success_rate': 0.68,    # 68% sucesso (REDUZIDO para gerar mais sinais)
             'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
             'risk_per_trade': 1.8,        # 1.8% risco
             'description': 'Swing - 100% Alpha Vantage: Stop/Take baseados na probabilidade histórica real'
         },
         'position': {
-            'base_success_rate': 0.82,    # 82% sucesso
+            'base_success_rate': 0.70,    # 70% sucesso (REDUZIDO para gerar mais sinais)
             'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
             'risk_per_trade': 2.2,        # 2.2% risco
             'description': 'Position - 100% Alpha Vantage: Stop/Take otimizados por análise de longo prazo'
@@ -6347,13 +6347,13 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     else:
         adjustments -= 3
     
-    # Ajustar baseado na volatilidade
-    if 0.008 <= daily_vol <= 0.020:
-        adjustments += 5  # Volatilidade ideal
-    elif daily_vol > 0.030:
-        adjustments -= 8  # Muito volátil
-    elif daily_vol < 0.005:
-        adjustments -= 5  # Pouco volátil
+    # Ajustar baseado na volatilidade (MAIS FLEXÍVEL)
+    if 0.005 <= daily_vol <= 0.030:
+        adjustments += 5  # Volatilidade aceitável (range ampliado)
+    elif daily_vol > 0.050:
+        adjustments -= 6  # Muito volátil (penalidade menor)
+    elif daily_vol < 0.003:
+        adjustments -= 3  # Pouco volátil (penalidade menor)
     
     # Ajustar baseado no R/R
     rr_ratio = tp_final / stop_final if stop_final > 0 else 1.5
@@ -6378,19 +6378,22 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     stop_distance = stop_distance or 0.01
     tp_distance = tp_distance or 0.01
     
-    # Limites específicos por perfil para garantir diferenças reais
+    # Limites específicos por perfil MAIS FLEXÍVEIS para garantir geração de sinais
     if profile == 'scalping':
         stop_final = max(0.0008, min(0.006, stop_distance))  # 0.08% a 0.6% (ultra-apertado)
         tp_final = max(0.0015, min(0.010, tp_distance))      # 0.15% a 1.0% (targets menores e rápidos)
     elif profile == 'intraday':  
-        stop_final = max(0.003, min(0.015, stop_distance))  # 0.3% a 1.5% (moderado)
-        tp_final = max(0.005, min(0.025, tp_distance))      # 0.5% a 2.5% (equilibrado)
+        # CORRIGIDO: Limites mais flexíveis para permitir mais sinais
+        stop_final = max(0.0015, min(0.025, stop_distance))  # 0.15% a 2.5% (mais flexível)
+        tp_final = max(0.002, min(0.040, tp_distance))       # 0.2% a 4.0% (mais range)
     elif profile == 'swing':
-        stop_final = max(0.008, min(0.035, stop_distance))  # 0.8% a 3.5% (amplo)
-        tp_final = max(0.015, min(0.060, tp_distance))      # 1.5% a 6.0% (agressivo)
+        # CORRIGIDO: Limites mais flexíveis para permitir mais sinais
+        stop_final = max(0.003, min(0.050, stop_distance))   # 0.3% a 5.0% (mais flexível)
+        tp_final = max(0.005, min(0.080, tp_distance))       # 0.5% a 8.0% (mais range)
     else:  # position
-        stop_final = max(0.015, min(0.080, stop_distance))  # 1.5% a 8.0% (muito amplo)
-        tp_final = max(0.030, min(0.150, tp_distance))      # 3.0% a 15.0% (muito agressivo)
+        # CORRIGIDO: Limites mais flexíveis para permitir mais sinais
+        stop_final = max(0.005, min(0.100, stop_distance))   # 0.5% a 10.0% (mais flexível)
+        tp_final = max(0.010, min(0.200, tp_distance))       # 1.0% a 20.0% (muito mais range)
     
     # Garantir que variáveis finais não sejam None ou zero
     stop_final = stop_final or 0.01
