@@ -1096,37 +1096,24 @@ def main():
             st.session_state['bank_value'] = bank_value
             st.session_state['lot_size'] = lot_size
             
-            # Calculadora Independente de Risco/Retorno
+            # Calculadora Compacta de Risco/Retorno
             st.markdown("**🧮 Calculadora de Risco/Retorno**")
             
-            # Campos para inserir preços manuais
-            calc_col1, calc_col2, calc_col3 = st.columns(3)
+            # Layout compacto com 2 colunas para economizar espaço
+            price_col1, price_col2 = st.columns(2)
             
-            with calc_col1:
+            with price_col1:
                 entry_price = st.number_input(
-                    "📍 Preço de Entrada",
+                    "📍 Entrada",
                     min_value=0.00001,
                     max_value=100.0,
                     value=1.10000,
                     step=0.00001,
                     format="%.5f",
-                    help="Preço onde você entrará na operação",
+                    help="Preço de entrada da operação",
                     key="calc_entry_price"
                 )
                 
-            with calc_col2:
-                stop_price = st.number_input(
-                    "🛑 Stop Loss",
-                    min_value=0.00001,
-                    max_value=100.0,
-                    value=1.09920,
-                    step=0.00001,
-                    format="%.5f",
-                    help="Preço do stop loss",
-                    key="calc_stop_price"
-                )
-                
-            with calc_col3:
                 take_price = st.number_input(
                     "🎯 Take Profit",
                     min_value=0.00001,
@@ -1136,6 +1123,18 @@ def main():
                     format="%.5f",
                     help="Preço do take profit",
                     key="calc_take_price"
+                )
+                
+            with price_col2:
+                stop_price = st.number_input(
+                    "🛑 Stop Loss",
+                    min_value=0.00001,
+                    max_value=100.0,
+                    value=1.09920,
+                    step=0.00001,
+                    format="%.5f",
+                    help="Preço do stop loss",
+                    key="calc_stop_price"
                 )
             
             # Calcular valores baseados nos preços inseridos
@@ -1149,16 +1148,17 @@ def main():
             rr_ratio = profit_usd / risk_usd if risk_usd > 0 else 0
             volume_usd = lot_size * 100000 * entry_price
             
-            # Mostrar resultados
-            result_col1, result_col2, result_col3, result_col4 = st.columns(4)
+            # Resultados em layout compacto 2x2
+            st.markdown("**📊 Resultados:**")
             
-            with result_col1:
+            metrics_col1, metrics_col2 = st.columns(2)
+            
+            with metrics_col1:
                 st.metric("🛑 Risco", f"${risk_usd:.2f}", f"{stop_pips:.1f} pips")
-            with result_col2:
+                st.metric("⚖️ Relação R/R", f"1:{rr_ratio:.2f}")
+                
+            with metrics_col2:
                 st.metric("💰 Lucro", f"${profit_usd:.2f}", f"{take_pips:.1f} pips")
-            with result_col3:
-                st.metric("⚖️ R/R", f"1:{rr_ratio:.2f}")
-            with result_col4:
                 st.metric("📊 Volume", f"${volume_usd:,.0f}")
                 
             st.caption("💡 Calculadora independente - modifique os preços acima para calcular risco/retorno")
@@ -1173,19 +1173,18 @@ def main():
             risk_percent = (risk_usd / bank_value) * 100 if bank_value > 0 else 0
             profit_percent = (profit_usd / bank_value) * 100 if bank_value > 0 else 0
             
-            impact_col1, impact_col2 = st.columns(2)
-            with impact_col1:
-                st.metric(
-                    "📉 Risco da Banca",
-                    f"{risk_percent:.2f}%",
-                    f"${risk_usd:.2f}"
-                )
-            with impact_col2:
-                st.metric(
-                    "📈 Ganho da Banca", 
-                    f"{profit_percent:.2f}%",
-                    f"${profit_usd:.2f}"
-                )
+            # Impacto na banca de forma mais compacta
+            st.metric(
+                "📉 % Risco da Banca",
+                f"{risk_percent:.2f}%",
+                f"${risk_usd:.2f} de ${bank_value:,.0f}"
+            )
+            
+            st.metric(
+                "📈 % Ganho Potencial", 
+                f"{profit_percent:.2f}%",
+                f"${profit_usd:.2f} de ${bank_value:,.0f}"
+            )
             
             # Alertas de risco
             if risk_percent > 5:
