@@ -5739,8 +5739,11 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
         # Calcular níveis estratégicos de entrada
         if is_bullish:
             # SETUP DE COMPRA
-            # Entrada estratégica em pullback ao suporte
-            entry_level = max(micro_support, current_price * (1 - volatility * 0.8))
+            # Entrada estratégica em pullback ao suporte - sempre diferente do preço atual
+            pullback_distance = max(volatility * 1.2, 0.0008)  # Mínimo 8 pips de diferença
+            entry_level = current_price * (1 - pullback_distance)
+            # Garantir que use o suporte se for mais conservador
+            entry_level = max(micro_support, entry_level)
             stop_level = entry_level * (1 - 0.003)  # Stop 0.3% abaixo da entrada
             take_level = min(micro_resistance, entry_level * (1 + 0.005))  # Take próximo à resistência
             
@@ -5751,8 +5754,11 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
             
         else:
             # SETUP DE VENDA  
-            # Entrada estratégica em pullback à resistência
-            entry_level = min(micro_resistance, current_price * (1 + volatility * 0.8))
+            # Entrada estratégica em pullback à resistência - sempre diferente do preço atual
+            pullback_distance = max(volatility * 1.2, 0.0008)  # Mínimo 8 pips de diferença
+            entry_level = current_price * (1 + pullback_distance)
+            # Garantir que use a resistência se for mais conservador
+            entry_level = min(micro_resistance, entry_level)
             stop_level = entry_level * (1 + 0.003)  # Stop 0.3% acima da entrada
             take_level = max(micro_support, entry_level * (1 - 0.005))  # Take próximo ao suporte
             
