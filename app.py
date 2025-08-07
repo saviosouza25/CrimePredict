@@ -823,7 +823,7 @@ def main():
             preset_choice = st.selectbox(
                 "Estratégia Temporal:",
                 list(temporal_presets.keys()),
-                index=1,  # Default Intraday
+                index=0,  # Default Scalping
                 help="Presets otimizados para máxima precisão entre intervalo e horizonte",
                 key="temporal_preset_selectbox"
             )
@@ -1817,9 +1817,6 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     
     # Get basic bank value first
     bank_value = st.session_state.get('bank_value', 10000)  # Default $10,000
-    
-    # FORÇAR DETECÇÃO DE SCALPING para debug
-    st.write(f"🔍 DEBUG: Trading style detectado: {trading_style}")
     
     if trading_style == 'scalping':
         # SCALPING ESTRATÉGICO: Calcular níveis técnicos de entrada ao invés de entrada imediata
