@@ -2987,19 +2987,19 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
         else:
             technical_components.append(f"RSI Scalping Neutro({rsi:.1f}): AGUARDAR VOLATILIDADE")
     
-    elif trading_style == 'intraday':  # Day Trading - RSI mais sensível
-        if rsi < 30:  # Oversold para day trading
+    elif trading_style == 'intraday':  # Day Trading - RSI CORRIGIDO
+        if rsi < 30:  # Oversold extremo
             technical_strength += 0.9
             technical_components.append(f"RSI Day Trade Oversold({rsi:.1f}): COMPRA FORTE")
-        elif rsi < 40:
+        elif rsi < 50:  # Abaixo da linha central = COMPRA
             technical_strength += 0.5
-            technical_components.append(f"RSI Day Trade Favorável({rsi:.1f}): COMPRA")
-        elif rsi > 70:  # Overbought para day trading
-            technical_strength -= 0.9
-            technical_components.append(f"RSI Day Trade Overbought({rsi:.1f}): VENDA FORTE")
-        elif rsi > 60:
-            technical_strength -= 0.5
-            technical_components.append(f"RSI Day Trade Desfavorável({rsi:.1f}): VENDA")
+            technical_components.append(f"RSI Day Trade Baixo({rsi:.1f}): COMPRA")
+        elif rsi > 70:  # Overbought - CUIDADO, não venda forte
+            technical_strength -= 0.3  # REDUZIDO: era -0.9
+            technical_components.append(f"RSI Day Trade Overbought({rsi:.1f}): CUIDADO")
+        elif rsi > 50:  # Acima da linha central = COMPRA (momentum positivo)
+            technical_strength += 0.3  # CORRIGIDO: era -0.5 (VENDA)
+            technical_components.append(f"RSI Day Trade Alto({rsi:.1f}): COMPRA (Momentum)")
         else:
             technical_components.append(f"RSI Day Trade Neutro({rsi:.1f}): NEUTRO")
     
