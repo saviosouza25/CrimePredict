@@ -2190,7 +2190,7 @@ def display_opportunity_ranking(results):
                     <p style="margin: 0.2rem 0; color: #666;">
                         <strong>{execution['direction']} {strength_text}</strong> | 
                         Preço: {current_price:.5f} | 
-                        Confiança: {execution['confidence']}%
+                        Confiança: {execution.get('confidence', execution.get('expected_success_rate', 75.0)):.1f}%
                     </p>
                 </div>
                 <div style="text-align: right;">
