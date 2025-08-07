@@ -2237,15 +2237,17 @@ def display_scalping_strategic_setup(pair, execution, result):
         setup_col1, setup_col2 = st.columns(2)
         
         with setup_col1:
-            st.markdown("### 🎯 Setup Principal")
+            st.markdown("### 🎯 Parâmetros de Entrada")
             primary = execution['primary_setup']
             st.info(f"**{primary['name']}**")
             
             setup_data = [
-                f"**🎯 Entrada:** {primary['entry_price']:.5f}",
-                f"**🛑 Stop:** {primary['stop_loss']:.5f}", 
-                f"**💰 Take:** {primary['take_profit']:.5f}",
-                f"**📏 Distância:** {primary['pips_to_entry']:.1f} pips",
+                f"**📊 Preço Atual:** {execution['current_price']:.5f}",
+                f"**🎯 Preço de Entrada Ideal:** {primary['entry_price']:.5f}",
+                f"**🛑 Stop Loss:** {primary['stop_loss']:.5f}", 
+                f"**💰 Take Profit:** {primary['take_profit']:.5f}",
+                f"**⏰ Tempo Válido:** {execution['validity_time']} minutos",
+                f"**📏 Distância para Entrada:** {primary['pips_to_entry']:.1f} pips",
                 f"**⚖️ R/R:** 1:{primary['risk_reward_ratio']:.1f}"
             ]
             
@@ -2260,10 +2262,12 @@ def display_scalping_strategic_setup(pair, execution, result):
             st.warning(f"**{breakout['name']}**")
             
             breakout_data = [
-                f"**🎯 Entrada:** {breakout['entry_price']:.5f}",
-                f"**🛑 Stop:** {breakout['stop_loss']:.5f}",
-                f"**💰 Take:** {breakout['take_profit']:.5f}", 
-                f"**📏 Distância:** {breakout['pips_to_entry']:.1f} pips",
+                f"**📊 Preço Atual:** {execution['current_price']:.5f}",
+                f"**🎯 Preço de Entrada Ideal:** {breakout['entry_price']:.5f}",
+                f"**🛑 Stop Loss:** {breakout['stop_loss']:.5f}",
+                f"**💰 Take Profit:** {breakout['take_profit']:.5f}", 
+                f"**⏰ Tempo Válido:** {execution['validity_time']} minutos",
+                f"**📏 Distância para Entrada:** {breakout['pips_to_entry']:.1f} pips",
                 f"**⚖️ R/R:** 1:{breakout['risk_reward_ratio']:.1f}"
             ]
             
