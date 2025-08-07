@@ -5583,16 +5583,29 @@ def run_profile_specific_analysis(current_price, pair, sentiment_score, df_with_
         analysis_result['unified_confidence'] = 0.5
         analysis_result['model_confidence'] = 0.5
     
-    # Add market direction based on signal strength
+    # Add market direction based on signal strength with profile-specific thresholds
     signal_strength = abs(analysis_result['unified_signal'])
     confidence_level = analysis_result['unified_confidence']
     
-    if signal_strength > 0.6 and confidence_level > 0.75:
-        direction = 'COMPRA FORTE' if analysis_result['unified_signal'] > 0 else 'VENDA FORTE'
-    elif signal_strength > 0.3 and confidence_level > 0.6:
-        direction = 'COMPRA' if analysis_result['unified_signal'] > 0 else 'VENDA'
+    # Get trading profile for adaptive thresholds
+    profile = analysis_result.get('profile', 'swing')
+    
+    if profile == 'scalping':
+        # SCALPING: Limiares mais baixos para detecção rápida de micro-movimentos
+        if signal_strength > 0.25 and confidence_level > 0.55:
+            direction = 'COMPRA FORTE' if analysis_result['unified_signal'] > 0 else 'VENDA FORTE'
+        elif signal_strength > 0.15 and confidence_level > 0.45:
+            direction = 'COMPRA' if analysis_result['unified_signal'] > 0 else 'VENDA'
+        else:
+            direction = 'NEUTRO'
     else:
-        direction = 'NEUTRO'
+        # OUTROS PERFIS: Limiares padrão para movimentos maiores
+        if signal_strength > 0.6 and confidence_level > 0.75:
+            direction = 'COMPRA FORTE' if analysis_result['unified_signal'] > 0 else 'VENDA FORTE'
+        elif signal_strength > 0.3 and confidence_level > 0.6:
+            direction = 'COMPRA' if analysis_result['unified_signal'] > 0 else 'VENDA'
+        else:
+            direction = 'NEUTRO'
     
     analysis_result['market_direction'] = direction
         
@@ -5636,19 +5649,29 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
             
             # PERFIL ESPECÍFICO: Parâmetros únicos para cada estratégia
             if profile == 'scalping':
-                # SCALPING: Ultra-curto prazo - movimentos de tick/minuto
-                window = min(3, len(df))  # Janela muito curta
+                # SCALPING: Ultra-responsivo para micro-movimentos
+                window = min(5, len(df))  # Janela micro-temporal
                 recent_data = df.tail(window)
                 
-                # Movimentos micro - baseados em volatilidade intrabar
-                tick_volatility = df['close'].tail(10).pct_change().std() if len(df) >= 10 else daily_vol
-                upside_movement = tick_volatility * 2.5  # Targets menores e rápidos
-                downside_movement = tick_volatility * 1.8  # Stops mais apertados
+                # Análise tick-por-tick para máxima sensibilidade
+                last_3_candles = df['close'].tail(3)
+                last_5_candles = df['close'].tail(5)
                 
-                # Multiplica por fator de velocidade do scalping
-                scalping_acceleration = 1.3
-                upside_movement *= scalping_acceleration
-                downside_movement *= scalping_acceleration
+                # Volatilidade instantânea (últimos 3 períodos)
+                instant_volatility = last_3_candles.pct_change().std() if len(last_3_candles) >= 2 else daily_vol
+                micro_volatility = last_5_candles.pct_change().std() if len(last_5_candles) >= 2 else daily_vol
+                
+                # Detecção de momentum micro (amplificado para sensibilidade)
+                micro_momentum = (last_3_candles.iloc[-1] - last_3_candles.iloc[0]) / last_3_candles.iloc[0]
+                
+                # Movimentos otimizados para scalping ultra-rápido
+                upside_movement = max(instant_volatility * 2.0, micro_volatility * 1.5) * (1 + abs(micro_momentum))
+                downside_movement = max(instant_volatility * 1.5, micro_volatility * 1.2) * (1 + abs(micro_momentum))
+                
+                # Fator de responsividade aumentado para scalping
+                scalping_responsiveness = 1.6  # Mais agressivo para micro-detecção
+                upside_movement *= scalping_responsiveness
+                downside_movement *= scalping_responsiveness
                 
             elif profile == 'intraday':
                 # INTRADAY: Movimentos do dia - sessão completa
@@ -5790,10 +5813,10 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     # Configurações específicas: cada perfil tem sua previsão Alpha Vantage
     profile_base_configs = {
         'scalping': {
-            'base_success_rate': 0.85,    # 85% sucesso (mais assertivo)
-            'movement_factor': 0.8,       # Usa 80% do movimento (mais conservador nos targets)
+            'base_success_rate': 0.88,    # 88% sucesso (ultra-assertivo para micro-entradas)
+            'movement_factor': 1.0,       # Usa 100% do movimento micro detectado
             'risk_per_trade': 0.6,        # 0.6% risco (menor risco por trade para mais frequência)
-            'description': 'Scalping Ultra-Assertivo - Order Flow + Volume Profile (2-3 períodos micro) + Breakouts voláteis'
+            'description': 'Scalping Ultra-Responsivo - Detecção micro-momentum + Volatilidade instantânea (3-5 períodos)'
         },
         'intraday': {
             'base_success_rate': 0.76,    # 76% sucesso
