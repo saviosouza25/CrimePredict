@@ -788,22 +788,7 @@ def main():
             st.session_state['stop_percentage'] = stop_percentage
             st.session_state['take_percentage'] = take_percentage
             
-            # Mostrar configuração fixa do scalping
-            with st.expander("⚡ Configuração Scalping (Otimizada)", expanded=False):
-                st.success("🎯 **SCALPING ULTRA-OTIMIZADO**: Parâmetros fixos para máxima eficiência")
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("Stop Loss", "8 pips (0.08%)", help="Fixo e otimizado para scalping real")
-                with col2:
-                    st.metric("Take Profit", "12 pips (0.12%)", help="Fixo e otimizado para scalping real")
-                
-                # Calcular e mostrar R/R
-                rr_ratio = 1.5  # 12/8 = 1.5
-                st.metric("Risk/Reward Ratio", f"{rr_ratio:.1f}", help="Relação ideal para scalping de alta frequência")
-                
-                st.info("⚡ **Estratégia**: Stops apertados + Takes conservadores = Alta taxa de acerto")
-                st.success("✅ **R/R Ideal**: 1.5 - Perfeito para operações de alta frequência")
+
         else:
             # Para outros estilos, não mostrar interface - usar cálculos automáticos do Alpha Vantage
             # Os parâmetros serão definidos automaticamente com base na análise de probabilidade real
