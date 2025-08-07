@@ -2233,48 +2233,25 @@ def display_scalping_strategic_setup(pair, execution, result):
         </div>
         """, unsafe_allow_html=True)
         
-        # Setup Principal e Alternativo em colunas
-        setup_col1, setup_col2 = st.columns(2)
+        # Parâmetros de Entrada (Setup Único)
+        st.markdown("### 🎯 Parâmetros de Entrada")
+        primary = execution['primary_setup']
+        st.info(f"**{primary['name']}**")
         
-        with setup_col1:
-            st.markdown("### 🎯 Parâmetros de Entrada")
-            primary = execution['primary_setup']
-            st.info(f"**{primary['name']}**")
-            
-            setup_data = [
-                f"**📊 Preço Atual:** {execution['current_price']:.5f}",
-                f"**🎯 Preço de Entrada Ideal:** {primary['entry_price']:.5f}",
-                f"**🛑 Stop Loss:** {primary['stop_loss']:.5f}", 
-                f"**💰 Take Profit:** {primary['take_profit']:.5f}",
-                f"**⏰ Tempo Válido:** {execution['validity_time']} minutos",
-                f"**📏 Distância para Entrada:** {primary['pips_to_entry']:.1f} pips",
-                f"**⚖️ R/R:** 1:{primary['risk_reward_ratio']:.1f}"
-            ]
-            
-            for item in setup_data:
-                st.write(f"• {item}")
-                
-            st.success(f"✅ {primary['trigger_condition']}")
+        setup_data = [
+            f"**📊 Preço Atual:** {execution['current_price']:.5f}",
+            f"**🎯 Preço de Entrada Ideal:** {primary['entry_price']:.5f}",
+            f"**🛑 Stop Loss:** {primary['stop_loss']:.5f}", 
+            f"**💰 Take Profit:** {primary['take_profit']:.5f}",
+            f"**⏰ Tempo Válido:** {execution['validity_time']} minutos",
+            f"**📏 Distância para Entrada:** {primary['pips_to_entry']:.1f} pips",
+            f"**⚖️ R/R:** 1:{primary['risk_reward_ratio']:.1f}"
+        ]
         
-        with setup_col2:
-            st.markdown("### ⚡ Setup Alternativo")
-            breakout = execution['breakout_setup'] 
-            st.warning(f"**{breakout['name']}**")
+        for item in setup_data:
+            st.write(f"• {item}")
             
-            breakout_data = [
-                f"**📊 Preço Atual:** {execution['current_price']:.5f}",
-                f"**🎯 Preço de Entrada Ideal:** {breakout['entry_price']:.5f}",
-                f"**🛑 Stop Loss:** {breakout['stop_loss']:.5f}",
-                f"**💰 Take Profit:** {breakout['take_profit']:.5f}", 
-                f"**⏰ Tempo Válido:** {execution['validity_time']} minutos",
-                f"**📏 Distância para Entrada:** {breakout['pips_to_entry']:.1f} pips",
-                f"**⚖️ R/R:** 1:{breakout['risk_reward_ratio']:.1f}"
-            ]
-            
-            for item in breakout_data:
-                st.write(f"• {item}")
-                
-            st.warning(f"⚡ {breakout['trigger_condition']}")
+        st.success(f"✅ {primary['trigger_condition']}")
         
         st.divider()
         
@@ -5749,10 +5726,7 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
             stop_level = entry_level * (1 - 0.0008)  # Stop 8 pips (0.08%)
             take_level = entry_level * (1 + 0.0012)  # Take 12 pips (0.12%)
             
-            # Entrada alternativa em breakout
-            breakout_entry = micro_resistance * 1.0002  # Entrada acima da resistência
-            breakout_stop = micro_resistance * 0.9992   # Stop 8 pips abaixo da resistência
-            breakout_take = breakout_entry * (1 + 0.0012)  # Take 12 pips acima
+
             
         else:
             # SETUP DE VENDA  
@@ -5765,10 +5739,7 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
             stop_level = entry_level * (1 + 0.0008)  # Stop 8 pips (0.08%)
             take_level = entry_level * (1 - 0.0012)  # Take 12 pips (0.12%)
             
-            # Entrada alternativa em breakout
-            breakout_entry = micro_support * 0.9998  # Entrada abaixo do suporte
-            breakout_stop = micro_support * 1.0008   # Stop 8 pips acima do suporte  
-            breakout_take = breakout_entry * (1 - 0.0012)  # Take 12 pips abaixo
+
         
         # Calcular tempo de validade baseado na volatilidade
         if volatility > 0.002:  # Alta volatilidade
@@ -5809,16 +5780,7 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
                 'risk_reward_ratio': risk_reward
             },
             
-            # Setup Alternativo (Breakout)
-            'breakout_setup': {
-                'name': f"Breakout {'da Resistência' if is_bullish else 'do Suporte'}",
-                'entry_price': breakout_entry,
-                'stop_loss': breakout_stop,
-                'take_profit': breakout_take,
-                'trigger_condition': f"Breakout {'acima' if is_bullish else 'abaixo'} de {breakout_entry:.5f}",
-                'pips_to_entry': abs(current_price - breakout_entry) * 10000,
-                'risk_reward_ratio': abs(breakout_take - breakout_entry) / max(abs(breakout_entry - breakout_stop), 0.00001) * 10000
-            },
+
             
             # Informações gerais
             'current_price': current_price,
@@ -5839,8 +5801,7 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
             
             # Instruções de execução
             'execution_instructions': [
-                f"✅ Aguardar preço atingir {entry_level:.5f} para setup principal",
-                f"⚡ Alternativa: Breakout em {breakout_entry:.5f}",
+                f"✅ Aguardar preço atingir {entry_level:.5f} para entrada",
                 f"⏰ Sinal válido por {validity_minutes} minutos (até {expiry_time.strftime('%H:%M')})",
                 f"💰 Risco: ${risk_amount:.2f} ({position_size:.2f} lotes)",
                 f"🎯 R/R: 1:{risk_reward:.1f}"
