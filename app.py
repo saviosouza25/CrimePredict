@@ -2357,9 +2357,11 @@ def display_execution_positions(results):
                     st.markdown("### 📊 Parâmetros de Entrada")
                     entry_data = [
                         f"**Direção:** {execution['direction']} {execution['strength']}",
-                        f"**Preço de Entrada:** {execution['entry_price']:.5f}",
-                        f"**Stop Loss:** {execution['stop_loss']:.5f}",
-                        f"**Take Profit:** {execution['take_profit']:.5f}",
+                        f"**📊 Preço Atual:** {result.get('current_price', execution['entry_price']):.5f}",
+                        f"**🎯 Preço de Entrada Ideal:** {execution['entry_price']:.5f}",
+                        f"**🛑 Stop Loss:** {execution['stop_loss']:.5f}",
+                        f"**💰 Take Profit:** {execution['take_profit']:.5f}",
+                        f"**⏰ Tempo Válido:** Imediato (não-scalping)",
                         f"**Tamanho da Posição:** {execution['position_size']:.2f} lotes"
                     ]
                     for item in entry_data:
