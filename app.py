@@ -2510,7 +2510,8 @@ def display_detailed_summary(results):
             score = result['opportunity_score']
             
             direction_icon = "📈" if execution['direction'] == 'COMPRA' else "📉"
-            st.write(f"{i+1}. **{pair}** {direction_icon} - {execution['direction']} {execution['strength']} (Score: {score:.1f}) - {execution['market_timing']}")
+            market_timing = execution.get('market_timing', execution.get('expiry_timestamp', 'Tempo válido'))
+            st.write(f"{i+1}. **{pair}** {direction_icon} - {execution['direction']} {execution['strength']} (Score: {score:.1f}) - {market_timing}")
 
 def display_footer():
     """Display the footer section"""
