@@ -5619,7 +5619,7 @@ def calculate_ai_analysis_simple(df_with_indicators, current_price):
     except:
         return {'signal': 0.0, 'confidence': 0.3, 'method': 'fallback'}
 
-def calculate_success_probability_parameters(df, confidence, profile, signal_strength, stop_percentage=50, take_percentage=50):
+def calculate_success_probability_parameters(df, confidence, profile, signal_strength, stop_percentage=None, take_percentage=None):
     """Calcula movimento previsto por perfil baseado em análise Alpha Vantage específica"""
     
     try:
@@ -5633,6 +5633,7 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         downside_movement = 0.01
         upside_range = 0.01
         downside_range = 0.01
+        window = len(df)
         
         # Análise Alpha Vantage específica por perfil operacional
         if len(df) >= 50:  # Dados suficientes para análise robusta
@@ -5839,8 +5840,10 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     
     if profile == 'scalping':
         # SCALPING: Usar percentuais fixos otimizados
-        stop_distance = (opposite_movement or 0.01) * (stop_percentage / 100.0)
-        tp_distance = (predicted_movement or 0.01) * (take_percentage / 100.0)
+        stop_pct = stop_percentage if stop_percentage is not None else 20
+        take_pct = take_percentage if take_percentage is not None else 30
+        stop_distance = (opposite_movement or 0.01) * (stop_pct / 100.0)
+        tp_distance = (predicted_movement or 0.01) * (take_pct / 100.0)
     else:
         # OUTROS PERFIS: 100% Alpha Vantage - sem percentuais, baseado na volatilidade real
         # Stop: baseado na probabilidade histórica de movimento adverso
@@ -5889,8 +5892,8 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         'volatility_analyzed': daily_vol * 100,  # Volatilidade real analisada
         'data_points_used': len(df),
         'probability_calculation': f"Análise {profile.title()} com {len(df)} períodos Alpha Vantage",
-        'stop_reasoning': f"Stop: {'85% volatilidade histórica real' if profile != 'scalping' else f'{stop_percentage}% movimento contrário'} = {(stop_distance or 0.01)*100:.3f}%",
-        'take_reasoning': f"Take: {'72% potencial favorável real' if profile != 'scalping' else f'{take_percentage}% movimento favorável'} = {(tp_distance or 0.01)*100:.3f}%",
+        'stop_reasoning': f"Stop: {'85% volatilidade histórica real' if profile != 'scalping' else f'{stop_percentage or 20}% movimento contrário'} = {(stop_distance or 0.01)*100:.3f}%",
+        'take_reasoning': f"Take: {'72% potencial favorável real' if profile != 'scalping' else f'{take_percentage or 30}% movimento favorável'} = {(tp_distance or 0.01)*100:.3f}%",
         'movement_direction': movement_direction,
         'base_movement_pct': (predicted_movement or 0.01) * 100,
         'opposite_movement_pct': (opposite_movement or 0.01) * 100,
