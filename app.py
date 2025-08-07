@@ -2910,10 +2910,10 @@ def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicator
             'take_multiplier': 1.6,
             'min_confidence': 50,
             'volatility_factor': 1.0,
-            'components_weight': [0.45, 0.20, 0.25, 0.05, 0.03, 0.02],  # Técnica 45%, Tendência 20%, Volume 25%
+            'components_weight': [0.70, 0.15, 0.10, 0.02, 0.02, 0.01],  # Técnica DOMINANTE 70% (EMAs 20/200), outros secundários
             'validity_hours': 4,
-            'primary_indicators': ['RSI H1', 'EMA H1', 'Volume H1', 'MACD H1'],
-            'analysis_focus': 'RSI + EMA + Volume análise tradicional H1',
+            'primary_indicators': ['EMA 20/200 H1 (DOMINANTE)', 'RSI H1', 'Volume H1', 'MACD H1'],
+            'analysis_focus': 'EMA 20/200 DOMINANTE H1 + RSI + Volume (análise técnica tradicional)',
             'optimal_pairs': ['EUR/USD', 'GBP/USD'],
             'best_times': '13:30-17:00 UTC (Sobreposição Londres/NY)',
             'accuracy_rate': '88%'  # Maior precisão com foco técnico
@@ -5780,7 +5780,7 @@ def run_profile_specific_analysis(current_price, pair, sentiment_score, df_with_
         
         if analysis_type == 'technical':
             # Technical analysis
-            technical_result = calculate_technical_analysis(df_with_indicators)
+            technical_result = calculate_technical_analysis(df_with_indicators, trading_style)
             analysis_result['components']['technical'] = technical_result
             weighted_signal += technical_result['signal'] * weight
             
@@ -6513,8 +6513,8 @@ def calculate_risk_analysis_simple(df_with_indicators, current_price):
     except:
         return {'signal': -0.1, 'confidence': 0.4, 'volatility': 0.02}
 
-def calculate_technical_analysis(df_with_indicators):
-    """Calculate technical analysis signals from indicators"""
+def calculate_technical_analysis(df_with_indicators, trading_style='swing'):
+    """Calculate technical analysis signals from indicators - EMAs dominantes para intraday"""
     try:
         signals = []
         confidences = []
@@ -6560,6 +6560,30 @@ def calculate_technical_analysis(df_with_indicators):
                 bb_position = (close - bb_lower) / bb_width - 0.5
                 signals.append(bb_position)
             confidences.append(0.6)
+        
+        # EMA 20/200 - DOMINANTE para perfil intraday
+        ema_signal = 0
+        ema_confidence = 0
+        if 'ema_20' in df_with_indicators.columns and 'ema_200' in df_with_indicators.columns:
+            ema_20 = df_with_indicators['ema_20'].iloc[-1]
+            ema_200 = df_with_indicators['ema_200'].iloc[-1]
+            
+            if ema_20 > ema_200:
+                ema_signal = 0.8  # Sinal forte de COMPRA
+            else:
+                ema_signal = -0.8  # Sinal forte de VENDA
+            ema_confidence = 0.9  # Alta confiança
+            
+            # Para INTRADAY: EMAs são DOMINANTES (peso multiplicado)
+            if trading_style == 'intraday':
+                # Triplicar o peso das EMAs para dominar outros indicadores
+                for _ in range(3):  
+                    signals.append(ema_signal)
+                    confidences.append(ema_confidence)
+            else:
+                # Para outros perfis: EMAs com peso normal
+                signals.append(ema_signal)
+                confidences.append(ema_confidence)
         
         # Aggregate signals
         if signals:
