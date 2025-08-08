@@ -6682,9 +6682,9 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         stop_final = max(0.0008, min(0.006, stop_distance))  # 0.08% a 0.6% (ultra-apertado)
         tp_final = max(0.0015, min(0.010, tp_distance))      # 0.15% a 1.0% (targets menores e rápidos)
     elif profile == 'intraday':  
-        # CORRIGIDO: Limites mais flexíveis para permitir mais sinais
-        stop_final = max(0.0015, min(0.025, stop_distance))  # 0.15% a 2.5% (mais flexível)
-        tp_final = max(0.002, min(0.040, tp_distance))       # 0.2% a 4.0% (mais range)
+        # INTRADAY: Take FIXO de 60 pontos + Stop dinâmico
+        stop_final = max(0.0012, min(0.0035, stop_distance))  # 12-35 pontos como definido
+        tp_final = 0.006  # FORÇAR EXATAMENTE 60 pontos (0.006)
     elif profile == 'swing':
         # CORRIGIDO: Limites mais flexíveis para permitir mais sinais
         stop_final = max(0.003, min(0.050, stop_distance))   # 0.3% a 5.0% (mais flexível)
