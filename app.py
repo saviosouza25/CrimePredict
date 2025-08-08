@@ -4276,7 +4276,7 @@ def display_main_summary(results, analysis_mode):
         price_change = results.get('price_change', 0)
         recommendation = "📈 COMPRA" if price_change > 0 else "📉 VENDA" if price_change < 0 else "⚪ INDECISÃO"
     
-    confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
+    confidence_color = "green" if results.get('model_confidence', 0.5) > 0.7 else "orange" if results.get('model_confidence', 0.5) > 0.5 else "red"
     
     # Create full width layout to match header
     col1, col2, col3 = st.columns([0.1, 10, 0.1])
@@ -4285,7 +4285,7 @@ def display_main_summary(results, analysis_mode):
         # Enhanced display for unified analysis with operation setup
         if analysis_mode == 'unified' and 'market_direction' in results:
             direction = results['market_direction']
-            probability = results.get('success_probability', results['model_confidence'] * 100)
+            probability = results.get('success_probability', results.get('model_confidence', 0.5) * 100)
             
             # Color and icon based on direction
             direction_str = str(direction)  # Garantir que é string
@@ -4455,7 +4455,7 @@ def display_main_summary(results, analysis_mode):
         if 'recommendation_details' in results:
             st.markdown(f"""
             <div style="text-align: center; margin-bottom: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 10px;">
-                <p style="color: #666; margin: 0; font-size: 0.95rem;">{results['recommendation_details']}</p>
+                <p style="color: #666; margin: 0; font-size: 0.95rem;">{results.get('recommendation_details', 'Análise baseada em dados reais Alpha Vantage')}</p>
             </div>
             """, unsafe_allow_html=True)
         
@@ -4467,15 +4467,15 @@ def display_main_summary(results, analysis_mode):
                 </div>
                 <div style="min-width: 120px;">
                     <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Previsto</strong></p>
-                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results['predicted_price']:.5f}</p>
+                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results.get('predicted_price', results.get('current_price', 0)):.5f}</p>
                 </div>
                 <div style="min-width: 100px;">
                     <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Variação</strong></p>
-                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results['price_change_pct']:+.2f}%</p>
+                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results.get('price_change_pct', 0):+.2f}%</p>
                 </div>
                 <div style="min-width: 100px;">
                     <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Confiança</strong></p>
-                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results['model_confidence']:.0%}</p>
+                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results.get('model_confidence', 0.5):.0%}</p>
                 </div>
             </div>
         </div>
@@ -4483,8 +4483,8 @@ def display_main_summary(results, analysis_mode):
         
         # Calculate and display risk information
         current_price = results['current_price']
-        predicted_price = results['predicted_price']
-        confidence = results['model_confidence']
+        predicted_price = results.get('predicted_price', results.get('current_price', 0))
+        confidence = results.get('model_confidence', 0.5)
         
         # Get risk level and sentiment score from results if available
         risk_level_used = results.get('risk_level_used', 'Moderate')
@@ -5420,7 +5420,7 @@ def display_summary_tab(results, analysis_mode):
         price_change = results.get('price_change', 0)
         recommendation = "📈 COMPRA" if price_change > 0 else "📉 VENDA" if price_change < 0 else "⚪ INDECISÃO"
     
-    confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
+    confidence_color = "green" if results.get('model_confidence', 0.5) > 0.7 else "orange" if results.get('model_confidence', 0.5) > 0.5 else "red"
     
     st.markdown(f"""
     <div class="metric-card">
@@ -5428,11 +5428,11 @@ def display_summary_tab(results, analysis_mode):
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
             <div>
                 <p><strong>Preço Atual:</strong> {results['current_price']:.5f}</p>
-                <p><strong>Preço Previsto:</strong> {results['predicted_price']:.5f}</p>
+                <p><strong>Preço Previsto:</strong> {results.get('predicted_price', results.get('current_price', 0)):.5f}</p>
             </div>
             <div>
-                <p><strong>Variação:</strong> {results['price_change_pct']:+.2f}%</p>
-                <p><strong>Confiança:</strong> {results['model_confidence']:.0%}</p>
+                <p><strong>Variação:</strong> {results.get('price_change_pct', 0):+.2f}%</p>
+                <p><strong>Confiança:</strong> {results.get('model_confidence', 0.5):.0%}</p>
             </div>
         </div>
     </div>
@@ -5666,13 +5666,13 @@ def display_metrics_tab(results):
     with col1:
         st.markdown("**Preços:**")
         st.metric("Preço Atual", f"{results['current_price']:.5f}")
-        st.metric("Preço Previsto", f"{results['predicted_price']:.5f}")
+        st.metric("Preço Previsto", f"{results.get('predicted_price', results.get('current_price', 0)):.5f}")
         st.metric("Variação Absoluta", f"{results.get('price_change', 0):+.5f}")
     
     with col2:
         st.markdown("**Percentuais:**")
-        st.metric("Variação %", f"{results['price_change_pct']:+.2f}%")
-        st.metric("Confiança", f"{results['model_confidence']:.1%}")
+        st.metric("Variação %", f"{results.get('price_change_pct', 0):+.2f}%")
+        st.metric("Confiança", f"{results.get('model_confidence', 0.5):.1%}")
         
         if 'sentiment_score' in results:
             st.metric("Sentimento", f"{results['sentiment_score']:+.3f}")
@@ -5752,7 +5752,7 @@ def display_analysis_results():
     # Enhanced display for unified analysis with market direction and probability
     if analysis_mode == 'unified' and 'market_direction' in results:
         direction = results['market_direction']
-        probability = results.get('success_probability', results['model_confidence'] * 100)
+        probability = results.get('success_probability', results.get('model_confidence', 0.5) * 100)
         confluence = results.get('confluence_strength', 0)
         agreement = results.get('agreement_score', 0)
         
@@ -5802,27 +5802,27 @@ def display_analysis_results():
                 </div>
                 <div style="background: rgba(255,255,255,0.8); padding: 1rem; border-radius: 8px; border-left: 4px solid {direction_color};">
                     <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Previsão</strong></p>
-                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #333;">{results['predicted_price']:.5f}</p>
+                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #333;">{results.get('predicted_price', results.get('current_price', 0)):.5f}</p>
                 </div>
             </div>
             
             <p style="color: #666; margin: 0; font-size: 0.95rem;">
                 <strong>Análise Confluente:</strong> {agreement} componentes concordam com {confluence} sinais de alta força. 
-                Variação esperada: {results['price_change_pct']:+.2f}% | Confiança: {results['model_confidence']:.0%}
+                Variação esperada: {results.get('price_change_pct', 0):+.2f}% | Confiança: {results.get('model_confidence', 0.5):.0%}
             </p>
         </div>
         """, unsafe_allow_html=True)
     else:
         # Fallback to original display for other analysis modes
-        confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
+        confidence_color = "green" if results.get('model_confidence', 0.5) > 0.7 else "orange" if results.get('model_confidence', 0.5) > 0.5 else "red"
         
         st.markdown(f"""
         <div class="metric-card">
             <h3 style="color: {confidence_color}; margin: 0;">{recommendation}</h3>
             <p style="margin: 0.5rem 0;"><strong>Preço Atual:</strong> {results['current_price']:.5f}</p>
-            <p style="margin: 0.5rem 0;"><strong>Preço Previsto:</strong> {results['predicted_price']:.5f}</p>
-            <p style="margin: 0.5rem 0;"><strong>Variação:</strong> {results['price_change_pct']:+.2f}%</p>
-            <p style="margin: 0.5rem 0;"><strong>Confiança:</strong> {results['model_confidence']:.0%}</p>
+            <p style="margin: 0.5rem 0;"><strong>Preço Previsto:</strong> {results.get('predicted_price', results.get('current_price', 0)):.5f}</p>
+            <p style="margin: 0.5rem 0;"><strong>Variação:</strong> {results.get('price_change_pct', 0):+.2f}%</p>
+            <p style="margin: 0.5rem 0;"><strong>Confiança:</strong> {results.get('model_confidence', 0.5):.0%}</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -5833,15 +5833,15 @@ def display_analysis_results():
     with col1:
         st.metric(
             "Variação Prevista",
-            f"{results['price_change_pct']:+.2f}%",
+            f"{results.get('price_change_pct', 0):+.2f}%",
             f"{results.get('price_change', 0):+.5f}"
         )
     
     with col2:
         st.metric(
             "Confiança do Modelo",
-            f"{results['model_confidence']:.0%}",
-            "Alta" if results['model_confidence'] > 0.7 else "Baixa"
+            f"{results.get('model_confidence', 0.5):.0%}",
+            "Alta" if results.get('model_confidence', 0.5) > 0.7 else "Baixa"
         )
     
     with col3:
