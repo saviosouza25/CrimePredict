@@ -4272,7 +4272,9 @@ def display_main_summary(results, analysis_mode):
     if 'final_recommendation' in results:
         recommendation = results['final_recommendation']
     else:
-        recommendation = "📈 COMPRA" if results['price_change'] > 0 else "📉 VENDA" if results['price_change'] < 0 else "⚪ INDECISÃO"
+        # Fallback usando price_change se disponível
+        price_change = results.get('price_change', 0)
+        recommendation = "📈 COMPRA" if price_change > 0 else "📉 VENDA" if price_change < 0 else "⚪ INDECISÃO"
     
     confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
     
@@ -5042,9 +5044,9 @@ def display_main_summary(results, analysis_mode):
             adjusted_target = int(base_target * (1 + confidence_boost + sentiment_boost))
             
             # Direção do movimento baseada na mudança de preço
-            if results['price_change'] > 0:
+            if results.get('price_change', 0) > 0:
                 direction = "ALTA"
-            elif results['price_change'] < 0:
+            elif results.get('price_change', 0) < 0:
                 direction = "BAIXA"
             else:
                 direction = "LATERAL"
@@ -5414,7 +5416,9 @@ def display_summary_tab(results, analysis_mode):
     if 'final_recommendation' in results:
         recommendation = results['final_recommendation']
     else:
-        recommendation = "📈 COMPRA" if results['price_change'] > 0 else "📉 VENDA" if results['price_change'] < 0 else "⚪ INDECISÃO"
+        # Fallback usando price_change se disponível
+        price_change = results.get('price_change', 0)
+        recommendation = "📈 COMPRA" if price_change > 0 else "📉 VENDA" if price_change < 0 else "⚪ INDECISÃO"
     
     confidence_color = "green" if results['model_confidence'] > 0.7 else "orange" if results['model_confidence'] > 0.5 else "red"
     
@@ -5663,7 +5667,7 @@ def display_metrics_tab(results):
         st.markdown("**Preços:**")
         st.metric("Preço Atual", f"{results['current_price']:.5f}")
         st.metric("Preço Previsto", f"{results['predicted_price']:.5f}")
-        st.metric("Variação Absoluta", f"{results['price_change']:+.5f}")
+        st.metric("Variação Absoluta", f"{results.get('price_change', 0):+.5f}")
     
     with col2:
         st.markdown("**Percentuais:**")
@@ -5741,7 +5745,9 @@ def display_analysis_results():
     elif 'market_direction' in results:
         recommendation = f"🎯 {results['market_direction']}"
     else:
-        recommendation = "📈 COMPRA" if results['price_change'] > 0 else "📉 VENDA" if results['price_change'] < 0 else "⚪ INDECISÃO"
+        # Fallback usando price_change se disponível
+        price_change = results.get('price_change', 0)
+        recommendation = "📈 COMPRA" if price_change > 0 else "📉 VENDA" if price_change < 0 else "⚪ INDECISÃO"
     
     # Enhanced display for unified analysis with market direction and probability
     if analysis_mode == 'unified' and 'market_direction' in results:
@@ -5828,7 +5834,7 @@ def display_analysis_results():
         st.metric(
             "Variação Prevista",
             f"{results['price_change_pct']:+.2f}%",
-            f"{results['price_change']:+.5f}"
+            f"{results.get('price_change', 0):+.5f}"
         )
     
     with col2:
