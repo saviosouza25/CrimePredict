@@ -2149,8 +2149,72 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         df, confidence, profile, signal_strength, stop_percentage, take_percentage
     )
     
-    # Calculate stop loss and take profit based on PROBABILITY ANALYSIS (not ATR)
-    entry_price = current_price
+    # Calculate optimal entry price for intraday
+    if profile == 'intraday':
+        # CÁLCULO DO PREÇO DE ENTRADA IDEAL PARA INTRADAY
+        # Baseado em análise técnica + volatilidade + momentum
+        
+        # 1. Obter indicadores técnicos atuais
+        latest = df.iloc[-1] if len(df) > 0 else None
+        if latest is not None:
+            # Suporte e resistência micro
+            recent_high = df['high'].tail(5).max()
+            recent_low = df['low'].tail(5).min()
+            
+            # Médias móveis como referência
+            sma_20 = df['close'].tail(20).mean() if len(df) >= 20 else current_price
+            ema_9 = df['close'].ewm(span=9).mean().iloc[-1] if len(df) >= 9 else current_price
+            
+            # Volatilidade recente para ajuste fino
+            recent_volatility = df['close'].pct_change().tail(10).std() * current_price
+            
+            # 2. Calcular preço ideal baseado na direção
+            if is_buy:
+                # Para COMPRA: buscar preço ligeiramente abaixo do atual para melhor R:R
+                # Priorizar pullbacks ou rompimentos de EMA9
+                
+                # Verificar se está próximo de suporte para entrada melhor
+                support_distance = current_price - recent_low
+                ema_distance = current_price - ema_9
+                
+                # Entrada ideal: ligeiramente acima da EMA9 ou 20-40% do range até suporte
+                if current_price > ema_9:  # Tendência de alta
+                    ideal_pullback = min(recent_volatility * 0.3, support_distance * 0.3)
+                    entry_price = current_price - ideal_pullback
+                    # Garantir que não fique abaixo da EMA9
+                    entry_price = max(entry_price, ema_9 * 1.0002)
+                else:  # Rompimento de EMA9
+                    entry_price = ema_9 * 1.0005  # Ligeiramente acima da EMA9
+                    
+            else:  # VENDA
+                # Para VENDA: buscar preço ligeiramente acima do atual
+                resistance_distance = recent_high - current_price
+                ema_distance = ema_9 - current_price
+                
+                # Entrada ideal: ligeiramente abaixo da EMA9 ou 20-40% do range até resistência  
+                if current_price < ema_9:  # Tendência de baixa
+                    ideal_pullback = min(recent_volatility * 0.3, resistance_distance * 0.3)
+                    entry_price = current_price + ideal_pullback
+                    # Garantir que não fique acima da EMA9
+                    entry_price = min(entry_price, ema_9 * 0.9998)
+                else:  # Rompimento de EMA9 para baixo
+                    entry_price = ema_9 * 0.9995  # Ligeiramente abaixo da EMA9
+            
+            # 3. Validação de segurança
+            max_adjustment = current_price * 0.0015  # Máximo 15 pontos de ajuste
+            if is_buy:
+                entry_price = max(entry_price, current_price - max_adjustment)
+                entry_price = min(entry_price, current_price + max_adjustment * 0.3)
+            else:
+                entry_price = min(entry_price, current_price + max_adjustment) 
+                entry_price = max(entry_price, current_price - max_adjustment * 0.3)
+                
+        else:
+            # Fallback se não houver dados
+            entry_price = current_price
+    else:
+        # Para outros perfis, usar preço atual
+        entry_price = current_price
     
     if is_buy:
         stop_loss = entry_price * (1 - prob_params['stop_distance_pct'])
