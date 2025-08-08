@@ -6616,10 +6616,12 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         stop_distance = (opposite_movement or 0.01) * (stop_pct / 100.0)
         tp_distance = (predicted_movement or 0.01) * (take_pct / 100.0)
     elif profile == 'intraday':
-        # INTRADAY: Take fixo de 60 pontos + Stop dinâmico já calculado
+        # INTRADAY: Take fixo de 60 pontos + Stop dinâmico baseado em ATR
         tp_distance = 60 / 10000  # FORÇAR 60 pontos = 0.006
-        # Stop dinâmico já foi calculado no upside_movement
-        stop_distance = downside_range or 0.001  # Usar stop dinâmico já calculado
+        
+        # Stop dinâmico: usar o valor já calculado do downside_movement no início da função
+        # downside_movement foi calculado como ATR * 1.2 com limitadores (12-35 pontos)
+        stop_distance = downside_movement if downside_movement else 0.0020  # Fallback 20 pontos
     else:
         # SWING/POSITION: 100% Alpha Vantage - sem percentuais, baseado na volatilidade real
         # Stop: baseado na probabilidade histórica de movimento adverso
