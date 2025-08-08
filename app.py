@@ -6325,22 +6325,49 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
                 downside_movement *= scalping_responsiveness
                 
             elif profile == 'intraday':
-                # INTRADAY: Movimentos do dia - sessão completa
+                # INTRADAY CUSTOMIZADO: Take fixo 60 pontos + Stop dinâmico
                 window = min(25, len(df))  # Janela do dia de trading
                 recent_data = df.tail(window)
                 
-                # Análise de range diário mais amplo
-                daily_range = (recent_data['high'].max() - recent_data['low'].min()) / current_price
-                session_volatility = recent_data['close'].pct_change().std()
+                # TAKE PROFIT FIXO: 60 pontos sempre
+                take_profit_pips = 60
+                upside_movement = take_profit_pips / 10000  # Converter para percentual (0.006 = 60 pontos)
                 
-                # Targets baseados no range da sessão
-                upside_movement = daily_range * 0.35 + session_volatility * 4.0  # Targets médios
-                downside_movement = daily_range * 0.28 + session_volatility * 3.2  # Stops intermediários
-                
-                # Fator de sustentação do intraday
-                intraday_sustainability = 1.1
-                upside_movement *= intraday_sustainability
-                downside_movement *= intraday_sustainability
+                # STOP LOSS DINÂMICO: Baseado na volatilidade real (ATR)
+                if len(recent_data) >= 14:
+                    # Calcular True Range para ATR real
+                    high_low = recent_data['high'] - recent_data['low']
+                    high_close_prev = abs(recent_data['high'] - recent_data['close'].shift(1))
+                    low_close_prev = abs(recent_data['low'] - recent_data['close'].shift(1))
+                    
+                    # True Range = máximo dos 3 valores
+                    true_range = pd.DataFrame({
+                        'hl': high_low,
+                        'hc': high_close_prev, 
+                        'lc': low_close_prev
+                    }).max(axis=1)
+                    
+                    # ATR de 14 períodos (padrão do mercado)
+                    atr_14 = true_range.rolling(window=14).mean().iloc[-1]
+                    atr_percentage = atr_14 / current_price
+                    
+                    # Stop dinâmico: 1.2x ATR para segurança (não muito apertado)
+                    dynamic_stop_multiplier = 1.2
+                    downside_movement = atr_percentage * dynamic_stop_multiplier
+                    
+                    # Limitadores para manter risk:reward razoável
+                    min_stop_pips = 12  # Mínimo 12 pontos
+                    max_stop_pips = 35  # Máximo 35 pontos (R:R mínimo 1:1.7)
+                    
+                    stop_pips = downside_movement * 10000
+                    if stop_pips < min_stop_pips:
+                        downside_movement = min_stop_pips / 10000
+                    elif stop_pips > max_stop_pips:
+                        downside_movement = max_stop_pips / 10000
+                else:
+                    # Fallback: usar volatilidade da sessão
+                    session_volatility = recent_data['close'].pct_change().std()
+                    downside_movement = max(session_volatility * 1.8, 18 / 10000)  # Mínimo 18 pontos
                 
             elif profile == 'swing':
                 # Swing: análise de movimentos de médio prazo (15-50 períodos)
@@ -6388,13 +6415,17 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
                     up_move = (future_high - entry_price) / entry_price
                     down_move = (entry_price - future_low) / entry_price
                     
-                    # Sistema dinâmico: usar % configurados para scalping ou Alpha Vantage para outros
+                    # Sistema dinâmico: configurações específicas por perfil
                     if profile == 'scalping' and take_percentage is not None and stop_percentage is not None:
                         # Para scalping usar % configurados
                         target_up = upside_movement * (take_percentage / 100.0)
                         target_down = downside_movement * (stop_percentage / 100.0)
+                    elif profile == 'intraday':
+                        # Para intraday: usar take fixo de 60 pontos + stop dinâmico
+                        target_up = upside_movement  # 60 pontos já está definido
+                        target_down = downside_movement  # Stop dinâmico já calculado
                     else:
-                        # Para outros perfis usar Alpha Vantage automático (75% upside, 50% downside)
+                        # Para swing/position usar Alpha Vantage automático (75% upside, 50% downside)
                         target_up = upside_movement * 0.75
                         target_down = downside_movement * 0.50
                     
