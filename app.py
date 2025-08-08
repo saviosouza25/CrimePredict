@@ -2590,7 +2590,7 @@ def display_execution_positions(results):
     st.markdown("#### ⚡ Posições de Execução Prontas")
     st.info("💵 **Valores calculados automaticamente baseados na Calculadora de Lote configurada na sidebar**")
     
-    for result in results[:10]:  # Top 10 para execução
+    for result in results:  # Mostrar todas as posições encontradas
         pair = result['pair']
         execution = result['execution_position']
         
