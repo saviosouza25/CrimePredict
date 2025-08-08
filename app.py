@@ -1116,6 +1116,27 @@ def main():
         
         # Seção de análises especializadas em expander colapsável
         with st.expander("🎯 Análises Especializadas", expanded=False):
+            # Seleção do perfil de trading para análises especializadas
+            specialized_profile = st.selectbox(
+                "🎯 Perfil de Trading Especializado:",
+                options=[
+                    "Scalping (Técnica + Volume + Micro Tendência)",
+                    "Intraday (Análise Técnica Tradicional H1)", 
+                    "Swing (Todas com Pesos Equilibrados)",
+                    "Position (Sentiment + Tendência + LSTM)"
+                ],
+                index=2,  # Default to Swing
+                key="specialized_profile_select",
+                help="Escolha o perfil que define quais análises serão priorizadas e como serão ponderadas"
+            )
+            
+            # Mostrar descrição do perfil selecionado
+            profile_config = parse_analysis_type(specialized_profile)
+            st.info(f"📊 **{profile_config['description']}**")
+            st.caption(f"🎯 Foco: {profile_config['focus']} | ⏰ Timeframe: {profile_config['timeframe']}")
+            
+            st.markdown("---")
+            
             # Seleção do par de moedas
             market_type = st.session_state.get('market_type_select', 'Forex')
             if market_type == "Forex":
@@ -1311,24 +1332,32 @@ def main():
         
         if unified_analysis:
             st.session_state['analysis_mode'] = 'unified'
+            # Armazenar perfil especializado selecionado para usar na análise
+            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
             analyze_button = True
         elif technical_analysis:
             st.session_state['analysis_mode'] = 'technical'
+            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
             analyze_button = True
         elif sentiment_analysis:
             st.session_state['analysis_mode'] = 'sentiment'
+            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
             analyze_button = True
         elif risk_analysis:
             st.session_state['analysis_mode'] = 'risk'
+            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
             analyze_button = True
         elif ai_analysis:
             st.session_state['analysis_mode'] = 'ai_lstm'
+            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
             analyze_button = True
         elif volume_analysis:
             st.session_state['analysis_mode'] = 'volume'
+            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
             analyze_button = True
         elif trend_analysis:
             st.session_state['analysis_mode'] = 'trend'
+            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
             analyze_button = True
         
         # Botões auxiliares compactos
@@ -2907,23 +2936,75 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
             }
             
             # Executar análises baseadas no modo selecionado - argumentos corretos
+            # Obter perfil especializado se definido, senão usar trading_style padrão
+            specialized_profile = st.session_state.get('specialized_profile')
+            
             if analysis_mode == 'unified':
-                current_trading_style = st.session_state.get('trading_style', 'swing')
-                # Debug: verificar estratégia
-                status_text.text(f"🎯 Executando análise {current_trading_style.upper()}...")
-                results.update(run_unified_analysis(current_price, pair, sentiment_score, df_with_indicators, current_trading_style))
-            elif analysis_mode == 'technical':
-                results.update(run_technical_analysis(current_price, df_with_indicators))
-            elif analysis_mode == 'sentiment':
-                results.update(run_sentiment_analysis(current_price, pair, sentiment_score))
-            elif analysis_mode == 'risk':
-                results.update(run_risk_analysis(current_price, df_with_indicators))
-            elif analysis_mode == 'ai_lstm':
-                results.update(run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators))
-            elif analysis_mode == 'volume':
-                results.update(run_volume_analysis(current_price, df_with_indicators))
-            elif analysis_mode == 'trend':
-                results.update(run_trend_analysis(current_price, df_with_indicators))
+                if specialized_profile:
+                    # Usar análise baseada em perfil especializado (como no multi-pares)
+                    analysis_config = parse_analysis_type(specialized_profile)
+                    status_text.text(f"🎯 Executando análise {analysis_config['description']}...")
+                    
+                    # Usar run_profile_specific_analysis para análise baseada em perfil
+                    profile_result = run_profile_specific_analysis(
+                        current_price, pair, sentiment_score, df_with_indicators, 
+                        analysis_config['profile'], analysis_config
+                    )
+                    
+                    # Converter resultado do perfil para o formato esperado
+                    results.update({
+                        'market_direction': determine_market_direction_from_profile(profile_result),
+                        'model_confidence': profile_result.get('unified_confidence', 0.5),
+                        'success_probability': profile_result.get('unified_confidence', 0.5) * 100,
+                        'recommendation': get_recommendation_from_profile(profile_result),
+                        'profile_analysis': profile_result,
+                        'trading_style': analysis_config['profile']
+                    })
+                else:
+                    # Usar método tradicional se não há perfil especializado
+                    current_trading_style = st.session_state.get('trading_style', 'swing')
+                    status_text.text(f"🎯 Executando análise {current_trading_style.upper()}...")
+                    results.update(run_unified_analysis(current_price, pair, sentiment_score, df_with_indicators, current_trading_style))
+                    
+            elif analysis_mode in ['technical', 'sentiment', 'risk', 'ai_lstm', 'volume', 'trend']:
+                if specialized_profile:
+                    # Usar análise especializada baseada em perfil para análises individuais
+                    analysis_config = parse_analysis_type(specialized_profile)
+                    status_text.text(f"🎯 Executando {analysis_mode} com perfil {analysis_config['profile']}...")
+                    
+                    # Executar análise individual focada no perfil
+                    if analysis_mode == 'technical':
+                        individual_result = calculate_technical_analysis(df_with_indicators, analysis_config['profile'])
+                        results.update({'technical_result': individual_result, 'trading_style': analysis_config['profile']})
+                    elif analysis_mode == 'sentiment':
+                        individual_result = calculate_sentiment_analysis(sentiment_score, pair)
+                        results.update({'sentiment_result': individual_result, 'trading_style': analysis_config['profile']})
+                    elif analysis_mode == 'trend':
+                        individual_result = calculate_trend_analysis(df_with_indicators)
+                        results.update({'trend_result': individual_result, 'trading_style': analysis_config['profile']})
+                    elif analysis_mode == 'volume':
+                        individual_result = calculate_volume_analysis(df_with_indicators)
+                        results.update({'volume_result': individual_result, 'trading_style': analysis_config['profile']})
+                    elif analysis_mode == 'risk':
+                        individual_result = calculate_risk_analysis_simple(df_with_indicators, current_price)
+                        results.update({'risk_result': individual_result, 'trading_style': analysis_config['profile']})
+                    elif analysis_mode == 'ai_lstm':
+                        individual_result = calculate_ai_lstm_analysis(df_with_indicators, lookback_period, epochs)
+                        results.update({'ai_result': individual_result, 'trading_style': analysis_config['profile']})
+                else:
+                    # Usar métodos tradicionais se não há perfil especializado
+                    if analysis_mode == 'technical':
+                        results.update(run_technical_analysis(current_price, df_with_indicators))
+                    elif analysis_mode == 'sentiment':
+                        results.update(run_sentiment_analysis(current_price, pair, sentiment_score))
+                    elif analysis_mode == 'risk':
+                        results.update(run_risk_analysis(current_price, df_with_indicators))
+                    elif analysis_mode == 'ai_lstm':
+                        results.update(run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators))
+                    elif analysis_mode == 'volume':
+                        results.update(run_volume_analysis(current_price, df_with_indicators))
+                    elif analysis_mode == 'trend':
+                        results.update(run_trend_analysis(current_price, df_with_indicators))
             else:
                 results.update(run_basic_analysis(current_price, is_quick, sentiment_score))
             
@@ -6965,6 +7046,105 @@ def display_alpha_vantage_trend_results(analysis: Dict):
             
         st.write(f"- **Estratégia de Entrada:** {execution_plan.get('entry_strategy', 'N/A')}")
         st.write(f"- **Monitoramento:** {execution_plan.get('monitoring_frequency', 'N/A')}")
+
+# === FUNÇÕES AUXILIARES PARA ANÁLISES ESPECIALIZADAS COM PERFIL ===
+
+def determine_market_direction_from_profile(profile_result):
+    """Determina direção do mercado baseada no resultado da análise por perfil"""
+    unified_signal = profile_result.get('unified_signal', 0.0)
+    confidence = profile_result.get('unified_confidence', 0.5)
+    
+    if unified_signal > 0.02 and confidence > 0.7:
+        return "COMPRA FORTE"
+    elif unified_signal > 0.005 and confidence > 0.6:
+        return "COMPRA"
+    elif unified_signal < -0.02 and confidence > 0.7:
+        return "VENDA FORTE"
+    elif unified_signal < -0.005 and confidence > 0.6:
+        return "VENDA"
+    else:
+        return "NEUTRO"
+
+def get_recommendation_from_profile(profile_result):
+    """Gera recomendação baseada no resultado da análise por perfil"""
+    unified_signal = profile_result.get('unified_signal', 0.0)
+    confidence = profile_result.get('unified_confidence', 0.5)
+    direction = determine_market_direction_from_profile(profile_result)
+    
+    if confidence > 0.8:
+        strength = "FORTE"
+    elif confidence > 0.65:
+        strength = "MODERADA"
+    else:
+        strength = "FRACA"
+    
+    if "COMPRA" in direction:
+        return f"Recomendação de COMPRA {strength} (Confiança: {confidence*100:.1f}%)"
+    elif "VENDA" in direction:
+        return f"Recomendação de VENDA {strength} (Confiança: {confidence*100:.1f}%)"
+    else:
+        return f"Aguardar melhores condições (Confiança: {confidence*100:.1f}%)"
+
+def calculate_sentiment_analysis(sentiment_score, pair):
+    """Calcula análise de sentimento individual"""
+    if sentiment_score > 0.05:
+        sentiment_signal = sentiment_score * 0.8
+        sentiment_direction = "POSITIVO"
+    elif sentiment_score < -0.05:
+        sentiment_signal = sentiment_score * 0.6
+        sentiment_direction = "NEGATIVO"
+    else:
+        sentiment_signal = sentiment_score * 0.2
+        sentiment_direction = "NEUTRO"
+    
+    return {
+        'signal': sentiment_signal,
+        'direction': sentiment_direction,
+        'strength': abs(sentiment_signal),
+        'confidence': min(abs(sentiment_signal) * 2, 1.0),
+        'raw_score': sentiment_score
+    }
+
+def calculate_ai_lstm_analysis(df_with_indicators, lookback_period, epochs):
+    """Calcula análise AI/LSTM individual"""
+    try:
+        prices = df_with_indicators['close'].values
+        if len(prices) < lookback_period:
+            return {'signal': 0, 'direction': 'NEUTRO', 'strength': 0, 'confidence': 0}
+        
+        recent_prices = prices[-lookback_period:]
+        
+        # Cálculos simplificados de tendência e momentum
+        short_trend = (recent_prices[-1] - recent_prices[-5]) / recent_prices[-5] if len(recent_prices) >= 5 else 0
+        long_trend = (recent_prices[-1] - recent_prices[0]) / recent_prices[0]
+        volatility = np.std(recent_prices) / np.mean(recent_prices)
+        
+        # Fator de aprendizado baseado em épocas
+        learning_factor = min(1.0, epochs / 100)
+        
+        # Sinais principais
+        trend_signal = np.tanh(long_trend * 10) * 0.020
+        momentum_signal = np.tanh(short_trend * 15) * 0.015
+        volatility_signal = (0.02 - volatility) * 0.010
+        
+        if volatility > 0.015:
+            volatility_signal *= 0.8
+        
+        combined_signal = (trend_signal * 0.5 + momentum_signal * 0.3 + volatility_signal * 0.2) * learning_factor
+        
+        direction = "POSITIVO" if combined_signal > 0.001 else "NEGATIVO" if combined_signal < -0.001 else "NEUTRO"
+        
+        return {
+            'signal': combined_signal,
+            'direction': direction,
+            'strength': abs(combined_signal),
+            'confidence': min(abs(combined_signal) * 10, 1.0),
+            'learning_factor': learning_factor,
+            'volatility': volatility
+        }
+        
+    except Exception as e:
+        return {'signal': 0, 'direction': 'NEUTRO', 'strength': 0, 'confidence': 0, 'error': str(e)}
 
 if __name__ == "__main__":
     main()
