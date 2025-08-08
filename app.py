@@ -80,6 +80,148 @@ def manage_active_setups(pair, new_setup=None, check_validity=True):
     
     return None
 
+def analyze_intraday_optimal_entry(df, current_price, confidence, signal_strength, timing_score, opportunity_score, sentiment_score):
+    """
+    Sistema inteligente de timing para intraday - otimizado para atingir 60 pontos
+    Analisa múltiplos fatores técnicos para sugerir o melhor momento de entrada
+    """
+    import pytz
+    from datetime import datetime
+    
+    # Análise de fatores técnicos para entrada ótima
+    entry_factors = {}
+    entry_tips = []
+    optimal_score = 0
+    
+    if len(df) >= 20:
+        # 1. ANÁLISE DE VOLATILIDADE ATUAL vs HISTÓRICA
+        current_volatility = df['close'].pct_change().tail(5).std() * 10000  # Últimos 5 períodos em pips
+        historical_volatility = df['close'].pct_change().std() * 10000  # Volatilidade histórica
+        
+        volatility_ratio = current_volatility / max(historical_volatility, 0.01)
+        
+        if 0.8 <= volatility_ratio <= 1.3:  # Volatilidade ideal para 60 pontos
+            entry_factors['volatility'] = 25
+            entry_tips.append("✅ Volatilidade IDEAL para target de 60 pontos")
+        elif volatility_ratio > 1.5:  # Alta volatilidade
+            entry_factors['volatility'] = 15
+            entry_tips.append("⚡ Volatilidade ALTA - Potencial para 60+ pontos, mas maior risco")
+        elif volatility_ratio < 0.6:  # Baixa volatilidade
+            entry_factors['volatility'] = 5
+            entry_tips.append("⚠️ Volatilidade BAIXA - Aguardar aumento para facilitar 60 pontos")
+        else:
+            entry_factors['volatility'] = 10
+            
+        # 2. ANÁLISE DE MOMENTUM DIRECCIONAL
+        if len(df) >= 10:
+            short_ema = df['close'].tail(5).mean()  # EMA curta (5 períodos)
+            long_ema = df['close'].tail(10).mean()   # EMA longa (10 períodos)
+            
+            momentum_strength = abs((short_ema - long_ema) / long_ema) * 10000  # Em pips
+            
+            if momentum_strength >= 20:  # Momentum forte (20+ pips)
+                entry_factors['momentum'] = 20
+                direction = "alta" if short_ema > long_ema else "baixa"
+                entry_tips.append(f"🚀 Momentum FORTE para {direction} - Favorável para 60 pontos")
+            elif momentum_strength >= 10:  # Momentum moderado
+                entry_factors['momentum'] = 10
+                entry_tips.append("📈 Momentum moderado - Aguardar confirmação")
+            else:  # Momentum fraco
+                entry_factors['momentum'] = 5
+                entry_tips.append("😴 Momentum fraco - Aguardar impulso direcional")
+        
+        # 3. ANÁLISE DE SUPORTE/RESISTÊNCIA PRÓXIMOS
+        recent_high = df['high'].tail(20).max()
+        recent_low = df['low'].tail(20).min()
+        
+        distance_to_resistance = abs(recent_high - current_price) / current_price * 10000  # Em pips
+        distance_to_support = abs(current_price - recent_low) / current_price * 10000
+        
+        # Verificar se há espaço para 60 pontos
+        min_distance_needed = 70  # 60 pontos + margem de segurança
+        
+        if distance_to_resistance >= min_distance_needed and distance_to_support >= min_distance_needed:
+            entry_factors['levels'] = 20
+            entry_tips.append("🎯 ESPAÇO LIVRE para 60 pontos - Sem obstáculos técnicos próximos")
+        elif distance_to_resistance >= min_distance_needed or distance_to_support >= min_distance_needed:
+            entry_factors['levels'] = 15
+            entry_tips.append("⚡ Espaço limitado - Direção preferencial identificada")
+        else:
+            entry_factors['levels'] = 5
+            entry_tips.append("🚧 CUIDADO: Suporte/Resistência próximos - Dificultar 60 pontos")
+        
+        # 4. ANÁLISE DE HORÁRIO DA SESSÃO (Brasília GMT-3)
+        brasilia_tz = pytz.timezone('America/Sao_Paulo')
+        current_time = datetime.now(brasilia_tz)
+        hour_brasilia = current_time.hour
+        
+        # Horários ótimos para intraday (sessões com maior volume)
+        if 10 <= hour_brasilia <= 12:  # Manhã - Abertura London overlap
+            entry_factors['session'] = 20
+            entry_tips.append("🌅 HORÁRIO ÓTIMO: Sobreposição London/NY - Alto volume")
+        elif 14 <= hour_brasilia <= 17:  # Tarde - Pico de volume NY
+            entry_factors['session'] = 25
+            entry_tips.append("🔥 HORÁRIO PERFEITO: Pico do mercado NY - Volume máximo")
+        elif 8 <= hour_brasilia <= 10 or 17 <= hour_brasilia <= 19:  # Bons horários
+            entry_factors['session'] = 15
+            entry_tips.append("✅ Horário bom para intraday - Volume adequado")
+        else:  # Horários de baixo volume
+            entry_factors['session'] = 5
+            entry_tips.append("😴 Horário de baixo volume - Aguardar sessão principal")
+        
+        # 5. CONVERGÊNCIA DE SINAIS TÉCNICOS
+        if confidence >= 0.7 and signal_strength >= 0.6:
+            entry_factors['convergence'] = 15
+            entry_tips.append("🎯 CONFLUÊNCIA TÉCNICA FORTE - Sinais alinhados")
+        elif confidence >= 0.5 and signal_strength >= 0.4:
+            entry_factors['convergence'] = 10
+            entry_tips.append("✅ Confluência técnica moderada")
+        else:
+            entry_factors['convergence'] = 5
+            entry_tips.append("⚠️ Confluência técnica fraca - Aguardar melhor setup")
+    
+    # CÁLCULO DO SCORE FINAL OTIMIZADO
+    optimal_score = sum(entry_factors.values())
+    
+    # MENSAGEM DE TIMING PERSONALIZADA PARA INTRADAY
+    if optimal_score >= 85:
+        timing_msg = f"🟢 EXECUTAR AGORA - Setup PERFEITO para 60 pontos (Score: {optimal_score}/100)"
+        entry_tips.insert(0, "🎯 TODAS as condições estão alinhadas para sucesso!")
+    elif optimal_score >= 70:
+        timing_msg = f"🟢 EXECUTAR - Condições ÓTIMAS para 60 pontos (Score: {optimal_score}/100)"
+        entry_tips.insert(0, "✅ Condições muito favoráveis para target")
+    elif optimal_score >= 55:
+        timing_msg = f"🟡 AGUARDAR 15-30min - Melhorar condições (Score: {optimal_score}/100)"
+        entry_tips.insert(0, "⏳ Aguardar melhoria em 1-2 fatores para maximizar chances")
+    elif optimal_score >= 40:
+        timing_msg = f"🟠 AGUARDAR 1-2h - Condições inadequadas (Score: {optimal_score}/100)"
+        entry_tips.insert(0, "⚠️ Condições não ideais - risco de não atingir 60 pontos")
+    else:
+        timing_msg = f"🔴 EVITAR - Aguardar novo setup (Score: {optimal_score}/100)"
+        entry_tips.insert(0, "❌ Condições desfavoráveis - alta probabilidade de falha")
+    
+    # DICAS ESPECÍFICAS PARA MELHORAR TIMING
+    if optimal_score < 70:
+        missing_factors = []
+        if entry_factors.get('volatility', 0) < 15:
+            missing_factors.append("volatilidade adequada")
+        if entry_factors.get('momentum', 0) < 15:
+            missing_factors.append("momentum direcional")
+        if entry_factors.get('levels', 0) < 15:
+            missing_factors.append("espaço técnico livre")
+        if entry_factors.get('session', 0) < 15:
+            missing_factors.append("horário de alta liquidez")
+        
+        if missing_factors:
+            entry_tips.append(f"🔧 Para melhorar: aguarde {', '.join(missing_factors)}")
+    
+    return {
+        'timing_message': timing_msg,
+        'entry_tips': entry_tips,
+        'optimal_score': optimal_score,
+        'entry_factors': entry_factors
+    }
+
 def check_setup_invalidation(pair, current_price, stop_loss, take_profit):
     """
     Verifica se setup deve ser invalidado por atingir stop/take
@@ -2284,14 +2426,24 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         else:
             market_timing = f"⚫ Evitar - Aguardar Novo Ciclo 24h+ (Score {timing_score:.0f})"
     
-    # Adicionar contexto específico do perfil
-    profile_contexts = {
-        'scalping': " | Micro-movimentos ultra-rápidos",
-        'intraday': " | Movimentos da sessão diária", 
-        'swing': " | Movimentos multi-dia",
-        'position': " | Tendências semanais/mensais"
-    }
-    market_timing += profile_contexts.get(profile, "")
+    # SISTEMA ESPECIAL PARA INTRADAY: Timing otimizado para 60 pontos
+    if profile == 'intraday':
+        intraday_timing_analysis = analyze_intraday_optimal_entry(
+            df, current_price, confidence, signal_strength, timing_score, opportunity_score, sentiment_score
+        )
+        market_timing = intraday_timing_analysis['timing_message']
+        
+        # Adicionar dicas específicas ao resultado final
+        intraday_entry_tips = intraday_timing_analysis['entry_tips']
+    else:
+        # Contexto normal para outros perfis
+        profile_contexts = {
+            'scalping': " | Micro-movimentos ultra-rápidos",
+            'swing': " | Movimentos multi-dia",
+            'position': " | Tendências semanais/mensais"
+        }
+        market_timing += profile_contexts.get(profile, "")
+        intraday_entry_tips = []
     
     # Risk level assessment based on Alpha Vantage calculated stops (dinâmico)
     # Remove valores fixos - usa apenas análise real dos dados Alpha Vantage
@@ -2343,7 +2495,8 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         'movement_direction': prob_params.get('movement_direction', ''),
         'base_movement_pct': prob_params.get('base_movement_pct', 0),
         'opposite_movement_pct': prob_params.get('opposite_movement_pct', 0),
-        'profile_analysis_window': prob_params.get('profile_analysis_window', '')
+        'profile_analysis_window': prob_params.get('profile_analysis_window', ''),
+        'intraday_entry_tips': intraday_entry_tips  # Adicionar dicas de entrada intraday
     }
 
 def display_multi_pair_results():
@@ -2641,6 +2794,13 @@ def display_execution_positions(results):
                 with profile_col1:
                     st.info(f"**Perfil:** {execution.get('trading_profile', 'N/A')}")
                     st.info(f"**Timing:** {execution['market_timing']}")
+                    
+                    # DICAS ESPECÍFICAS DE ENTRADA INTRADAY
+                    if execution.get('intraday_entry_tips') and execution.get('trading_profile', '').lower() == 'intraday':
+                        with st.expander("💡 Dicas para Atingir 60 Pontos - Intraday", expanded=True):
+                            tips = execution['intraday_entry_tips']
+                            for tip in tips:
+                                st.write(f"• {tip}")
                     
                 with profile_col2:
                     risk_color = "🟢" if execution['risk_level'] == 'Baixo' else "🟡" if execution['risk_level'] == 'Moderado' else "🔴"
