@@ -2216,26 +2216,30 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
         # Para outros perfis, usar preço atual
         entry_price = current_price
     
+    # IMPORTANTE: Usar current_price para cálculos de análise (não entry_price)
+    # entry_price é apenas para exibição como "preço ideal de entrada"
+    calculation_price = current_price  # Sempre usar preço atual para análise
+    
     if is_buy:
-        stop_loss = entry_price * (1 - prob_params['stop_distance_pct'])
-        take_profit = entry_price * (1 + prob_params['tp_distance_pct'])
+        stop_loss = calculation_price * (1 - prob_params['stop_distance_pct'])
+        take_profit = calculation_price * (1 + prob_params['tp_distance_pct'])
     else:
-        stop_loss = entry_price * (1 + prob_params['stop_distance_pct'])
-        take_profit = entry_price * (1 - prob_params['tp_distance_pct'])
+        stop_loss = calculation_price * (1 + prob_params['stop_distance_pct'])
+        take_profit = calculation_price * (1 - prob_params['tp_distance_pct'])
     
     # Calculate position size based on probability-adjusted risk management
     risk_percentage = prob_params['banca_risk'] / 100
     risk_amount = bank_value * risk_percentage
     pip_value = 1  # Simplified - would need proper pip calculation
-    stop_distance_pips = abs(entry_price - stop_loss) * 10000  # Convert to pips
+    stop_distance_pips = abs(calculation_price - stop_loss) * 10000  # Convert to pips
     
     if stop_distance_pips > 0:
         position_size = risk_amount / stop_distance_pips
     else:
         position_size = 0.01  # Minimum position
     
-    # Calculate potential profit/loss
-    tp_distance_pips = abs(take_profit - entry_price) * 10000
+    # Calculate potential profit/loss (usando calculation_price para consistência)
+    tp_distance_pips = abs(take_profit - calculation_price) * 10000
     risk_reward_ratio = tp_distance_pips / stop_distance_pips if stop_distance_pips > 0 else 0
     
     potential_profit = tp_distance_pips * position_size
