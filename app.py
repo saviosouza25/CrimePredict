@@ -6616,12 +6616,45 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         stop_distance = (opposite_movement or 0.01) * (stop_pct / 100.0)
         tp_distance = (predicted_movement or 0.01) * (take_pct / 100.0)
     elif profile == 'intraday':
-        # INTRADAY: Take fixo de 60 pontos + Stop dinâmico baseado em ATR
-        tp_distance = 60 / 10000  # FORÇAR 60 pontos = 0.006
+        # INTRADAY: Take e Stop dinâmicos baseados em probabilidades reais e volatilidade
         
-        # Stop dinâmico: usar o valor já calculado do downside_movement no início da função
-        # downside_movement foi calculado como ATR * 1.2 com limitadores (12-35 pontos)
-        stop_distance = downside_movement if downside_movement else 0.0020  # Fallback 20 pontos
+        # Take Profit dinâmico: baseado na volatilidade real do mercado para intraday
+        # Usar ATR para determinar movimento realista em 2-6 horas de trading
+        if len(df) >= 14:
+            # Calcular ATR para take profit realista
+            recent_data = df.tail(25)  # Últimas 25 velas para análise intraday
+            high_low = recent_data['high'] - recent_data['low']
+            high_close_prev = abs(recent_data['high'] - recent_data['close'].shift(1))
+            low_close_prev = abs(recent_data['low'] - recent_data['close'].shift(1))
+            
+            true_range = pd.DataFrame({
+                'hl': high_low,
+                'hc': high_close_prev,
+                'lc': low_close_prev
+            }).max(axis=1)
+            
+            atr_14 = true_range.rolling(window=14).mean().iloc[-1]
+            atr_percentage = atr_14 / current_price
+            
+            # Take profit: 2.0x ATR para movimento realista intraday (30-50 pontos típico)
+            tp_multiplier = 2.0
+            tp_distance = atr_percentage * tp_multiplier
+            
+            # Limitadores para manter operações intraday realistas
+            min_take_pips = 25  # Mínimo 25 pontos
+            max_take_pips = 45  # Máximo 45 pontos (adequado para intraday)
+            
+            take_pips = tp_distance * 10000
+            if take_pips < min_take_pips:
+                tp_distance = min_take_pips / 10000
+            elif take_pips > max_take_pips:
+                tp_distance = max_take_pips / 10000
+        else:
+            # Fallback: 35 pontos padrão para intraday
+            tp_distance = 35 / 10000
+        
+        # Stop Loss dinâmico: já calculado anteriormente (downside_movement)
+        stop_distance = downside_movement if downside_movement else 0.0020
     else:
         # SWING/POSITION: 100% Alpha Vantage - sem percentuais, baseado na volatilidade real
         # Stop: baseado na probabilidade histórica de movimento adverso
@@ -6682,9 +6715,9 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
         stop_final = max(0.0008, min(0.006, stop_distance))  # 0.08% a 0.6% (ultra-apertado)
         tp_final = max(0.0015, min(0.010, tp_distance))      # 0.15% a 1.0% (targets menores e rápidos)
     elif profile == 'intraday':  
-        # INTRADAY: Take FIXO de 60 pontos + Stop dinâmico
-        stop_final = max(0.0012, min(0.0035, stop_distance))  # 12-35 pontos como definido
-        tp_final = 0.006  # FORÇAR EXATAMENTE 60 pontos (0.006)
+        # INTRADAY: Take e Stop dinâmicos baseados em volatilidade real
+        stop_final = max(0.0012, min(0.0035, stop_distance))  # 12-35 pontos baseado em ATR
+        tp_final = max(0.0025, min(0.0045, tp_distance))      # 25-45 pontos baseado em 2x ATR
     elif profile == 'swing':
         # CORRIGIDO: Limites mais flexíveis para permitir mais sinais
         stop_final = max(0.003, min(0.050, stop_distance))   # 0.3% a 5.0% (mais flexível)
