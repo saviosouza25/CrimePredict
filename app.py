@@ -6382,25 +6382,25 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     # Configurações específicas: cada perfil tem sua previsão Alpha Vantage
     profile_base_configs = {
         'scalping': {
-            'base_success_rate': 0.88,    # 88% sucesso (ultra-assertivo para micro-entradas)
+            # REMOVIDO: 'base_success_rate' - agora usa calculate_real_success_rate() dinâmico
             'movement_factor': 1.0,       # Usa 100% do movimento micro detectado
             'risk_per_trade': 0.6,        # 0.6% risco (menor risco por trade para mais frequência)
             'description': 'Scalping Ultra-Responsivo - Detecção micro-momentum + Volatilidade instantânea (3-5 períodos)'
         },
         'intraday': {
-            'base_success_rate': 0.72,    # 72% sucesso (AUMENTADO - análise técnica tradicional é mais precisa)
+            # REMOVIDO: 'base_success_rate' - agora usa calculate_real_success_rate() dinâmico
             'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
             'risk_per_trade': 1.2,        # 1.2% risco
             'description': 'Intraday - Análise Técnica Tradicional H1: RSI + EMA + Volume + MACD'
         },
         'swing': {
-            'base_success_rate': 0.68,    # 68% sucesso (REDUZIDO para gerar mais sinais)
+            # REMOVIDO: 'base_success_rate' - agora usa calculate_real_success_rate() dinâmico
             'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
             'risk_per_trade': 1.8,        # 1.8% risco
             'description': 'Swing - 100% Alpha Vantage: Stop/Take baseados na probabilidade histórica real'
         },
         'position': {
-            'base_success_rate': 0.70,    # 70% sucesso (REDUZIDO para gerar mais sinais)
+            # REMOVIDO: 'base_success_rate' - agora usa calculate_real_success_rate() dinâmico
             'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
             'risk_per_trade': 2.2,        # 2.2% risco
             'description': 'Position - 100% Alpha Vantage: Stop/Take otimizados por análise de longo prazo'
@@ -6438,43 +6438,24 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     
     # Sem ajustes artificiais - apenas dados Alpha Vantage puros com seus controles %
     
-    # Risk management baseado na taxa de sucesso real calculada
-    # Calcular taxa dinâmica baseada em confluência de fatores
-    base_rate = config['base_success_rate'] * 100  # Converter para %
-    adjustments = 0
+    # Risk management baseado na taxa de sucesso DINÂMICA real calculada
+    # CORRIGIDO: Usar calculate_real_success_rate ao invés de valores fixos
     
-    # Ajustar baseado na confiança (peso maior)
-    if confidence > 0.8:
-        adjustments += 12
-    elif confidence > 0.65:
-        adjustments += 8
-    elif confidence > 0.5:
-        adjustments += 4
-    else:
-        adjustments -= 5
+    # Calcular R/R real para a função
+    real_rr = (tp_distance / stop_distance) if (stop_distance and stop_distance > 0) else 1.5
     
-    # Ajustar baseado na força do sinal
-    signal_abs = abs(signal_strength)
-    if signal_abs > 0.7:
-        adjustments += 8
-    elif signal_abs > 0.5:
-        adjustments += 5
-    elif signal_abs > 0.3:
-        adjustments += 2
-    else:
-        adjustments -= 3
-    
-    # Ajustar baseado na volatilidade (MAIS FLEXÍVEL)
-    if 0.005 <= daily_vol <= 0.030:
-        adjustments += 5  # Volatilidade aceitável (range ampliado)
-    elif daily_vol > 0.050:
-        adjustments -= 6  # Muito volátil (penalidade menor)
-    elif daily_vol < 0.003:
-        adjustments -= 3  # Pouco volátil (penalidade menor)
-    
-    # Calcular taxa inicial dinâmica (sem R/R ainda)
-    dynamic_success_rate = base_rate + adjustments
-    dynamic_success_rate = max(45.0, min(95.0, dynamic_success_rate))  # Limitar entre 45-95%
+    # Usar função dinâmica que considera TODOS os fatores de confluência
+    dynamic_success_rate = calculate_real_success_rate(
+        analysis_result={
+            'components': {},  # Pode ser expandido para incluir componentes específicos
+            'unified_signal': signal_strength
+        },
+        confidence=confidence,
+        signal_strength=abs(signal_strength),
+        sentiment_score=sentiment_score,
+        volatility=daily_vol,
+        risk_reward_ratio=real_rr
+    )
     
     success_rate = dynamic_success_rate / 100  # Converter para decimal
     
@@ -6505,20 +6486,8 @@ def calculate_success_probability_parameters(df, confidence, profile, signal_str
     stop_final = stop_final or 0.01
     tp_final = tp_final or 0.01
     
-    # AGORA calcular ajuste baseado no R/R (após stop_final e tp_final serem definidos)
-    rr_ratio = tp_final / stop_final if stop_final > 0 else 1.5
-    rr_adjustment = 0
-    if rr_ratio >= 1.8:
-        rr_adjustment += 5
-    elif rr_ratio >= 1.4:
-        rr_adjustment += 3
-    elif rr_ratio >= 1.1:
-        rr_adjustment += 1
-    else:
-        rr_adjustment -= 10
-    
-    # Aplicar ajuste do R/R à taxa final
-    dynamic_success_rate = min(95.0, max(45.0, dynamic_success_rate + rr_adjustment))
+    # Taxa de sucesso dinâmica já calculada pela função calculate_real_success_rate
+    # que já considera todos os fatores incluindo R/R, volatilidade, confluência, etc.
     success_rate = dynamic_success_rate / 100
     
     # R/R real calculado baseado nos dados
