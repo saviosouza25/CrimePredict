@@ -2698,10 +2698,12 @@ def display_execution_positions(results):
                     st.info(f"**Timing:** {execution.get('market_timing', 'Imediato')}")
                     
                 with profile_col2:
-                    risk_color = "🟢" if execution['risk_level'] == 'Baixo' else "🟡" if execution['risk_level'] == 'Moderado' else "🔴"
-                    st.info(f"**Risco:** {risk_color} {execution['risk_level']}")
-                    sentiment_color = "🟢" if execution['sentiment_bias'] == 'Positivo' else "🔴" if execution['sentiment_bias'] == 'Negativo' else "🟡"
-                    st.info(f"**Sentimento:** {sentiment_color} {execution['sentiment_bias']}")
+                    risk_level = execution.get('risk_level', 'Moderado')
+                    risk_color = "🟢" if risk_level == 'Baixo' else "🟡" if risk_level == 'Moderado' else "🔴"
+                    st.info(f"**Risco:** {risk_color} {risk_level}")
+                    sentiment_bias = execution.get('sentiment_bias', 'Neutro')
+                    sentiment_color = "🟢" if sentiment_bias == 'Positivo' else "🔴" if sentiment_bias == 'Negativo' else "🟡"
+                    st.info(f"**Sentimento:** {sentiment_color} {sentiment_bias}")
             
             st.divider()
             
