@@ -1231,8 +1231,11 @@ def main():
 
     # Analysis buttons are now in sidebar - this section removed
     
-    # Process analysis requests - removed since no analysis buttons in interface anymore
-    # Analysis can be triggered programmatically or via other interface elements if needed
+    # Process multi-pair analysis if button was clicked
+    if 'multi_pair_analysis' in locals() and multi_pair_analysis:
+        # Get selected analysis type
+        multi_analysis_type = st.session_state.get('multi_analysis_type', 'Intraday (Análise Unificada Completa)')
+        run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs, multi_analysis_type)
     
     # Always show main header
     display_main_header()
