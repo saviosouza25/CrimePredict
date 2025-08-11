@@ -1044,72 +1044,11 @@ def main():
             # Não armazenar valores fixos no session state - deixar para o Alpha Vantage calcular
             pass
         
-        # Sistema unificado de Intervalo e Horizonte em expander colapsável
-        with st.expander("⏰ Configuração Temporal Unificada", expanded=False):
-            # Presets integrados para máxima coerência (usando valores exatos de HORIZONS)
-            temporal_presets = {
-                "Scalping (1-5 min)": {"interval": "5min", "horizon": "5 Minutos", "description": "Operações ultra-rápidas de 1-5 minutos"},
-                "Intraday (15-30 min)": {"interval": "15min", "horizon": "1 Hora", "description": "Operações no mesmo dia"},
-                "Swing (1-4 horas)": {"interval": "60min", "horizon": "4 Horas", "description": "Operações de alguns dias"},
-                "Position (Diário)": {"interval": "daily", "horizon": "1 Dia", "description": "Operações de posição"}
-            }
-            
-            preset_choice = st.selectbox(
-                "Estratégia Temporal:",
-                list(temporal_presets.keys()),
-                index=0,  # Default Scalping
-                help="Presets otimizados para máxima precisão entre intervalo e horizonte",
-                key="temporal_preset_selectbox"
-            )
-            
-            selected_preset = temporal_presets[preset_choice]
-            interval = selected_preset["interval"]
-            horizon = selected_preset["horizon"]
-            
-            # Mapear preset_choice para trading_style
-            trading_style_mapping = {
-                "Scalping (1-5 min)": "scalping",
-                "Intraday (15-30 min)": "intraday",
-                "Swing (1-4 horas)": "swing", 
-                "Position (Diário)": "position"
-            }
-            
-            # Definir trading_style baseado na seleção
-            trading_style = trading_style_mapping.get(preset_choice, "swing")
-            st.session_state['trading_style'] = trading_style
-            
-            # Mostrar configuração atual com estratégia
-            st.info(f"📊 **{preset_choice}** | Intervalo: {interval} | Horizonte: {horizon}")
-            st.caption(f"💡 {selected_preset['description']}")
-            st.success(f"🎯 **Estratégia Ativa:** {trading_style.upper()}")
-            
-            # Opção avançada para configuração manual (colapsável)
-            with st.expander("⚙️ Configuração Manual Avançada"):
-                st.warning("⚠️ Configuração manual pode reduzir a precisão se intervalo e horizonte não estiverem alinhados!")
-                
-                manual_interval = st.selectbox("Intervalo Manual:", list(INTERVALS.keys()), 
-                                             index=list(INTERVALS.keys()).index(interval), key="manual_interval_selectbox")
-                # Verificar se horizonte existe na lista, senão usar primeiro item
-                horizon_index = 0
-                try:
-                    horizon_index = HORIZONS.index(horizon)
-                except ValueError:
-                    horizon = HORIZONS[0]  # Usar o primeiro como fallback
-                
-                manual_horizon = st.selectbox("Horizonte Manual:", HORIZONS,
-                                            index=horizon_index, key="manual_horizon_selectbox")
-                
-                if st.checkbox("Usar Configuração Manual", key="manual_config_checkbox"):
-                    interval = manual_interval
-                    horizon = manual_horizon
-                    # Tentar manter o trading_style consistente mesmo no modo manual
-                    if "15min" in interval or "30min" in interval:
-                        st.session_state['trading_style'] = "intraday"
-                    elif "60min" in interval or "1hour" in interval:
-                        st.session_state['trading_style'] = "swing"
-                    elif "daily" in interval:
-                        st.session_state['trading_style'] = "position"
-                    st.error("🔧 Modo manual ativo - Verifique se intervalo e horizonte estão compatíveis!")
+        # Usar configurações padrão automáticas para intraday (removidas da interface)
+        interval = "15min"
+        horizon = "1 Hora" 
+        trading_style = "intraday"
+        st.session_state['trading_style'] = trading_style
         
         # Usar configuração de risco padrão (moderado)
         risk_level_en = "Moderate"
