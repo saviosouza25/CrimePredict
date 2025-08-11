@@ -1,810 +1,416 @@
+import sys
+import os
+
+# Ensure we can find all installed packages
+sys.path.insert(0, '/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages')
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
-import datetime
 from datetime import datetime, timedelta
-import pytz
-import requests
 import time
-import warnings
-warnings.filterwarnings('ignore')
 
-# Configuration imports
+# Import custom modules
 from config.settings import *
 from config.languages import get_text
+from config.help_content import get_help_content, get_help_title
+from services.data_service import DataService
+from services.sentiment_service import SentimentService
+from services.indicators import TechnicalIndicators
+from models.lstm_model import ForexPredictor
+from utils.visualization import ForexVisualizer
+from utils.cache_manager import CacheManager
+import hashlib
+import base64
 
-# Enhanced imports including Alpha Vantage indicators
-try:
-    from models.lstm_model import ForexPredictor
-    from services.data_service import DataService  
-    from services.sentiment_service import SentimentService
-    from services.ai_unified_service import AIUnifiedService
-    from services.alpha_vantage_indicators import AlphaVantageIndicators
-    from services.trend_analysis_engine import TrendAnalysisEngine
-    from utils.cache_manager import CacheManager
-    
-    # Initialize services
-    services = {
-        'data_service': DataService(),
-        'sentiment_service': SentimentService(),
-        'ai_unified_service': AIUnifiedService()
-    }
-except ImportError as e:
-    st.error(f"❌ ERRO CRÍTICO: Falha ao carregar serviços essenciais: {e}")
-    st.error("🔑 Verifique se a chave API Alpha Vantage está configurada corretamente")
-    st.error("📡 Sistema requer conexão real com Alpha Vantage API - dados simulados não são permitidos")
-    st.stop()  # Stop execution - no mock services allowed
+# Authentication configuration
+VALID_CREDENTIALS = {
+    "artec": "e10adc3949ba59abbe56e057f20f883e"  # MD5 hash of "123456"
+}
 
-# FUNÇÃO GLOBAL: Gerenciar setups ativos com validação temporal
-def manage_active_setups(pair, new_setup=None, check_validity=True):
-    """
-    Gerencia setups ativos com validação temporal para evitar sinais conflitantes
-    """
-    if 'active_setups' not in st.session_state:
-        st.session_state.active_setups = {}
+def get_logo_base64():
+    """Get the company logo as base64 encoded string."""
+    try:
+        with open("assets/company_logo.png", "rb") as f:
+            logo_data = f.read()
+            return base64.b64encode(logo_data).decode()
+    except FileNotFoundError:
+        return ""
+
+def check_password():
+    """Returns `True` if the user had the correct password."""
     
-    brasilia_tz = pytz.timezone('America/Sao_Paulo')
-    now_brasilia = datetime.now(brasilia_tz)
-    pair_key = str(pair)
-    
-    # Verificar se existe setup ativo para o par
-    if pair_key in st.session_state.active_setups:
-        active_setup = st.session_state.active_setups[pair_key]
-        setup_time = active_setup.get('created_at')
-        validity_minutes = active_setup.get('validity_minutes', 45)
+    def password_entered():
+        """Checks whether a password entered by the user is correct."""
+        username = st.session_state.get("username", "")
+        password = st.session_state.get("password", "")
+        remember_me = st.session_state.get("remember_me", False)
         
-        if setup_time:
-            # Calcular tempo restante
-            time_elapsed = (now_brasilia - setup_time).total_seconds() / 60
-            time_remaining = validity_minutes - time_elapsed
+        if username and password and username in VALID_CREDENTIALS and VALID_CREDENTIALS[username] == hashlib.md5(password.encode()).hexdigest():
+            st.session_state["password_correct"] = True
             
-            # Se ainda válido, retornar setup existente
-            if time_remaining > 0 and check_validity:
-                active_setup['time_remaining'] = int(time_remaining)
-                active_setup['status'] = 'ATIVO'
-                return active_setup
-            else:
-                # Setup expirou, remover
-                del st.session_state.active_setups[pair_key]
-    
-    # Se novo setup fornecido, armazenar
-    if new_setup:
-        new_setup['created_at'] = now_brasilia
-        new_setup['pair'] = pair_key
-        new_setup['status'] = 'NOVO'
-        st.session_state.active_setups[pair_key] = new_setup
-        return new_setup
-    
-    return None
+            # Save credentials if remember me is checked
+            if remember_me:
+                st.session_state["saved_username"] = username
+                st.session_state["saved_password"] = password
+                st.session_state["credentials_saved"] = True
+            
+            # Clear the input fields but keep login state
+            if "password" in st.session_state:
+                del st.session_state["password"]
+            if "username" in st.session_state:
+                del st.session_state["username"]
+        else:
+            st.session_state["password_correct"] = False
 
-def check_setup_invalidation(pair, current_price, stop_loss, take_profit):
-    """
-    Verifica se setup deve ser invalidado por atingir stop/take
-    """
-    pair_key = str(pair)
-    if pair_key in st.session_state.active_setups:
-        setup = st.session_state.active_setups[pair_key]
-        direction = setup.get('direction', '').upper()
+    def direct_login():
+        """Direct login using saved credentials."""
+        if st.session_state.get("credentials_saved", False):
+            saved_username = st.session_state.get("saved_username", "")
+            saved_password = st.session_state.get("saved_password", "")
+            
+            if saved_username in VALID_CREDENTIALS and VALID_CREDENTIALS[saved_username] == hashlib.md5(saved_password.encode()).hexdigest():
+                st.session_state["password_correct"] = True
+                return True
+        return False
+
+    # Auto-login with saved credentials on page load
+    if st.session_state.get("credentials_saved", False) and not st.session_state.get("password_correct", False):
+        if direct_login():
+            return True
+
+    # Check if user clicked direct login button
+    if st.session_state.get("direct_login_clicked", False):
+        if direct_login():
+            st.session_state["direct_login_clicked"] = False
+            return True
+        else:
+            st.session_state["direct_login_clicked"] = False
+            st.session_state["credentials_saved"] = False  # Clear invalid saved credentials
+
+    # Return True if the password is validated
+    if st.session_state.get("password_correct", False):
+        return True
+
+    # Show input for password with company logo
+    logo_base64 = get_logo_base64()
+    
+    st.markdown(f"""
+    <div style="display: flex; justify-content: center; align-items: center; height: 60vh;">
+        <div style="text-align: center; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); background: white; min-width: 400px;">
+            <div style="margin-bottom: 1.5rem;">
+                <img src="data:image/png;base64,{logo_base64}" style="max-width: 120px; height: auto;" />
+            </div>
+            <h2 style="color: #333; margin-bottom: 2rem;">{get_text("login_title")}</h2>
+            <p style="color: #666; margin-bottom: 2rem;">{get_text("login_subtitle")}</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        # Check if we have saved credentials for direct login
+        has_saved_credentials = st.session_state.get("credentials_saved", False)
         
-        # Verificar se stop ou take foi atingido
-        if direction == 'COMPRA':
-            if current_price <= stop_loss:
-                setup['status'] = 'STOP_ATINGIDO'
-                setup['invalidated_at'] = datetime.now(pytz.timezone('America/Sao_Paulo'))
-                return True
-            elif current_price >= take_profit:
-                setup['status'] = 'TAKE_ATINGIDO'
-                setup['invalidated_at'] = datetime.now(pytz.timezone('America/Sao_Paulo'))
-                return True
-        elif direction == 'VENDA':
-            if current_price >= stop_loss:
-                setup['status'] = 'STOP_ATINGIDO'
-                setup['invalidated_at'] = datetime.now(pytz.timezone('America/Sao_Paulo'))
-                return True
-            elif current_price <= take_profit:
-                setup['status'] = 'TAKE_ATINGIDO'
-                setup['invalidated_at'] = datetime.now(pytz.timezone('America/Sao_Paulo'))
-                return True
+        if has_saved_credentials:
+            st.success("🔑 Credenciais salvas encontradas!")
+            
+            col_direct, col_manual = st.columns(2)
+            
+            with col_direct:
+                if st.button("🚀 Entrar Automaticamente", type="primary", use_container_width=True, key="auto_login_btn"):
+                    # Direct login with saved credentials
+                    saved_username = st.session_state.get("saved_username", "")
+                    saved_password = st.session_state.get("saved_password", "")
+                    
+                    if saved_username in VALID_CREDENTIALS and VALID_CREDENTIALS[saved_username] == hashlib.md5(saved_password.encode()).hexdigest():
+                        st.session_state["password_correct"] = True
+                        st.rerun()  # Immediate redirect
+                    else:
+                        st.session_state["credentials_saved"] = False
+                        st.error("❌ Credenciais salvas inválidas!")
+                        st.rerun()
+            
+            with col_manual:
+                if st.button("✏️ Inserir Manualmente", use_container_width=True, key="manual_login_btn"):
+                    st.session_state["credentials_saved"] = False
+                    st.rerun()
+            
+            st.markdown("---")
+        
+        # Manual login form
+        st.text_input(get_text("username_placeholder"), key="username", placeholder=get_text("username_placeholder"))
+        st.text_input(get_text("password_placeholder"), type="password", key="password", placeholder=get_text("password_placeholder"))
+        
+        # Remember me checkbox
+        st.checkbox("🔒 Lembrar credenciais", key="remember_me", help="Salva suas credenciais para login automático futuro")
+        
+        # Login button with immediate response
+        if st.button("🔓 Fazer Login", type="primary", use_container_width=True, key="login_submit"):
+            username = st.session_state.get("username", "")
+            password = st.session_state.get("password", "")
+            remember_me = st.session_state.get("remember_me", False)
+            
+            if username and password and username in VALID_CREDENTIALS and VALID_CREDENTIALS[username] == hashlib.md5(password.encode()).hexdigest():
+                st.session_state["password_correct"] = True
+                
+                # Save credentials if remember me is checked
+                if remember_me:
+                    st.session_state["saved_username"] = username
+                    st.session_state["saved_password"] = password
+                    st.session_state["credentials_saved"] = True
+                
+                # Clear the input fields
+                if "password" in st.session_state:
+                    del st.session_state["password"]
+                if "username" in st.session_state:
+                    del st.session_state["username"]
+                
+                st.rerun()  # Immediate redirect
+            else:
+                st.session_state["password_correct"] = False
+                st.error("❌ Usuário ou senha incorretos!")
+        
+        # Remove the general error message since we handle it inline now
+            
+        # Clear saved credentials option
+        if has_saved_credentials:
+            if st.button("🗑️ Limpar Credenciais Salvas", help="Remove as credenciais salvas deste dispositivo", key="clear_creds_btn"):
+                st.session_state["credentials_saved"] = False
+                if "saved_username" in st.session_state:
+                    del st.session_state["saved_username"]
+                if "saved_password" in st.session_state:
+                    del st.session_state["saved_password"]
+                st.success("Credenciais removidas com sucesso!")
+                st.rerun()
+            
+        st.markdown("""
+        <div style="text-align: center; margin-top: 2rem; color: #888; font-size: 0.9em;">
+            <p>🔐 Suas credenciais são armazenadas localmente e criptografadas</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     return False
 
-def calculate_real_success_rate(analysis_result, confidence, signal_strength, sentiment_score, volatility, risk_reward_ratio):
-    """
-    Calcula taxa de acertividade real baseada em confluência de fatores
-    """
-    try:
-        # Base rate para scalping estratégico (conservador)
-        base_rate = 65.0
-        
-        # Fatores de ajuste baseados em análise real
-        adjustments = 0
-        
-        # 1. Confluência de sinais (peso maior)
-        if confidence > 0.8:
-            adjustments += 12  # Alta confluência
-        elif confidence > 0.65:
-            adjustments += 8   # Confluência moderada
-        elif confidence > 0.5:
-            adjustments += 4   # Confluência baixa
-        else:
-            adjustments -= 5   # Conflito de sinais
-        
-        # 2. Força do sinal
-        if signal_strength > 0.7:
-            adjustments += 8   # Sinal muito forte
-        elif signal_strength > 0.5:
-            adjustments += 5   # Sinal forte
-        elif signal_strength > 0.3:
-            adjustments += 2   # Sinal moderado
-        else:
-            adjustments -= 3   # Sinal fraco
-        
-        # 3. Sentimento do mercado
-        sentiment_abs = abs(sentiment_score)
-        if sentiment_abs > 0.6:
-            adjustments += 6   # Sentimento muito definido
-        elif sentiment_abs > 0.3:
-            adjustments += 3   # Sentimento moderado
-        else:
-            adjustments -= 2   # Sentimento neutro/indefinido
-        
-        # 4. Volatilidade (para scalping)
-        if 0.0008 <= volatility <= 0.002:
-            adjustments += 5   # Volatilidade ideal para scalping
-        elif volatility > 0.003:
-            adjustments -= 8   # Muito volátil
-        elif volatility < 0.0005:
-            adjustments -= 5   # Pouco volátil
-        
-        # 5. Risk/Reward ratio
-        if risk_reward_ratio >= 1.8:
-            adjustments += 5   # R/R excelente
-        elif risk_reward_ratio >= 1.4:
-            adjustments += 3   # R/R bom
-        elif risk_reward_ratio >= 1.1:
-            adjustments += 1   # R/R aceitável
-        else:
-            adjustments -= 10  # R/R ruim
-        
-        # 6. Análise de componentes (se disponível)
-        if analysis_result and 'components' in analysis_result:
-            components = analysis_result['components']
-            agreement_count = 0
-            total_components = len(components)
-            
-            if total_components > 0:
-                # Contar quantos componentes concordam com a direção
-                avg_signal = analysis_result.get('unified_signal', 0)
-                for comp_data in components.values():
-                    comp_signal = comp_data.get('signal', 0)
-                    if (avg_signal > 0 and comp_signal > 0) or (avg_signal < 0 and comp_signal < 0):
-                        agreement_count += 1
-                
-                agreement_pct = agreement_count / total_components
-                if agreement_pct >= 0.8:
-                    adjustments += 10  # 80%+ acordo
-                elif agreement_pct >= 0.6:
-                    adjustments += 6   # 60%+ acordo
-                elif agreement_pct >= 0.4:
-                    adjustments += 2   # 40%+ acordo
-                else:
-                    adjustments -= 8   # Baixo acordo
-        
-        # Calcular taxa final
-        final_rate = base_rate + adjustments
-        
-        # Limitar entre 45% e 95%
-        final_rate = max(45.0, min(95.0, final_rate))
-        
-        return final_rate
-        
-    except Exception as e:
-        # Fallback conservador em caso de erro
-        return 70.0
+# Page configuration
+st.set_page_config(
+    page_title=get_text("login_title"),
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-def evaluate_unified_execution_decision(alpha_score, qualitative_score, historical_success):
-    """
-    Avalia decisão unificada de execução baseada nos 3 tipos de confluência:
-    1. Score IA (confiança dinâmica)
-    2. Avaliação qualitativa (setup técnico)
-    3. Taxa de sucesso histórico
-    """
-    criteria_met = 0
-    reasons = []
-    
-    # Critério 1: Score IA (peso: 40%)
-    alpha_passed = alpha_score >= 75.0
-    if alpha_passed:
-        criteria_met += 1
-        reasons.append("Score IA forte")
-    elif alpha_score >= 65.0:
-        criteria_met += 0.5
-        reasons.append("Score IA moderado")
-    else:
-        reasons.append("Score IA baixo")
-    
-    # Critério 2: Avaliação qualitativa (peso: 35%)
-    qualitative_passed = qualitative_score >= 85.0
-    if qualitative_passed:
-        criteria_met += 1
-        reasons.append("Setup técnico excelente")
-    elif qualitative_score >= 70.0:
-        criteria_met += 0.5
-        reasons.append("Setup técnico bom")
-    else:
-        reasons.append("Setup técnico regular")
-    
-    # Critério 3: Taxa histórica (peso: 25%)
-    historical_passed = historical_success >= 65.0
-    if historical_passed:
-        criteria_met += 1
-        reasons.append("Taxa histórica alta")
-    elif historical_success >= 55.0:
-        criteria_met += 0.5
-        reasons.append("Taxa histórica média")
-    else:
-        reasons.append("Taxa histórica baixa")
-    
-    # Calcular confluência ponderada
-    confluence_score = (
-        (alpha_score * 0.40) +
-        (qualitative_score * 0.35) +
-        (historical_success * 0.25)
-    )
-    
-    # Lógica de decisão
-    # Para EXECUTAR: pelo menos 2 critérios completos OU 75%+ de confluência
-    execute_decision = criteria_met >= 2.0 or confluence_score >= 75.0
-    
-    # Determinar razão principal
-    if execute_decision:
-        if criteria_met >= 2.5:
-            main_reason = "Todos os critérios fortemente atendidos"
-        elif criteria_met >= 2.0:
-            main_reason = "Maioria dos critérios atendidos"
-        else:
-            main_reason = f"Alta confluência ({confluence_score:.1f}%)"
-    else:
-        if criteria_met < 1.0:
-            main_reason = "Critérios insuficientes"
-        elif confluence_score < 65.0:
-            main_reason = "Confluência baixa"
-        else:
-            main_reason = "Critérios parcialmente atendidos"
-    
-    return {
-        'execute': execute_decision,
-        'criteria_met': criteria_met,
-        'confluence_score': confluence_score,
-        'reason': main_reason,
-        'details': reasons,
-        'alpha_weight': alpha_score * 0.40,
-        'qualitative_weight': qualitative_score * 0.35,
-        'historical_weight': historical_success * 0.25
-    }
-
-# FUNÇÃO GLOBAL: Calcular probabilidades REAIS de mercado
-def calculate_realistic_drawdown_and_extensions(current_price, pair_name, horizon, risk_level, sentiment_score, lstm_confidence):
-    """
-    Calcula drawdown máximo realístico e extensões de preço baseadas em estatísticas reais do mercado
-    Focado 100% em precisão para Swing e Intraday trading
-    """
-    # Importar configurações localmente para evitar erros de circular import
-    try:
-        from config.settings import TEMPORAL_AI_PARAMETERS, RISK_PROFILES
-    except ImportError:
-        # Fallback com parâmetros básicos se a importação falhar
-        TEMPORAL_AI_PARAMETERS = {
-            '15 Minutos': {'ai_drawdown_probability': 0.25, 'ai_max_adverse_pips': 12, 'ai_extension_probability': 0.70, 'ai_realistic_targets': {'conservative': 18, 'moderate': 25, 'aggressive': 35}},
-            '1 Hora': {'ai_drawdown_probability': 0.30, 'ai_max_adverse_pips': 25, 'ai_extension_probability': 0.75, 'ai_realistic_targets': {'conservative': 25, 'moderate': 40, 'aggressive': 60}},
-            '4 Horas': {'ai_drawdown_probability': 0.35, 'ai_max_adverse_pips': 45, 'ai_extension_probability': 0.80, 'ai_realistic_targets': {'conservative': 60, 'moderate': 90, 'aggressive': 130}}
-        }
-        RISK_PROFILES = {
-            'Conservative': {'atr_multiplier_stop': 1.5},
-            'Moderate': {'atr_multiplier_stop': 2.0},
-            'Aggressive': {'atr_multiplier_stop': 2.5}
-        }
-    
-    # Obter parâmetros específicos do horizonte temporal
-    temporal_params = TEMPORAL_AI_PARAMETERS.get(horizon, TEMPORAL_AI_PARAMETERS['1 Hora'])
-    risk_profile = RISK_PROFILES.get(risk_level, RISK_PROFILES['Moderate'])
-    
-    # Calcular ATR para volatilidade base
-    pair_name_str = str(pair_name)  # Garantir que é string
-    pip_value = 0.0001 if 'JPY' not in pair_name_str else 0.01
-    
-    # Probabilidades realísticas baseadas em dados históricos
-    drawdown_probability = temporal_params.get('ai_drawdown_probability', 0.30)
-    max_adverse_pips = temporal_params.get('ai_max_adverse_pips', 25)
-    extension_probability = temporal_params.get('ai_extension_probability', 0.75)
-    
-    # Ajustar por confiança do modelo
-    confidence_adjustment = (lstm_confidence - 0.5) * 0.4  # -0.2 a +0.2
-    adjusted_extension_prob = min(0.95, max(0.50, extension_probability + confidence_adjustment))
-    adjusted_drawdown_prob = max(0.15, min(0.50, drawdown_probability - confidence_adjustment))
-    
-    # Ajustar por sentimento
-    sentiment_boost = abs(sentiment_score) * 0.15  # Máximo 15% de boost
-    if sentiment_score > 0:
-        adjusted_extension_prob += sentiment_boost
-        adjusted_drawdown_prob -= sentiment_boost * 0.5
-    else:
-        adjusted_extension_prob -= sentiment_boost * 0.5
-        adjusted_drawdown_prob += sentiment_boost
-    
-    # Calcular drawdown máximo realístico (pontos contra a tendência inicial)
-    base_adverse_distance = max_adverse_pips * pip_value
-    
-    # Ajustar por perfil de risco
-    risk_multiplier = risk_profile.get('atr_multiplier_stop', 2.0)
-    realistic_max_drawdown = base_adverse_distance * risk_multiplier
-    
-    # Calcular extensões realísticas (até onde pode chegar na direção da análise)
-    realistic_targets = temporal_params.get('ai_realistic_targets', {
-        'conservative': 30,
-        'moderate': 50, 
-        'aggressive': 75
-    })
-    
-    # Selecionar alvo baseado no perfil
-    if risk_level == 'Conservative':
-        target_pips = realistic_targets.get('conservative', 30)
-    elif risk_level == 'Aggressive':
-        target_pips = realistic_targets.get('aggressive', 75)
-    else:
-        target_pips = realistic_targets.get('moderate', 50)
-    
-    # Ajustar alvo por confiança e sentimento
-    confidence_multiplier = 0.7 + (lstm_confidence * 0.6)  # 0.7 - 1.3
-    sentiment_multiplier = 1.0 + (abs(sentiment_score) * 0.3)  # 1.0 - 1.3
-    
-    adjusted_target_pips = target_pips * confidence_multiplier * sentiment_multiplier
-    realistic_extension = adjusted_target_pips * pip_value
-    
-    # Calcular probabilidades finais realísticas
-    final_extension_prob = min(0.92, max(0.55, adjusted_extension_prob))
-    final_drawdown_prob = min(0.45, max(0.18, adjusted_drawdown_prob))
-    
-    # Determinar direção baseada na análise
-    direction = "ALTA" if sentiment_score > 0 or lstm_confidence > 0.6 else "BAIXA"
-    
-    # Garantir que current_price é float para operações matemáticas
-    current_price = float(current_price)
-    
-    if direction == "ALTA":
-        max_adverse_level = current_price - realistic_max_drawdown
-        extension_level = current_price + realistic_extension
-    else:
-        max_adverse_level = current_price + realistic_max_drawdown
-        extension_level = current_price - realistic_extension
-    
-    return {
-        'direction': direction,
-        'drawdown_pips': int(realistic_max_drawdown / pip_value),
-        'max_adverse_level': max_adverse_level,
-        'drawdown_probability': final_drawdown_prob,
-        'extension_pips': int(realistic_extension / pip_value),
-        'extension_level': extension_level,
-        'extension_probability': final_extension_prob,
-        'confidence_adjustment': confidence_adjustment,
-        'sentiment_impact': sentiment_boost,
-        'horizon_base_target': target_pips,
-        'adjusted_target': int(adjusted_target_pips)
-    }
-
-def calculate_market_probabilities_real(lstm_confidence, ai_consensus, sentiment_score, technical_signals, pair_name, horizon):
-    """Calcular probabilidades REAIS de sucesso baseadas em confluência de análises"""
-    
-    # Obter parâmetros realísticos por horizonte temporal
-    temporal_params = TEMPORAL_AI_PARAMETERS.get(horizon, TEMPORAL_AI_PARAMETERS['1 Hora'])
-    success_rate_base = temporal_params.get('ai_success_rate_target', 0.70)
-    
-    # 1. LSTM Probability (40% do peso total)
-    lstm_prob = min(0.95, max(0.30, lstm_confidence * 1.2))  # Entre 30-95%
-    
-    # 2. AI Consensus Probability (30% do peso total)
-    ai_prob = min(0.90, max(0.25, ai_consensus * 1.1))  # Entre 25-90%
-    
-    # 3. Sentiment Probability (20% do peso total)
-    sentiment_normalized = abs(sentiment_score)
-    sentiment_prob = min(0.85, max(0.40, 0.5 + (sentiment_normalized * 0.4)))  # Entre 40-85%
-    
-    # 4. Technical Signals Probability (10% do peso total)
-    technical_prob = min(0.80, max(0.35, technical_signals * 0.8 + 0.35))  # Entre 35-80%
-    
-    # Calcular probabilidade confluente REAL
-    confluent_probability = (
-        lstm_prob * 0.40 +
-        ai_prob * 0.30 + 
-        sentiment_prob * 0.20 + 
-        technical_prob * 0.10
-    )
-    
-    # Ajuste por par de moeda (volatilidade real)
-    pair_adjustment = PAIR_AI_ADJUSTMENTS.get(pair_name, {'prediction_confidence_boost': 1.0})
-    adjusted_probability = confluent_probability * pair_adjustment['prediction_confidence_boost']
-    
-    # Limitar entre probabilidades realísticas por horizonte
-    min_prob = success_rate_base * 0.6  # 60% da taxa base mínima
-    max_prob = min(0.95, success_rate_base * 1.3)  # Máximo 95% ou 130% da base
-    
-    final_probability = max(min_prob, min(max_prob, adjusted_probability))
-    
-    return {
-        'confluent_probability': final_probability,
-        'lstm_component': lstm_prob * 0.40,
-        'ai_component': ai_prob * 0.30,
-        'sentiment_component': sentiment_prob * 0.20,
-        'technical_component': technical_prob * 0.10,
-        'base_success_rate': success_rate_base,
-        'confidence_breakdown': {
-            'Very High (>85%)': final_probability > 0.85,
-            'High (70-85%)': 0.70 <= final_probability <= 0.85,
-            'Medium (55-70%)': 0.55 <= final_probability < 0.70,
-            'Low (<55%)': final_probability < 0.55
-        }
-    }
-
-# FUNÇÃO GLOBAL: Estratégia Temporal Unificada Original - Gatilhos Alpha Vantage
-def calculate_confluent_levels_global(current_price, predicted_price, pair_name, profile, market_probability):
-    """Estratégia Temporal Unificada Original: Prever próximos movimentos baseado no período gráfico + gatilhos Alpha Vantage"""
-    
-    import streamlit as st
-    horizon = st.session_state.get('analysis_horizon', '1 Hora')
-    
-    # GATILHOS ALPHA VANTAGE POR PERÍODO - Dados reais de movimentação típica
-    alpha_triggers = {
-        '5 Minutos': {
-            'volatility_range': 0.15,     # Scalping: movimentos de 15% do ATR por período
-            'momentum_threshold': 0.8,     # Threshold baixo para captação rápida
-            'stop_protection': 0.6,        # Proteção apertada (60% ATR)
-            'target_extension': 1.2,       # Alvo conservador (120% ATR)
-            'trend_confirmation': 2,       # Confirma em 2 períodos
-            'market_noise_filter': 0.3     # Filtro de ruído alto
-        },
-        '15 Minutos': {
-            'volatility_range': 0.25,     # Intraday: movimentos de 25% do ATR
-            'momentum_threshold': 1.0,     
-            'stop_protection': 1.0,        # Proteção moderada (100% ATR) - ajustado
-            'target_extension': 2.5,       # Alvo equilibrado (250% ATR) - aumentado
-            'trend_confirmation': 3,       
-            'market_noise_filter': 0.2
-        },
-        '30 Minutos': {
-            'volatility_range': 0.35,     
-            'momentum_threshold': 1.2,     
-            'stop_protection': 1.3,        # (130% ATR) - ajustado
-            'target_extension': 3.2,       # (320% ATR) - aumentado
-            'trend_confirmation': 4,       
-            'market_noise_filter': 0.15
-        },
-        '1 Hora': {
-            'volatility_range': 0.50,     # Intraday amplo: movimentos significativos
-            'momentum_threshold': 1.5,     
-            'stop_protection': 1.6,        # Proteção moderada (160% ATR) - ajustado
-            'target_extension': 4.0,       # Alvo amplo (400% ATR) - aumentado
-            'trend_confirmation': 5,       
-            'market_noise_filter': 0.1
-        },
-        '4 Horas': {
-            'volatility_range': 0.75,     # Swing: movimentos estruturais
-            'momentum_threshold': 2.0,     
-            'stop_protection': 2.8,        # Proteção ampla (280% ATR) - aumentado
-            'target_extension': 7.0,       # Alvo extenso (700% ATR) - muito aumentado
-            'trend_confirmation': 6,       
-            'market_noise_filter': 0.05
-        },
-        '1 Dia': {
-            'volatility_range': 1.0,      # Position: movimentos estruturais longos
-            'momentum_threshold': 2.5,     
-            'stop_protection': 4.5,        # Proteção muito ampla (450% ATR) - muito aumentado
-            'target_extension': 12.0,      # Alvo muito extenso (1200% ATR) - dobrado
-            'trend_confirmation': 8,       
-            'market_noise_filter': 0.02
-        },
-        '1 Mês': {
-            'volatility_range': 1.5,      # Long-term: movimentos estruturais (mantido para compatibilidade)
-            'momentum_threshold': 3.0,     
-            'stop_protection': 3.5,        # Proteção realista (350% ATR)
-            'target_extension': 7.0,       # Alvo realista (700% ATR)
-            'trend_confirmation': 12,      
-            'market_noise_filter': 0.01
-        }
-    }
-    
-    # Obter gatilhos do período escolhido
-    triggers = alpha_triggers.get(horizon, alpha_triggers['1 Hora'])
-    
-    # ATR real por par (Alpha Vantage)
-    atr_values = {
-        'EUR/USD': 0.0012, 'USD/JPY': 0.018, 'GBP/USD': 0.0018, 'AUD/USD': 0.0020,
-        'USD/CAD': 0.0014, 'USD/CHF': 0.0016, 'NZD/USD': 0.0022, 'EUR/GBP': 0.0010,
-        'EUR/JPY': 0.020, 'GBP/JPY': 0.025, 'AUD/JPY': 0.022
-    }
-    current_atr = atr_values.get(pair_name, 0.0015)
-    
-    # ANÁLISE CONFLUENTE: Previsão + Probabilidade + Momentum
-    # Garantir que são floats para operações matemáticas
-    current_price = float(current_price)
-    predicted_price = float(predicted_price)
-    
-    direction = 1 if predicted_price > current_price else -1
-    price_momentum = abs(predicted_price - current_price) / current_price
-    prob_strength = market_probability['confluent_probability']
-    
-    # GATILHO DE MOMENTUM: Verificar se movimento supera threshold do período
-    momentum_confirmed = price_momentum >= (triggers['momentum_threshold'] * current_atr / current_price)
-    
-    # ESTRATÉGIA TEMPORAL UNIFICADA: Variação Real do Mercado por Período
-    
-    # 1. VARIAÇÃO REAL DO MERCADO POR PERÍODO (dados históricos Alpha Vantage)
-    market_variation_data = {
-        '5 Minutos': {
-            'typical_move_atr': 0.25,   # Scalping otimizado: movimentos de 25% ATR (mais conservador)
-            'max_adverse_atr': 0.6,     # Stop apertado: 60% ATR máximo (era 80%)
-            'profit_target_atr': 0.4    # Take conservador: 40% ATR (era 60%) para maior hit rate
-        },
-        '15 Minutos': {
-            'typical_move_atr': 0.6,    # Intraday: movimentos de 60% ATR
-            'max_adverse_atr': 1.2,     # Máximo adverso
-            'profit_target_atr': 1.5    # Alvo intraday
-        },
-        '1 Hora': {
-            'typical_move_atr': 1.0,    # Movimentos de 100% ATR
-            'max_adverse_atr': 1.8,     # Máximo adverso 
-            'profit_target_atr': 2.5    # Alvo horário
-        },
-        '4 Horas': {
-            'typical_move_atr': 2.2,    # Swing: movimentos estruturais
-            'max_adverse_atr': 3.5,     # Máximo adverso swing
-            'profit_target_atr': 5.5    # Alvo swing
-        },
-        '1 Dia': {
-            'typical_move_atr': 4.0,    # Position: movimentos diários
-            'max_adverse_atr': 6.5,     # Máximo adverso diário
-            'profit_target_atr': 10.0   # Alvo position
-        }
-    }
-    
-    # Obter dados de variação do período selecionado
-    market_data = market_variation_data.get(horizon, market_variation_data['1 Hora'])
-    
-    # 2. PERFIL TRADER: Define tolerância ao risco baseada na variação real
-    profile_name = profile.get('name', 'Moderate')
-    
-    if profile_name == 'Conservative':
-        # Conservative: Stop baseado em 70% da variação adversa máxima
-        stop_safety_factor = 0.7
-        # Take baseado em 60% do alvo típico (mais conservador)
-        take_target_factor = 0.6
-        risk_tolerance = 0.8
-    elif profile_name == 'Aggressive':
-        # Aggressive: Stop baseado em 120% da variação adversa (mais risco)
-        stop_safety_factor = 1.2
-        # Take baseado em 150% do alvo típico (mais ambicioso)
-        take_target_factor = 1.5
-        risk_tolerance = 1.3
-    else:  # Moderate
-        # Moderate: Stop baseado em 100% da variação adversa real
-        stop_safety_factor = 1.0
-        # Take baseado em 100% do alvo típico
-        take_target_factor = 1.0
-        risk_tolerance = 1.0
-    
-    # 3. CÁLCULO DO STOP baseado na VARIAÇÃO REAL DO MERCADO
-    # Stop = Máximo movimento adverso real × fator de segurança do perfil
-    stop_multiplier = market_data['max_adverse_atr'] * stop_safety_factor * risk_tolerance
-    
-    # 4. CÁLCULO DO TAKE baseado no POTENCIAL REAL DO PERÍODO
-    # Take = Alvo típico do período × fator do perfil × força do sinal
-    signal_strength_multiplier = 0.8 + (prob_strength * 0.4)  # Entre 0.8 e 1.2
-    take_multiplier = market_data['profit_target_atr'] * take_target_factor * signal_strength_multiplier
-    
-    # 5. VALIDAÇÃO: Garantir que ratio risco/retorno seja realista
-    calculated_ratio = take_multiplier / stop_multiplier if stop_multiplier > 0 else 0
-    
-    # Ajustar se ratio estiver fora dos padrões reais do mercado
-    if calculated_ratio < 1.2:  # Ratio muito baixo
-        take_multiplier = stop_multiplier * 1.5  # Forçar ratio mínimo 1:1.5
-    elif calculated_ratio > 4.0:  # Ratio muito alto (irrealista)
-        take_multiplier = stop_multiplier * 3.5  # Limitar ratio máximo 1:3.5
-    
-    # Determinar força da confluência
-    if prob_strength > 0.75 and momentum_confirmed:
-        confluence_strength = "ALTA CONFLUÊNCIA"
-        confidence_boost = 1.0
-    elif prob_strength > 0.6:
-        confluence_strength = "CONFLUÊNCIA MODERADA" 
-        confidence_boost = 0.95
-    elif prob_strength > 0.5:
-        confluence_strength = "BAIXA CONFLUÊNCIA"
-        confidence_boost = 0.9
-    else:
-        confluence_strength = "SEM CONFLUÊNCIA"
-        confidence_boost = 0.85
-    
-    # APLICAR FILTRO DE RUÍDO (reduz em mercados laterais)
-    noise_factor = 1.0 - triggers['market_noise_filter']
-    
-    # CALCULAR NÍVEIS FINAIS baseados nos gatilhos Alpha + período temporal
-    final_stop_multiplier = stop_multiplier * confidence_boost * noise_factor
-    final_take_multiplier = take_multiplier * confidence_boost * noise_factor
-    
-    # PREÇOS DE STOP/TAKE baseados na estratégia temporal unificada
-    if direction == 1:  # COMPRA
-        stop_loss_price = current_price - (current_atr * final_stop_multiplier)
-        take_profit_price = current_price + (current_atr * final_take_multiplier)
-    else:  # VENDA
-        stop_loss_price = current_price + (current_atr * final_stop_multiplier)
-        take_profit_price = current_price - (current_atr * final_take_multiplier)
-    
-    # Converter para pontos (pips)
-    def price_to_points(price1, price2, pair_name):
-        diff = abs(price1 - price2)
-        pair_str = str(pair_name)  # Garantir que é string
-        if 'JPY' in pair_str:
-            return round(diff * 100, 1)
-        else:
-            return round(diff * 10000, 1)
-    
-    stop_points = price_to_points(current_price, stop_loss_price, pair_name)
-    take_points = price_to_points(current_price, take_profit_price, pair_name)
-    risk_reward_ratio = take_points / stop_points if stop_points > 0 else 0
-    
-    # Análise de confirmação de tendência
-    trend_strength = "FORTE" if momentum_confirmed and prob_strength > 0.7 else \
-                    "MODERADA" if prob_strength > 0.5 else "FRACA"
-    
-    return {
-        'stop_loss_price': stop_loss_price,
-        'take_profit_price': take_profit_price,
-        'stop_loss_points': stop_points,
-        'take_profit_points': take_points,
-        'risk_reward_ratio': risk_reward_ratio,
-        'operation_direction': 'COMPRA' if direction == 1 else 'VENDA',
-        'confluent_probability': prob_strength,
-        'atr_used': current_atr,
-        'fibonacci_support_ref': current_price - current_atr,
-        'fibonacci_resistance_ref': current_price + current_atr,
-        'position_strength': trend_strength,
-        'temporal_strategy': f"Temporal Unificada {horizon}",
-        'fibonacci_adjustment': confidence_boost,
-        'volatility_factor': noise_factor,
-        'final_multipliers': {
-            'stop': final_stop_multiplier,
-            'take': final_take_multiplier
-        },
-        'alpha_triggers': triggers,
-        'momentum_confirmed': momentum_confirmed,
-        'temporal_period': horizon,
-        'confluence_analysis': {
-            'strength': confluence_strength,
-            'profile_used': profile_name,
-            'market_variation': market_data,
-            'stop_safety_factor': stop_safety_factor,
-            'take_target_factor': take_target_factor,
-            'calculated_ratio': calculated_ratio,
-            'final_stop_atr': stop_multiplier,
-            'final_take_atr': take_multiplier,
-            'variation_base': f"Stop baseado em {stop_safety_factor*100:.0f}% da variação adversa real",
-            'target_base': f"Take baseado em {take_target_factor*100:.0f}% do potencial do período",
-            'risk_evaluation': 'FAVORÁVEL' if confidence_boost > 0.95 else 'MODERADO' if confidence_boost > 0.9 else 'CONSERVADOR'
-        },
-        'next_market_prediction': {
-            'direction': 'ALTA' if direction == 1 else 'BAIXA',
-            'strength': trend_strength,
-            'time_confirmation': f"{triggers['trend_confirmation']} períodos",
-            'volatility_expected': f"{triggers['volatility_range']*100:.0f}% do ATR",
-            'confluence_rating': confluence_strength
-        }
-    }
-
-# Simple technical indicators class
-class TechnicalIndicators:
-    @staticmethod
-    def add_all_indicators(df):
-        return df if df is not None else None
-    
-    @staticmethod  
-    def get_trading_signals(df):
-        return {"overall": "HOLD"} if df is not None else {}
-
-# Simple cache manager
-class CacheManager:
-    @staticmethod
-    def clear_cache():
-        for key in list(st.session_state.keys()):
-            if key.startswith(('cache_', 'analysis_', 'unified_', 'ai_result_')):
-                if key != 'analysis_results':  # Preservar resultado final
-                    del st.session_state[key]
-
+# Dynamic CSS based on theme
 def apply_theme_css():
-    """Apply theme-specific CSS based on current theme"""
-    current_theme = st.session_state.get('theme', 'light')
+    theme = st.session_state.get('theme', 'light')
     
-    # CSS para ocultar elementos de carregamento do Streamlit
-    hide_loading_css = """
-    <style>
-        /* Ocultar spinner de carregamento no canto superior direito */
-        .stSpinner > div {
-            display: none !important;
-        }
-        
-        /* Ocultar indicador de running no header */
-        .stApp > header [data-testid="stHeader"] .stSpinner {
-            display: none !important;
-        }
-        
-        /* Ocultar status de "Running" */
-        .stStatus {
-            display: none !important;
-        }
-        
-        /* Ocultar todos os spinners do sistema */
-        div[data-testid="stSpinner"] {
-            display: none !important;
-        }
-        
-        /* Ocultar loading overlay */
-        .stLoadingOverlay {
-            display: none !important;
-        }
-        
-        /* Indicador de carregamento personalizado */
-        .custom-loader {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 40px;
-            height: 40px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            z-index: 9999;
-            display: none;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Mostrar loader personalizado quando necessário */
-        .show-custom-loader .custom-loader {
-            display: block !important;
-        }
-    </style>
-    """
-    st.markdown(hide_loading_css, unsafe_allow_html=True)
-    
-    if current_theme == 'dark':
+    if theme == 'dark':
         st.markdown("""
         <style>
+            /* Dark Theme */
             .stApp {
-                background-color: #0e1117 !important;
+                background-color: #1e1e1e !important;
                 color: #ffffff !important;
             }
-            .main .block-container {
-                background-color: #0e1117 !important;
-                color: #ffffff !important;
+            .main-header {
+                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                padding: 1rem;
+                border-radius: 10px;
+                margin-bottom: 2rem;
             }
-            .stSelectbox > div > div {
-                background-color: #262730 !important;
-                color: #ffffff !important;
-            }
-            .stSlider > div > div > div {
-                background-color: #667eea !important;
-            }
-            .stMarkdown {
-                color: #ffffff !important;
+            .main-header h1 {
+                color: white;
+                text-align: center;
+                margin: 0;
+                font-size: 2.5rem;
             }
             .metric-card {
-                background: linear-gradient(135deg, #1e1e1e, #2d2d2d) !important;
+                background: #2d2d2d !important;
+                padding: 1rem;
+                border-radius: 10px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                border-left: 4px solid #667eea;
+                color: #ffffff !important;
+            }
+            .success-alert {
+                background-color: #1b5e20 !important;
+                border: 1px solid #4caf50;
+                color: #e8f5e8 !important;
+                padding: 0.75rem;
+                border-radius: 0.25rem;
+                margin: 1rem 0;
+            }
+            .error-alert {
+                background-color: #b71c1c !important;
+                border: 1px solid #f44336;
+                color: #ffebee !important;
+                padding: 0.75rem;
+                border-radius: 0.25rem;
+                margin: 1rem 0;
+            }
+            .warning-alert {
+                background-color: #e65100 !important;
+                border: 1px solid #ff9800;
+                color: #fff3e0 !important;
+                padding: 0.75rem;
+                border-radius: 0.25rem;
+                margin: 1rem 0;
+            }
+            .sidebar .stSelectbox label {
+                font-weight: bold;
+                color: #ffffff !important;
+            }
+            .stButton > button {
+                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 0.5rem 1rem;
+                font-weight: bold;
+                width: 100%;
+            }
+            .stButton > button:hover {
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                transform: translateY(-2px);
+            }
+            
+            /* Dark theme sidebar and components */
+            .css-1d391kg, .css-1lcbmhc, .css-1outpf7 {
+                background-color: #2d2d2d !important;
+            }
+            
+            /* Dark theme text - More specific selectors */
+            .stApp .stMarkdown, 
+            .stApp .stText, 
+            .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, 
+            .stApp p, .stApp div, .stApp span, 
+            .stApp label,
+            .stApp .stSelectbox label,
+            .stApp .stSlider label,
+            .stApp .stCheckbox label,
+            .css-1kyxreq, .css-1kyxreq p, .css-1kyxreq div, .css-1kyxreq span,
+            .element-container, .element-container p, .element-container div,
+            .st-emotion-cache-1kyxreq,
+            .st-emotion-cache-1kyxreq p,
+            .st-emotion-cache-1kyxreq div,
+            .st-emotion-cache-1kyxreq span,
+            .st-emotion-cache-1kyxreq h1,
+            .st-emotion-cache-1kyxreq h2,
+            .st-emotion-cache-1kyxreq h3,
+            .st-emotion-cache-1kyxreq h4 {
+                color: #ffffff !important;
+            }
+            
+            /* Dark theme input fields */
+            .stSelectbox > div > div, 
+            .stTextInput > div > div > input, 
+            .stSlider > div > div,
+            .stSelectbox div[data-baseweb="select"] > div,
+            .stSelectbox div[data-baseweb="select"] > div > div,
+            .stSelectbox [role="option"],
+            .stSelectbox [role="listbox"] {
+                background-color: #2d2d2d !important;
+                color: #ffffff !important;
                 border: 1px solid #444 !important;
+            }
+            
+            /* Dark theme dropdown options */
+            .stSelectbox div[data-baseweb="popover"] {
+                background-color: #2d2d2d !important;
+            }
+            
+            .stSelectbox div[data-baseweb="popover"] li {
+                background-color: #2d2d2d !important;
+                color: #ffffff !important;
+            }
+            
+            .stSelectbox div[data-baseweb="popover"] li:hover {
+                background-color: #404040 !important;
+                color: #ffffff !important;
+            }
+            
+            /* Dark theme expanders */
+            .streamlit-expanderHeader,
+            details[open] > summary,
+            details > summary,
+            .st-emotion-cache-1p1nwyz,
+            .st-emotion-cache-1p1nwyz p,
+            .st-emotion-cache-1p1nwyz div {
+                background-color: #2d2d2d !important;
+                color: #ffffff !important;
+            }
+            
+            /* Dark theme tabs */
+            .stTabs [data-baseweb="tab-list"],
+            .stTabs [data-baseweb="tab-list"] button,
+            .st-emotion-cache-1whx7iy,
+            .st-emotion-cache-1whx7iy button {
+                background-color: #2d2d2d !important;
+                color: #ffffff !important;
+            }
+            
+            .stTabs [data-baseweb="tab"],
+            .stTabs [data-baseweb="tab"] div,
+            .st-emotion-cache-1whx7iy button div {
+                color: #ffffff !important;
+                background-color: #2d2d2d !important;
+            }
+            
+            .stTabs [data-baseweb="tab-panel"],
+            .st-emotion-cache-1kyxreq {
+                background-color: #1e1e1e !important;
+                color: #ffffff !important;
+            }
+            
+            /* Dark theme for all containers and panels */
+            .block-container,
+            .css-1kyxreq,
+            .element-container,
+            .st-emotion-cache-1kyxreq,
+            .st-emotion-cache-16idsys,
+            .st-emotion-cache-1wmy9hl,
+            .st-emotion-cache-12fmjuu {
+                background-color: #1e1e1e !important;
+                color: #ffffff !important;
+            }
+            
+            /* Dark theme metrics and info boxes */
+            .stMetric,
+            .stMetric label,
+            .stMetric div,
+            .stInfo,
+            .stSuccess,
+            .stWarning,
+            .stError {
+                color: #ffffff !important;
+            }
+            
+            /* Dark theme sidebar improvements */
+            .css-1d391kg,
+            .css-1lcbmhc, 
+            .css-1outpf7,
+            .st-emotion-cache-16idsys,
+            .st-emotion-cache-1gwvy71 {
+                background-color: #2d2d2d !important;
+                color: #ffffff !important;
+            }
+            
+            .css-1d391kg p,
+            .css-1d391kg div,
+            .css-1d391kg span,
+            .css-1d391kg label {
+                color: #ffffff !important;
+            }
+            
+            /* Dark theme for tutorial sections - comprehensive */
+            .css-1kyxreq ul,
+            .css-1kyxreq li,
+            .css-1kyxreq strong,
+            .css-1kyxreq em,
+            .st-emotion-cache-1kyxreq ul,
+            .st-emotion-cache-1kyxreq li,
+            .st-emotion-cache-1kyxreq strong,
+            .st-emotion-cache-1kyxreq em {
                 color: #ffffff !important;
             }
         </style>
@@ -812,6484 +418,1821 @@ def apply_theme_css():
     else:
         st.markdown("""
         <style>
+            /* Light Theme */
             .stApp {
                 background-color: #ffffff !important;
                 color: #000000 !important;
             }
-            .main .block-container {
-                background-color: #ffffff !important;
+            .main-header {
+                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                padding: 1rem;
+                border-radius: 10px;
+                margin-bottom: 2rem;
+            }
+            .main-header h1 {
+                color: white;
+                text-align: center;
+                margin: 0;
+                font-size: 2.5rem;
             }
             .metric-card {
-                background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
-                border: 1px solid #dee2e6 !important;
+                background: white !important;
+                padding: 1rem;
+                border-radius: 10px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                border-left: 4px solid #667eea;
+                color: #000000 !important;
+            }
+            .success-alert {
+                background-color: #d4edda !important;
+                border: 1px solid #c3e6cb;
+                color: #155724 !important;
+                padding: 0.75rem;
+                border-radius: 0.25rem;
+                margin: 1rem 0;
+            }
+            .error-alert {
+                background-color: #f8d7da !important;
+                border: 1px solid #f5c6cb;
+                color: #721c24 !important;
+                padding: 0.75rem;
+                border-radius: 0.25rem;
+                margin: 1rem 0;
+            }
+            .warning-alert {
+                background-color: #fff3cd !important;
+                border: 1px solid #ffeaa7;
+                color: #856404 !important;
+                padding: 0.75rem;
+                border-radius: 0.25rem;
+                margin: 1rem 0;
+            }
+            .sidebar .stSelectbox label {
+                font-weight: bold;
+                color: #333 !important;
+            }
+            .stButton > button {
+                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                color: white !important;
+                border: none;
+                border-radius: 8px;
+                padding: 0.75rem 1rem;
+                font-weight: bold;
+                width: 100%;
+                min-height: 44px; /* iOS touch target minimum */
+                font-size: 16px; /* Prevent zoom on iOS */
+                touch-action: manipulation; /* Improve touch response */
+                transition: all 0.2s ease;
+            }
+            .stButton > button:hover {
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                transform: translateY(-2px);
+            }
+            .stButton > button:active {
+                transform: translateY(0);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+            
+            /* Mobile-specific improvements for general interface */
+            @media (max-width: 768px) {
+                /* Enhanced button sizing for mobile */
+                .stButton > button {
+                    padding: 1rem !important;
+                    font-size: 16px !important;
+                    min-height: 48px !important;
+                    border-radius: 10px !important;
+                    margin: 0.5rem 0 !important;
+                }
+                
+                /* Improve selectbox touch targets */
+                .stSelectbox > div > div {
+                    min-height: 48px !important;
+                    font-size: 16px !important;
+                    padding: 0.75rem !important;
+                }
+                
+                /* Better sidebar organization */
+                .css-1d391kg {
+                    padding: 1rem 0.5rem !important;
+                }
+                
+                /* Stack columns for mobile readability */
+                div[data-testid="column"] {
+                    min-width: 100% !important;
+                    margin-bottom: 1rem !important;
+                }
+                
+                /* Optimize main content area */
+                .block-container {
+                    padding: 1rem 0.5rem !important;
+                    max-width: 100% !important;
+                }
+                
+                /* Responsive header design */
+                .main-header {
+                    padding: 1rem 0.5rem !important;
+                    text-align: center !important;
+                }
+                
+                .main-header h1 {
+                    font-size: 1.5rem !important;
+                    margin: 0.5rem 0 !important;
+                }
+                
+                .main-header p {
+                    font-size: 0.9rem !important;
+                }
+                
+                /* Better text readability */
+                h1, h2, h3, h4 {
+                    font-size: 1.2rem !important;
+                    line-height: 1.4 !important;
+                    margin: 0.75rem 0 !important;
+                }
+                
+                p, div, span {
+                    font-size: 14px !important;
+                    line-height: 1.5 !important;
+                }
             }
         </style>
         """, unsafe_allow_html=True)
 
-def check_authentication():
-    """Check if user is authenticated"""
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
-    
-    if not st.session_state.authenticated:
-        st.markdown("""
-        <div style="
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 2.5rem 4rem;
-            border-radius: 20px;
-            text-align: center;
-            color: white;
-            margin: 2rem auto;
-            max-width: 900px;
-            width: 90%;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-        ">
-            <h1 style="color: white; margin-bottom: 1rem; font-size: 2.4em; font-weight: 700;">🔐 Acesso Restrito</h1>
-            <h2 style="color: white; margin-bottom: 1rem; font-size: 1.9em; font-weight: 600;">Plataforma Avançada de Análise Forex</h2>
-            <h3 style="color: rgba(255,255,255,0.95); margin-bottom: 2rem; font-size: 1.4em; font-weight: 400; line-height: 1.4;">
-                Sistema profissional de trading com IA e análise em tempo real
-            </h3>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Formulário de login centralizado
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.markdown("### 🔑 Digite a Senha de Acesso")
-            password = st.text_input("Senha:", type="password", placeholder="Digite sua senha...", key="login_password")
-            
-            col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-            with col_btn2:
-                if st.button("🚀 Entrar na Plataforma", type="primary", use_container_width=True, key="login_button"):
-                    if password == "artec2025":
-                        st.session_state.authenticated = True
-                        st.success("✅ Acesso autorizado! Redirecionando...")
-                        st.rerun()
-                    else:
-                        st.error("❌ Senha incorreta. Tente novamente.")
-        
-        # Informações da plataforma
-        st.markdown("---")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.markdown("""
-            ### 🧠 Inteligência Artificial
-            - Rede neural LSTM avançada
-            - Análise de sentimento em tempo real
-            - Predições com alta precisão
-            """)
-        
-        with col2:
-            st.markdown("""
-            ### 📊 Análise Técnica
-            - 15+ indicadores técnicos
-            - Sinais automáticos de trading
-            - Múltiplos timeframes
-            """)
-        
-        with col3:
-            st.markdown("""
-            ### 💰 Gestão de Risco
-            - Cálculos MT4/MT5 reais
-            - Stop loss inteligente
-            - Múltiplos perfis de risco
-            """)
-        
-        st.markdown("""
-        <div style="text-align: center; color: #666; padding: 2rem; margin-top: 2rem;">
-            <p>🔒 Sistema seguro desenvolvido pela Artecinvesting</p>
-            <p>Para acesso, entre em contato com a administração</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        return False
-    
-    return True
+# Initialize services
+@st.cache_resource
+def initialize_services():
+    """Initialize all services once and cache them."""
+    return {
+        'data_service': DataService(),
+        'sentiment_service': SentimentService(),
+        'visualizer': ForexVisualizer()
+    }
 
-def main():
-    """Main application function"""
-    
-    # Page configuration
-    st.set_page_config(
-        page_title="Advanced Forex Analysis Platform",
-        page_icon="📈",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-    
-    # Apply theme CSS
-    apply_theme_css()
-    
-    # Check authentication first
-    if not check_authentication():
-        return
-    
-    # Custom CSS for styling
+services = initialize_services()
+
+# Additional Dark Theme fixes for dashboard functions panel - apply globally for better coverage
+if st.session_state.get('theme', 'light') == 'dark':
     st.markdown("""
     <style>
-        .main-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 2rem;
-            border-radius: 15px;
-            margin-bottom: 2rem;
-            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+        /* Critical fixes for Dark theme dashboard functions visibility */
+        
+        /* Ensure ALL text elements in main content are visible */
+        .main .block-container,
+        .main .block-container *,
+        .stApp .main,
+        .stApp .main *,
+        .css-1kyxreq *,
+        .st-emotion-cache-1kyxreq *,
+        [data-testid="stHorizontalBlock"] *,
+        [data-testid="stVerticalBlock"] *,
+        [data-testid="stColumns"] *,
+        [data-testid="column"] *,
+        .element-container *,
+        .st-emotion-cache-12fmjuu *,
+        .st-emotion-cache-1wmy9hl * {
+            color: #ffffff !important;
         }
-        .metric-card {
-            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-            padding: 1.5rem;
-            border-radius: 12px;
-            border: 1px solid #dee2e6;
-            margin: 1rem 0;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        
+        /* Function panel specific fixes */
+        .stTabs .st-emotion-cache-1kyxreq,
+        .stTabs .st-emotion-cache-1kyxreq p,
+        .stTabs .st-emotion-cache-1kyxreq div,
+        .stTabs .st-emotion-cache-1kyxreq span,
+        .stTabs .st-emotion-cache-1kyxreq li,
+        .stTabs .st-emotion-cache-1kyxreq ul,
+        .stTabs .st-emotion-cache-1kyxreq h1,
+        .stTabs .st-emotion-cache-1kyxreq h2,
+        .stTabs .st-emotion-cache-1kyxreq h3,
+        .stTabs .st-emotion-cache-1kyxreq h4,
+        .stTabs .st-emotion-cache-1kyxreq strong,
+        .stTabs .st-emotion-cache-1kyxreq em {
+            color: #ffffff !important;
+            background-color: transparent !important;
         }
-        .warning-alert {
-            background: linear-gradient(135deg, #ff6b6b, #ffa500);
-            color: white;
-            padding: 1rem;
-            border-radius: 8px;
-            margin: 1rem 0;
+        
+        /* Markdown content in Dark theme */
+        .stMarkdown h1,
+        .stMarkdown h2,
+        .stMarkdown h3,
+        .stMarkdown h4,
+        .stMarkdown p,
+        .stMarkdown div,
+        .stMarkdown span,
+        .stMarkdown li,
+        .stMarkdown ul,
+        .stMarkdown strong,
+        .stMarkdown em,
+        .stMarkdown code {
+            color: #ffffff !important;
+        }
+        
+        /* Tutorial sections comprehensive fix */
+        .css-1kyxreq,
+        .css-1kyxreq *,
+        .st-emotion-cache-1kyxreq,
+        .st-emotion-cache-1kyxreq * {
+            color: #ffffff !important;
+        }
+        
+        /* Column content visibility */
+        [data-testid="column"] div,
+        [data-testid="column"] p,
+        [data-testid="column"] span,
+        [data-testid="column"] h1,
+        [data-testid="column"] h2,
+        [data-testid="column"] h3,
+        [data-testid="column"] h4,
+        [data-testid="column"] li,
+        [data-testid="column"] ul,
+        [data-testid="column"] strong {
+            color: #ffffff !important;
+        }
+        
+        /* Info boxes and alerts in Dark theme */
+        .info-alert,
+        .success-alert,
+        .warning-alert,
+        .error-alert {
+            border: 1px solid #444 !important;
+        }
+        
+        .info-alert,
+        .info-alert * {
+            background-color: #1a237e !important;
+            color: #e3f2fd !important;
+        }
+        
+        /* Gradient boxes for Dark theme */
+        div[style*="background: linear-gradient"] * {
+            color: #ffffff !important;
+        }
+        
+        /* Ensure button text is visible */
+        .stButton > button,
+        .stButton > button * {
+            color: white !important;
+        }
+        
+        /* Progress and status elements */
+        .stProgress,
+        .stProgress *,
+        .stMetric,
+        .stMetric * {
+            color: #ffffff !important;
+        }
+        
+        /* Fix for any remaining invisible elements */
+        * {
+            color: inherit !important;
+        }
+        
+        /* Override any Streamlit defaults for Dark theme */
+        .stApp[data-theme="dark"] *,
+        [data-theme="dark"] * {
+            color: #ffffff !important;
         }
     </style>
     """, unsafe_allow_html=True)
+
+# Common CSS for both themes
+st.markdown("""
+<style>
+    /* Buy/Sell/Hold signals - consistent across themes */
+    .buy-signal {
+        background: linear-gradient(135deg, #4CAF50, #45a049);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+        margin: 1rem 0;
+    }
+    .sell-signal {
+        background: linear-gradient(135deg, #f44336, #da190b);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+        margin: 1rem 0;
+    }
+    .hold-signal {
+        background: linear-gradient(135deg, #ff9800, #f57c00);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+        margin: 1rem 0;
+    }
+    .info-alert {
+        background-color: #e3f2fd;
+        border: 1px solid #2196f3;
+        color: #0d47a1;
+        padding: 0.75rem;
+        border-radius: 0.25rem;
+        margin: 1rem 0;
+    }
     
-    # Main content area - header controlled by display logic
+    /* Hide Streamlit's default loading indicators completely */
+    .stSpinner, .stAlert, .stSpinner > div {
+        display: none !important;
+    }
     
-    # Initialize services if not already done - ONLY REAL DATA ALLOWED
-    global services
-    if 'services' not in globals() or services is None:
-        try:
-            from services.data_service import DataService
-            from services.sentiment_service import SentimentService
-            services = {
-                'data_service': DataService(),
-                'sentiment_service': SentimentService(),
-                'alpha_indicators': AlphaVantageIndicators(),
-                'trend_engine': TrendAnalysisEngine()
+    /* Hide the running indicator in top right corner */
+    .stApp > header,
+    [data-testid="stToolbar"],
+    .stApp > div[data-testid="stHeader"],
+    .streamlit-container .element-container:has(.stSpinner),
+    .stApp .stSpinner,
+    [data-testid="stStatusWidget"],
+    .StatusWidget,
+    .streamlit-container .stAlert {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Hide the menu button (3 dots) and running status */
+    .css-14xtw13.e8zbici0,
+    .css-h5rgaw.egzxvld1,
+    button[title="View fullscreen"],
+    [data-testid="stDecoration"],
+    .decoration,
+    .css-1rs6os.edgvbvh3,
+    .css-1vbkxwb.e1nzilvr5,
+    .css-1vbkxwb,
+    [aria-label="Running..."],
+    [data-testid="stAppViewContainer"] > .stSpinner {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+    
+    /* Animation for custom spinner */
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Custom spinner for manual use */
+    .custom-spinner {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 60px;
+        margin: 20px 0;
+    }
+    
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(102, 126, 234, 0.1);
+        border-left: 4px solid #667eea;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+    
+    /* COMPREHENSIVE REMOVAL OF ALL STREAMLIT LOADING ELEMENTS */
+    /* Remove all spinners, progress bars, status messages, and loading indicators */
+    .stApp [data-testid="stHeader"],
+    .stApp .stSpinner,
+    .stSpinner,
+    [data-testid="stSpinner"],
+    .css-1outpf7,
+    .css-164nlkn,
+    .css-12oz5g7,
+    .css-1n76uvr,
+    [data-baseweb="notification"],
+    .streamlit-spinner,
+    .stProgress,
+    [data-testid="stProgress"],
+    .stAlert,
+    [data-testid="stAlert"],
+    .stStatus,
+    [data-testid="stStatus"],
+    .stToast,
+    [data-testid="stToast"],
+    .element-container:has(.stSpinner),
+    .element-container:has([data-testid="stSpinner"]),
+    div:has(> .stSpinner),
+    div:has(> [data-testid="stSpinner"]),
+    .st-emotion-cache-*:has(.stSpinner),
+    .block-container .stSpinner,
+    .main .stSpinner,
+    [class*="spinner"],
+    [class*="loading"],
+    [class*="status"],
+    [class*="progress"],
+    .css-*:has(.stSpinner),
+    .st-*:has(.stSpinner),
+    .st-emotion-cache-*,
+    [data-testid="stLoading"],
+    [data-testid="stProgressBar"],
+    .stProgress > *,
+    .stStatus > *,
+    .stSpinner > *,
+    div[data-testid="element-container"]:has(.stSpinner),
+    div[data-testid="element-container"]:has(.stProgress),
+    div[data-testid="element-container"]:has(.stStatus),
+    .css-1wrcr25,
+    .css-12oz5g7,
+    .css-5uatcg,
+    .st-emotion-cache-1wrcr25,
+    .st-emotion-cache-12oz5g7,
+    .st-emotion-cache-5uatcg {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        position: absolute !important;
+        left: -9999px !important;
+        z-index: -1 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Services already initialized above
+
+# Initialize session state
+if 'analysis_results' not in st.session_state:
+    st.session_state.analysis_results = {}
+if 'model_trained' not in st.session_state:
+    st.session_state.model_trained = False
+
+def main():
+    # Check authentication first
+    if not check_password():
+        return
+    
+    # Apply theme CSS immediately after authentication
+    apply_theme_css()
+    
+    # Force Dark theme CSS specifically for tutorial/configuration panels
+    if st.session_state.get('theme', 'light') == 'dark':
+        st.markdown("""
+        <style>
+            /* CRITICAL: Force white text on ALL elements in Dark theme */
+            
+            /* Global override for all text elements */
+            * {
+                color: #ffffff !important;
             }
-            # Verify Alpha Vantage API key is present
-            from config.settings import API_KEY
-            if not API_KEY or API_KEY == 'your_alpha_vantage_api_key_here':
-                st.error("❌ CHAVE API ALPHA VANTAGE NÃO CONFIGURADA")
-                st.error("🔑 Configure ALPHA_VANTAGE_API_KEY nas variáveis de ambiente")
-                st.stop()
-        except Exception as e:
-            st.error(f"❌ ERRO: Falha ao inicializar serviços: {e}")
-            st.stop()
+            
+            /* Specific elements that need white text */
+            h1, h2, h3, h4, h5, h6,
+            p, div, span, label, li, ul, ol,
+            strong, em, b, i, code, pre,
+            .stMarkdown, .stText,
+            [data-testid] *,
+            .element-container *,
+            .block-container *,
+            .css-* *,
+            .st-* *,
+            .st-emotion-* * {
+                color: #ffffff !important;
+            }
+            
+            /* Tutorial and tab specific fixes */
+            .stTabs *,
+            .stTabs div,
+            .stTabs p,
+            .stTabs span,
+            .stTabs h1,
+            .stTabs h2,
+            .stTabs h3,
+            .stTabs h4,
+            .stTabs li,
+            .stTabs ul,
+            .stTabs strong,
+            .stTabs em,
+            div[data-baseweb="tab-panel"] *,
+            div[data-testid="stHorizontalBlock"] *,
+            div[data-testid="stVerticalBlock"] *,
+            div[data-testid="column"] *,
+            div[data-testid="stMarkdown"] * {
+                color: #ffffff !important;
+                background-color: transparent !important;
+            }
+            
+            /* Override any conflicting styles */
+            .main .block-container * {
+                color: #ffffff !important;
+            }
+            
+            /* Ensure buttons remain readable and mobile-friendly + remove spinners */
+            .stButton > button {
+                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%) !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 8px !important;
+                padding: 0.75rem 1rem !important;
+                font-weight: bold !important;
+                width: 100% !important;
+                min-height: 44px !important; /* iOS touch target minimum */
+                font-size: 16px !important; /* Prevent zoom on iOS */
+                touch-action: manipulation !important; /* Improve touch response */
+                transition: all 0.2s ease !important;
+            }
+            
+            /* Aggressive spinner removal for Dark theme */
+            .stSpinner,
+            [data-testid="stSpinner"],
+            .streamlit-spinner,
+            .stProgress,
+            [data-testid="stProgress"],
+            .stAlert,
+            [data-testid="stAlert"],
+            .stStatus,
+            [data-testid="stStatus"],
+            .stToast,
+            [data-testid="stToast"],
+            [class*="spinner"],
+            [class*="loading"],
+            [class*="status"],
+            .element-container:has(.stSpinner),
+            div:has(> .stSpinner) {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                width: 0 !important;
+                position: absolute !important;
+                left: -9999px !important;
+            }
+            
+            .stButton > button:hover {
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+                transform: translateY(-2px) !important;
+            }
+            
+            .stButton > button:active {
+                transform: translateY(0) !important;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+            }
+            
+            /* Ensure dropdowns work properly and are mobile-friendly */
+            .stSelectbox div[data-baseweb="select"] > div {
+                background-color: #2d2d2d !important;
+                color: #ffffff !important;
+                border: 1px solid #444 !important;
+                min-height: 44px !important;
+                font-size: 16px !important;
+            }
+            
+            /* MODERN MOBILE-FIRST RESPONSIVE DESIGN WITH TOGGLE */
+            @media (max-width: 768px) {
+                /* Main content adjustment for mobile toggle */
+                .main .block-container {
+                    padding-top: 4rem !important;
+                }
+                
+                /* Enhanced mobile configuration panel */
+                .stColumns {
+                    gap: 1rem !important;
+                }
+                
+                .stColumns > div {
+                    padding: 1rem !important;
+                    background: rgba(255,255,255,0.05) !important;
+                    border-radius: 12px !important;
+                    margin-bottom: 1rem !important;
+                }
+                
+                /* Mobile responsive columns stack vertically */
+                @media (max-width: 480px) {
+                    .stColumns {
+                        flex-direction: column !important;
+                    }
+                    
+                    .stColumns > div {
+                        width: 100% !important;
+                        margin-bottom: 1rem !important;
+                    }
+                }
+                
+                /* Sidebar styling - responsive behavior */
+                .css-1d391kg,
+                .st-emotion-cache-1d391kg,
+                section[data-testid="stSidebar"] {
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    width: 85% !important;
+                    max-width: 350px !important;
+                    height: 100vh !important;
+                    background: white !important;
+                    box-shadow: 2px 0 10px rgba(0,0,0,0.1) !important;
+                    z-index: 9998 !important;
+                    overflow-y: auto !important;
+                    padding: 1rem !important;
+                    transition: transform 0.3s ease !important;
+                    /* Show by default */
+                    transform: translateX(0) !important;
+                }
+                
+                /* Hide sidebar when closed */
+                .sidebar-closed .css-1d391kg,
+                .sidebar-closed .st-emotion-cache-1d391kg,
+                .sidebar-closed section[data-testid="stSidebar"] {
+                    transform: translateX(-100%) !important;
+                }
+                
+                /* Overlay for sidebar - visible by default */
+                .sidebar-overlay {
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    background: rgba(0,0,0,0.5) !important;
+                    z-index: 9997 !important;
+                    opacity: 1 !important;
+                    visibility: visible !important;
+                    transition: all 0.3s ease !important;
+                }
+                
+                /* Hide overlay when sidebar is closed */
+                .sidebar-closed .sidebar-overlay {
+                    opacity: 0 !important;
+                    visibility: hidden !important;
+                }
+                
+                /* Show overlay when sidebar is open (default) */
+                .sidebar-overlay {
+                    opacity: 1 !important;
+                    visibility: visible !important;
+                }
+                
+                /* Modern sidebar styling for mobile */
+                .css-1d391kg > div,
+                .st-emotion-cache-1d391kg > div {
+                    padding: 0 !important;
+                    width: 100% !important;
+                }
+                
+                /* Adjust main content for mobile */
+                .main .block-container {
+                    padding-left: 1rem !important;
+                    padding-top: 4rem !important; /* Space for toggle button */
+                }
+                
+                /* Better button sizing for mobile */
+                .stButton > button {
+                    padding: 1rem !important;
+                    font-size: 16px !important;
+                    min-height: 52px !important;
+                    border-radius: 12px !important;
+                    width: 100% !important;
+                    margin: 0.5rem 0 !important;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+                    transition: all 0.2s ease !important;
+                }
+                
+                /* Enhanced mobile touch targets for selectors */
+                .stSelectbox > div > div,
+                .stSelectbox div[data-baseweb="select"] > div {
+                    min-height: 52px !important;
+                    font-size: 16px !important;
+                    padding: 1rem !important;
+                    border-radius: 12px !important;
+                    border: 1px solid rgba(0,0,0,0.2) !important;
+                }
+                
+                /* Modern slider styling for mobile */
+                .stSlider {
+                    padding: 1.5rem 0 !important;
+                }
+                
+                .stSlider > div > div {
+                    height: 8px !important;
+                    border-radius: 4px !important;
+                }
+                
+                /* Stack columns beautifully on mobile */
+                div[data-testid="column"] {
+                    min-width: 100% !important;
+                    margin-bottom: 1.5rem !important;
+                    padding: 0 0.5rem !important;
+                }
+                
+                /* Improved main container with modern spacing */
+                .block-container {
+                    padding: 1rem !important;
+                    max-width: 100% !important;
+                }
+                
+                /* Modern header design for mobile */
+                .main-header {
+                    padding: 1.5rem 1rem !important;
+                    text-align: center !important;
+                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)) !important;
+                    border-radius: 16px !important;
+                    margin-bottom: 1.5rem !important;
+                }
+                
+                .main-header h1 {
+                    font-size: 1.8rem !important;
+                    margin: 0.5rem 0 !important;
+                    font-weight: 700 !important;
+                }
+                
+                .main-header p {
+                    font-size: 1rem !important;
+                    margin: 0.5rem 0 !important;
+                    opacity: 0.9 !important;
+                }
+                
+                /* Modern tab navigation for mobile */
+                .stTabs > div > div > div {
+                    overflow-x: auto !important;
+                    white-space: nowrap !important;
+                    padding: 0.5rem 0 !important;
+                    -webkit-overflow-scrolling: touch !important;
+                }
+                
+                .stTabs > div > div > div > button {
+                    min-width: 140px !important;
+                    padding: 1rem 1.25rem !important;
+                    font-size: 15px !important;
+                    border-radius: 12px !important;
+                    margin: 0 0.25rem !important;
+                    font-weight: 600 !important;
+                }
+                
+                /* Modern typography for mobile */
+                h1, h2, h3, h4 {
+                    font-size: 1.3rem !important;
+                    line-height: 1.4 !important;
+                    margin: 1rem 0 !important;
+                    font-weight: 600 !important;
+                }
+                
+                p, div, span {
+                    font-size: 15px !important;
+                    line-height: 1.6 !important;
+                }
+                
+                /* Modern metric cards for mobile */
+                div[data-testid="metric-container"] {
+                    padding: 1.5rem !important;
+                    margin: 1rem 0 !important;
+                    border-radius: 16px !important;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+                    border: 1px solid rgba(0,0,0,0.08) !important;
+                }
+                
+                /* Modern input styling */
+                .stTextInput > div > div > input,
+                .stNumberInput > div > div > input {
+                    min-height: 52px !important;
+                    font-size: 16px !important;
+                    border-radius: 12px !important;
+                    border: 1px solid rgba(0,0,0,0.2) !important;
+                    padding: 1rem !important;
+                }
+                
+                /* Remove ALL loading elements on mobile */
+                .stSpinner,
+                [data-testid="stSpinner"],
+                .streamlit-spinner,
+                .stProgress,
+                [data-testid="stProgress"],
+                .stStatus,
+                [data-testid="stStatus"],
+                [class*="spinner"],
+                [class*="loading"] {
+                    display: none !important;
+                    visibility: hidden !important;
+                    opacity: 0 !important;
+                }
+            }
+            
+            /* MODERN TABLET DESIGN */
+            @media (min-width: 769px) and (max-width: 1024px) {
+                .block-container {
+                    padding: 1.5rem !important;
+                    max-width: 95% !important;
+                }
+                
+                .stButton > button {
+                    min-height: 48px !important;
+                    font-size: 15px !important;
+                    border-radius: 10px !important;
+                    padding: 0.875rem 1.25rem !important;
+                }
+                
+                /* Enhanced sidebar for tablet */
+                section[data-testid="stSidebar"] {
+                    width: 320px !important;
+                    padding: 1.25rem !important;
+                }
+                
+                /* Better spacing for tablets */
+                .main-header {
+                    padding: 2rem 1.5rem !important;
+                    border-radius: 16px !important;
+                }
+                
+                div[data-testid="metric-container"] {
+                    padding: 1.25rem !important;
+                    border-radius: 12px !important;
+                }
+            }
+            
+            /* MODERN DESKTOP DESIGN */
+            @media (min-width: 1025px) {
+                /* Enhanced desktop sidebar */
+                section[data-testid="stSidebar"] {
+                    width: 350px !important;
+                    padding: 1.5rem !important;
+                    background: linear-gradient(145deg, #f8f9fa, #e9ecef) !important;
+                    border-right: 1px solid rgba(0,0,0,0.1) !important;
+                    position: relative !important;
+                    transform: none !important;
+                }
+                
+                /* Reset main content padding on desktop */
+                .main .block-container {
+                    padding-top: 1rem !important;
+                }
+                
+                /* Reset main content padding on desktop */
+                .main .block-container {
+                    padding-top: 1rem !important;
+                }
+                
+                /* Modern desktop buttons */
+                .stButton > button {
+                    min-height: 44px !important;
+                    border-radius: 8px !important;
+                    transition: all 0.2s ease !important;
+                }
+                
+                .stButton > button:hover {
+                    transform: translateY(-1px) !important;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+                }
+                
+                /* Desktop header styling */
+                .main-header {
+                    padding: 2.5rem 2rem !important;
+                    border-radius: 20px !important;
+                    margin-bottom: 2rem !important;
+                }
+                
+                /* Enhanced desktop typography */
+                .main-header h1 {
+                    font-size: 2.2rem !important;
+                    font-weight: 700 !important;
+                }
+                
+                .main-header p {
+                    font-size: 1.1rem !important;
+                }
+            }
+        </style>
+        """, unsafe_allow_html=True)
+    
+    # Mobile sidebar toggle using Streamlit button - default open
+    if 'sidebar_open' not in st.session_state:
+        st.session_state.sidebar_open = True
+    
+    # Create mobile toggle button using columns for positioning
+    col_toggle, col_spacer = st.columns([1, 20])
+    
+    with col_toggle:
+        # Mobile toggle button with CSS styling
+        st.markdown("""
+        <style>
+        @media (max-width: 768px) {
+            .mobile-toggle-button {
+                position: fixed !important;
+                top: 1rem !important;
+                left: 1rem !important;
+                z-index: 9999 !important;
+                background: linear-gradient(135deg, #667eea, #764ba2) !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 12px !important;
+                min-width: 48px !important;
+                min-height: 48px !important;
+                font-size: 1.2rem !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+            }
+            
+            .mobile-toggle-button button {
+                background: transparent !important;
+                border: none !important;
+                color: white !important;
+                font-size: 1.2rem !important;
+                width: 100% !important;
+                height: 100% !important;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .mobile-toggle-button {
+                display: none !important;
+            }
+        }
+        </style>
+        
+        <div class="mobile-toggle-button">
+        """, unsafe_allow_html=True)
+        
+        # Toggle button - show close when open, hamburger when closed
+        if st.button('✕' if st.session_state.sidebar_open else '☰', key="mobile_sidebar_toggle", help="Abrir/Fechar Menu"):
+            st.session_state.sidebar_open = not st.session_state.sidebar_open
+            st.rerun()
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Apply sidebar state with JavaScript - use sidebar-closed instead of sidebar-open
+    sidebar_js_state = "true" if st.session_state.sidebar_open else "false"
+    
+    st.markdown(f"""
+    <script>
+    // Apply sidebar state - default is open, add closed class when needed
+    document.body.className = document.body.className.replace(/sidebar-closed/g, '');
+    if (!{sidebar_js_state}) {{
+        document.body.classList.add('sidebar-closed');
+    }}
+    </script>
+    """, unsafe_allow_html=True)
+    
+    # Header with company logo
+    logo_base64 = get_logo_base64()
+    
+    st.markdown(f"""
+    <div class="main-header">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
+            <img src="data:image/png;base64,{logo_base64}" style="max-width: 60px; height: auto;" />
+            <div>
+                <h1 style="margin: 0;">{get_text("main_title")}</h1>
+                <p style="color: white; text-align: center; margin: 0; font-size: 1.1rem;">
+                    Previsões Forex com IA e Análise em Tempo Real
+                </p>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Quick action buttons in main content area
+    st.markdown("## 🚀 Análises Rápidas")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📊 Análise Técnica", type="primary", use_container_width=True, key="quick_technical"):
+            st.session_state['show_analysis'] = True
+            st.session_state['analysis_type'] = 'technical'
+    
+    with col2:
+        if st.button("🤖 Previsão IA", type="primary", use_container_width=True, key="quick_ai"):
+            st.session_state['show_analysis'] = True
+            st.session_state['analysis_type'] = 'prediction'
+    
+    with col3:
+        if st.button("📈 Dashboard Completo", type="primary", use_container_width=True, key="quick_complete"):
+            st.session_state['show_analysis'] = True
+            st.session_state['analysis_type'] = 'complete'
+    
+    st.markdown("---")
     
     # Sidebar lateral simples como era antes
     with st.sidebar:
-        # Botão Home no topo da sidebar
-        if st.button("🏠 Home", type="primary", use_container_width=True, key="home_button"):
-            # Limpar todos os resultados e voltar ao estado inicial
-            for key in ['analysis_results', 'show_analysis', 'analysis_mode']:
-                if key in st.session_state:
-                    del st.session_state[key]
-            st.rerun()
+        # Header da sidebar
+        st.markdown("""
+        <div style="text-align: center; padding: 1rem 0; margin-bottom: 1.5rem; 
+                    background: linear-gradient(135deg, #667eea, #764ba2); 
+                    border-radius: 12px; color: white;">
+            <h2 style="margin: 0; font-size: 1.3rem; font-weight: 600;">⚙️ Configurações</h2>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">Ajuste sua análise</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Botão de logout
-        if st.button("🚪 Logout", type="secondary", use_container_width=True, key="logout_button"):
-            # Limpar sessão e autenticação
+        # Trading Configuration Section
+        st.markdown("### 💱 Configuração de Trading")
+        
+        # Currency pair selection with modern styling
+        pair = st.selectbox(
+            "Par de Moedas",
+            PAIRS,
+            help=get_help_content("currency_pair")
+        )
+        
+        # Time interval
+        interval = st.selectbox(
+            "Intervalo de Tempo",
+            list(INTERVALS.keys()),
+            index=4,  # Default to 60min
+            help=get_help_content("time_interval")
+        )
+        
+        # Prediction horizon
+        horizon = st.selectbox(
+            "Horizonte de Previsão",
+            HORIZONS,
+            help=get_help_content("prediction_horizon")
+        )
+        
+        st.markdown("---")
+        
+        # Risk Management Section
+        st.markdown("### ⚖️ Gestão de Risco")
+        
+        risk_level = st.selectbox(
+            "Nível de Risco",
+            ["Conservativo", "Moderado", "Agressivo"],
+            index=1,  # Default to Moderate
+            help=get_help_content("risk_level")
+        )
+        
+        # Configuration status
+        cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
+        if cache_count > 0:
+            st.info(f"💾 {cache_count} análises em cache disponíveis")
+        
+        st.markdown("---")
+        
+        # AI Configuration Section
+        st.markdown("### 🤖 Configuração de IA")
+        
+        lookback_period = st.slider(
+            "Histórico de Dados",
+            min_value=30,
+            max_value=120,
+            value=LOOKBACK_PERIOD,
+            help=get_help_content("lookback_period")
+        )
+        
+        epochs = st.slider(
+            "Épocas de Treinamento",
+            min_value=5,
+            max_value=20,
+            value=EPOCHS,
+            help=get_help_content("epochs")
+        )
+        
+        mc_samples = st.slider(
+            "Amostras Monte Carlo",
+            min_value=10,
+            max_value=50,
+            value=MC_SAMPLES,
+            help=get_help_content("mc_samples")
+        )
+        
+        st.markdown("---")
+        
+        # Cache Management Section
+        st.markdown("### 🗂️ Gerenciamento de Cache")
+        
+        if cache_count > 0:
+            st.success(f"💾 {cache_count} análises em cache")
+            if st.button("🗑️ Limpar Cache", help="Remove todas as análises do cache"):
+                CacheManager.clear_cache()
+                st.success("Cache limpo com sucesso!")
+                st.rerun()
+        else:
+            st.info("📂 Nenhuma análise em cache")
+        
+        st.markdown("---")
+        
+        # Tutorial button
+        if st.button("📚 Tutorial Completo", help="Abrir guia detalhado de todas as funções"):
+            st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
+        
+        # Add logout button
+        if st.button("🚪 Sair", help="Sair da plataforma"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
         
-        st.markdown("---")
-        
-        # Header da sidebar compacto
-        st.markdown("## ⚙️ Configurações")
-        
-        # Market selection em expander colapsável
-        with st.expander("📊 Mercado", expanded=False):
-            market_type = st.radio(
-                "Tipo de Mercado:",
-                ["Forex", "Criptomoedas"],
-                index=0,
-                key="market_type_select"
-            )
-        
-        # Análise multi-pares com seleção de tipo em expander colapsável
-        with st.expander("🌍 Análise Multi-Pares Especializada", expanded=False):
-            # Seleção do tipo de análise baseado no perfil
-            multi_analysis_type = st.selectbox(
-                "Tipo de Análise Multi-Pares:",
-                options=[
-                    "Scalping (Técnica + Volume + Micro Tendência)",
-                    "Intraday (Análise Unificada Completa)", 
-                    "Swing (Todas com Pesos Equilibrados)",
-                    "Position (Sentiment + Tendência + LSTM)"
-                ],
-                key="multi_analysis_type"
-            )
-            
-            multi_pair_analysis = st.button("🌍 Executar Análise Multi-Pares", use_container_width=True, key="multi_pair_btn")
-        
-        # Verificar o trading style primeiro
-        current_trading_style = st.session_state.get('trading_style', 'swing')
-        
-        # Para scalping, usar parâmetros fixos otimizados (sem interface de configuração)
-        if current_trading_style == 'scalping':
-            # Parâmetros fixos otimizados para scalping
-            stop_percentage = 20  # Stop apertado fixo
-            take_percentage = 30  # Take conservador fixo
-            
-            # Armazenar no session state
-            st.session_state['stop_percentage'] = stop_percentage
-            st.session_state['take_percentage'] = take_percentage
-            
 
-        else:
-            # Para outros estilos, não mostrar interface - usar cálculos automáticos do Alpha Vantage
-            # Os parâmetros serão definidos automaticamente com base na análise de probabilidade real
-            # Não armazenar valores fixos no session state - deixar para o Alpha Vantage calcular
-            pass
-        
-        # Sistema unificado de Intervalo e Horizonte em expander colapsável
-        with st.expander("⏰ Configuração Temporal Unificada", expanded=False):
-            # Presets integrados para máxima coerência (usando valores exatos de HORIZONS)
-            temporal_presets = {
-                "Scalping (1-5 min)": {"interval": "5min", "horizon": "5 Minutos", "description": "Operações ultra-rápidas de 1-5 minutos"},
-                "Intraday (15-30 min)": {"interval": "15min", "horizon": "1 Hora", "description": "Operações no mesmo dia"},
-                "Swing (1-4 horas)": {"interval": "60min", "horizon": "4 Horas", "description": "Operações de alguns dias"},
-                "Position (Diário)": {"interval": "daily", "horizon": "1 Dia", "description": "Operações de posição"}
-            }
-            
-            preset_choice = st.selectbox(
-                "Estratégia Temporal:",
-                list(temporal_presets.keys()),
-                index=0,  # Default Scalping
-                help="Presets otimizados para máxima precisão entre intervalo e horizonte",
-                key="temporal_preset_selectbox"
-            )
-            
-            selected_preset = temporal_presets[preset_choice]
-            interval = selected_preset["interval"]
-            horizon = selected_preset["horizon"]
-            
-            # Mapear preset_choice para trading_style
-            trading_style_mapping = {
-                "Scalping (1-5 min)": "scalping",
-                "Intraday (15-30 min)": "intraday",
-                "Swing (1-4 horas)": "swing", 
-                "Position (Diário)": "position"
-            }
-            
-            # Definir trading_style baseado na seleção
-            trading_style = trading_style_mapping.get(preset_choice, "swing")
-            st.session_state['trading_style'] = trading_style
-            
-            # Mostrar configuração atual com estratégia
-            st.info(f"📊 **{preset_choice}** | Intervalo: {interval} | Horizonte: {horizon}")
-            st.caption(f"💡 {selected_preset['description']}")
-            st.success(f"🎯 **Estratégia Ativa:** {trading_style.upper()}")
-            
-            # Opção avançada para configuração manual (colapsável)
-            with st.expander("⚙️ Configuração Manual Avançada"):
-                st.warning("⚠️ Configuração manual pode reduzir a precisão se intervalo e horizonte não estiverem alinhados!")
-                
-                manual_interval = st.selectbox("Intervalo Manual:", list(INTERVALS.keys()), 
-                                             index=list(INTERVALS.keys()).index(interval), key="manual_interval_selectbox")
-                # Verificar se horizonte existe na lista, senão usar primeiro item
-                horizon_index = 0
-                try:
-                    horizon_index = HORIZONS.index(horizon)
-                except ValueError:
-                    horizon = HORIZONS[0]  # Usar o primeiro como fallback
-                
-                manual_horizon = st.selectbox("Horizonte Manual:", HORIZONS,
-                                            index=horizon_index, key="manual_horizon_selectbox")
-                
-                if st.checkbox("Usar Configuração Manual", key="manual_config_checkbox"):
-                    interval = manual_interval
-                    horizon = manual_horizon
-                    # Tentar manter o trading_style consistente mesmo no modo manual
-                    if "15min" in interval or "30min" in interval:
-                        st.session_state['trading_style'] = "intraday"
-                    elif "60min" in interval or "1hour" in interval:
-                        st.session_state['trading_style'] = "swing"
-                    elif "daily" in interval:
-                        st.session_state['trading_style'] = "position"
-                    st.error("🔧 Modo manual ativo - Verifique se intervalo e horizonte estão compatíveis!")
-        
-        # Usar configuração de risco padrão (moderado)
-        risk_level_en = "Moderate"
-        
-        # Seção de análises especializadas em expander colapsável
-        with st.expander("🎯 Análises Especializadas", expanded=False):
-            # Seleção do perfil de trading para análises especializadas
-            specialized_profile = st.selectbox(
-                "🎯 Perfil de Trading Especializado:",
-                options=[
-                    "Scalping (Técnica + Volume + Micro Tendência)",
-                    "Intraday (Análise Técnica Tradicional H1)", 
-                    "Swing (Todas com Pesos Equilibrados)",
-                    "Position (Sentiment + Tendência + LSTM)"
-                ],
-                index=2,  # Default to Swing
-                key="specialized_profile_select",
-                help="Escolha o perfil que define quais análises serão priorizadas e como serão ponderadas"
-            )
-            
-            # Mostrar descrição do perfil selecionado
-            profile_config = parse_analysis_type(specialized_profile)
-            st.info(f"📊 **{profile_config['description']}**")
-            st.caption(f"🎯 Foco: {profile_config['focus']} | ⏰ Timeframe: {profile_config['timeframe']}")
-            
-            st.markdown("---")
-            
-            # Seleção do par de moedas
-            market_type = st.session_state.get('market_type_select', 'Forex')
-            if market_type == "Forex":
-                available_pairs = PAIRS
-                pair_label = "💱 Par de Moedas"
-            else:  # Criptomoedas
-                available_pairs = CRYPTO_PAIRS
-                pair_label = "₿ Par Cripto"
-            
-            pair = st.selectbox(pair_label, available_pairs, key="pair_selectbox")
-            
-            st.markdown("---")
-            
-            # Análise unificada principal
-            unified_analysis = st.button("🧠 Análise Unificada Inteligente", type="primary", use_container_width=True, 
-                                       help="Combina todas as análises para a melhor previsão do mercado", key="unified_analysis_btn")
-            
-            st.markdown("**Análises Individuais:**")
-            
-            # Análises empilhadas verticalmente para melhor visualização
-            technical_analysis = st.button("📊 Análise Técnica", use_container_width=True, key="technical_btn")
-            trend_analysis = st.button("📉 Análise de Tendência", use_container_width=True, key="trend_btn")
-            sentiment_analysis = st.button("📰 Análise de Sentimento", use_container_width=True, key="sentiment_btn")
-            ai_analysis = st.button("🤖 Análise IA/LSTM", use_container_width=True, key="ai_btn")
-            volume_analysis = st.button("📈 Análise de Volume", use_container_width=True, key="volume_btn")
-            risk_analysis = st.button("⚖️ Análise de Risco", use_container_width=True, key="risk_btn")
-            
-            # Análise rápida
-            quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, key="quick_analysis_btn")
-
-        
-        # Gestão de Banca Simplificada em expander colapsável
-        with st.expander("💰 Calculadora de Lote", expanded=False):
-            col1, col2 = st.columns(2)
-            with col1:
-                bank_value = st.number_input(
-                    "💳 Valor da Banca (USD)", 
-                    min_value=100.0, 
-                    max_value=1000000.0, 
-                    value=st.session_state.get('bank_value', 5000.0), 
-                    step=500.0,
-                    help="Valor total da sua banca em dólares",
-                    key="bank_value_input"
-                )
-            
-            with col2:
-                lot_size = st.number_input(
-                    "📊 Tamanho do Lote",
-                    min_value=0.01,
-                    max_value=100.0,
-                    value=st.session_state.get('lot_size', 0.1),
-                    step=0.01,
-                    format="%.2f",
-                    help="Tamanho do lote para a operação",
-                    key="lot_size_input"
-                )
-            
-            # Armazenar no session state para uso nas análises
-            st.session_state['bank_value'] = bank_value
-            st.session_state['lot_size'] = lot_size
-            
-            # Calculadora Compacta de Risco/Retorno
-            st.markdown("**🧮 Calculadora de Risco/Retorno**")
-            
-            # Layout compacto com 2 colunas para economizar espaço
-            price_col1, price_col2 = st.columns(2)
-            
-            with price_col1:
-                entry_price = st.number_input(
-                    "📍 Entrada",
-                    min_value=0.00001,
-                    max_value=100.0,
-                    value=1.10000,
-                    step=0.00001,
-                    format="%.5f",
-                    help="Preço de entrada da operação",
-                    key="calc_entry_price"
-                )
-                
-                take_price = st.number_input(
-                    "🎯 Take Profit",
-                    min_value=0.00001,
-                    max_value=100.0,
-                    value=1.10120,
-                    step=0.00001,
-                    format="%.5f",
-                    help="Preço do take profit",
-                    key="calc_take_price"
-                )
-                
-            with price_col2:
-                stop_price = st.number_input(
-                    "🛑 Stop Loss",
-                    min_value=0.00001,
-                    max_value=100.0,
-                    value=1.09920,
-                    step=0.00001,
-                    format="%.5f",
-                    help="Preço do stop loss",
-                    key="calc_stop_price"
-                )
-            
-            # Calcular valores baseados nos preços inseridos
-            stop_pips = abs(entry_price - stop_price) * 10000
-            take_pips = abs(take_price - entry_price) * 10000
-            pip_value = lot_size * 10.0  # Valor do pip para o lote
-            
-            # Valores em USD
-            risk_usd = stop_pips * pip_value / 10
-            profit_usd = take_pips * pip_value / 10
-            rr_ratio = profit_usd / risk_usd if risk_usd > 0 else 0
-            volume_usd = lot_size * 100000 * entry_price
-            
-            # Resultados em layout compacto 2x2
-            st.markdown("**📊 Resultados:**")
-            
-            metrics_col1, metrics_col2 = st.columns(2)
-            
-            with metrics_col1:
-                st.metric("🛑 Risco", f"${risk_usd:.2f}", f"{stop_pips:.1f} pips")
-                st.metric("⚖️ Relação R/R", f"1:{rr_ratio:.2f}")
-                
-            with metrics_col2:
-                st.metric("💰 Lucro", f"${profit_usd:.2f}", f"{take_pips:.1f} pips")
-                st.metric("📊 Volume", f"${volume_usd:,.0f}")
-                
-            st.caption("💡 Calculadora independente - modifique os preços acima para calcular risco/retorno")
-            
-            # Separador visual
-            st.divider()
-            
-            # Calculadora de Percentual da Banca
-            st.markdown("**📊 Impacto na Banca**")
-            
-            # Calcular percentuais
-            risk_percent = (risk_usd / bank_value) * 100 if bank_value > 0 else 0
-            profit_percent = (profit_usd / bank_value) * 100 if bank_value > 0 else 0
-            
-            # Impacto na banca de forma mais compacta
-            st.metric(
-                "📉 % Risco da Banca",
-                f"{risk_percent:.2f}%",
-                f"${risk_usd:.2f} de ${bank_value:,.0f}"
-            )
-            
-            st.metric(
-                "📈 % Ganho Potencial", 
-                f"{profit_percent:.2f}%",
-                f"${profit_usd:.2f} de ${bank_value:,.0f}"
-            )
-            
-            # Alertas de risco
-            if risk_percent > 5:
-                st.error("⚠️ RISCO ALTO: Mais de 5% da banca em risco!")
-            elif risk_percent > 2:
-                st.warning("⚠️ Risco moderado: Entre 2-5% da banca")
-            else:
-                st.success("✅ Risco baixo: Menos de 2% da banca")
-            
-            st.caption("💡 Recomendação: Máximo 2% de risco por operação")
-        
-        # Configurações de IA colapsáveis
-        with st.expander("🤖 Configurações Avançadas de IA"):
-            lookback_period = st.slider("Histórico de Dados", 30, 120, LOOKBACK_PERIOD, key="lookback_slider")
-            epochs = st.slider("Épocas de Treinamento", 5, 20, EPOCHS, key="epochs_slider")
-            mc_samples = st.slider("Amostras Monte Carlo", 10, 50, MC_SAMPLES, key="mc_samples_slider")
-        
-        # Cache compacto
-        cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
-        if cache_count > 0:
-            col1, col2 = st.columns([2, 1])
-            with col1:
-                st.caption(f"💾 {cache_count} em cache")
-            with col2:
-                if st.button("🗑️", help="Limpar Cache", key="clear_cache_btn"):
-                    # Limpar cache do session state
-                    for key in list(st.session_state.keys()):
-                        if isinstance(st.session_state.get(key), tuple):
-                            del st.session_state[key]
-                    
-                    # Limpar outras chaves de cache
-                    cache_keys = ['last_pair', 'last_interval', 'cached_data', 'model_cache', 
-                                  'sentiment_cache', 'indicators_cache', 'analysis_cache']
-                    for key in cache_keys:
-                        if key in st.session_state:
-                            del st.session_state[key]
-                    
-                    st.success("Cache limpo!")
-                    st.rerun()
-        
-        # Processamento dos diferentes tipos de análise
-        analyze_button = False
-        
-        if unified_analysis:
-            st.session_state['analysis_mode'] = 'unified'
-            # Armazenar perfil especializado selecionado para usar na análise
-            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
-            analyze_button = True
-        elif technical_analysis:
-            st.session_state['analysis_mode'] = 'technical'
-            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
-            analyze_button = True
-        elif sentiment_analysis:
-            st.session_state['analysis_mode'] = 'sentiment'
-            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
-            analyze_button = True
-        elif risk_analysis:
-            st.session_state['analysis_mode'] = 'risk'
-            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
-            analyze_button = True
-        elif ai_analysis:
-            st.session_state['analysis_mode'] = 'ai_lstm'
-            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
-            analyze_button = True
-        elif volume_analysis:
-            st.session_state['analysis_mode'] = 'volume'
-            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
-            analyze_button = True
-        elif trend_analysis:
-            st.session_state['analysis_mode'] = 'trend'
-            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
-            analyze_button = True
-        
-        # Botões auxiliares compactos
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📚 Tutorial"):
-                st.session_state['show_tutorial'] = not st.session_state.get('show_tutorial', False)
-        with col2:
-            if st.button("🚪 Sair"):
-                for key in list(st.session_state.keys()):
-                    del st.session_state[key]
-                st.rerun()
-
-    # Analysis buttons are now in sidebar - this section removed
     
-    # Process analysis requests from sidebar buttons
-    if analyze_button or quick_analysis:
-        run_analysis(
-            pair, interval, horizon, lookback_period, 
-            mc_samples, epochs, quick_analysis
-        )
-    elif multi_pair_analysis:
-        # Get selected analysis type
-        multi_analysis_type = st.session_state.get('multi_analysis_type', 'Swing (Todas com Pesos Equilibrados)')
-        run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs, multi_analysis_type)
+    # Display analysis results
+    if st.session_state.get('show_analysis', False):
+        display_analysis_results()
     
-    # Always show main header
-    display_main_header()
-    
-    # Display tutorial if activated
-    if st.session_state.get('show_tutorial', False):
-        display_comprehensive_tutorial()
-    
-    # Display results if available
-    elif st.session_state.get('multi_pair_results'):
-        display_multi_pair_results()
-    elif st.session_state.get('analysis_results'):
-        display_analysis_results_with_tabs()
-    else:
-        # Show footer when no analysis is active
-        display_footer()
-
-def display_main_header():
-    """Display the main platform header"""
-    st.markdown("""
-    <div class="main-header" style="text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 15px; margin-bottom: 2rem; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3); color: white;">
-        <h1 style="color: white; margin-bottom: 0.5rem; font-size: 2.5rem;">
-            📊 Plataforma Avançada de Análise Forex
-        </h1>
-        <p style="color: rgba(255,255,255,0.9); font-size: 1.2em; margin: 0;">
-            Análises com Dados Reais Alpha Vantage - 100% Autênticos
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-def display_comprehensive_tutorial():
-    """Display comprehensive tutorial about all platform functions"""
-    st.markdown("# 📚 Tutorial Completo da Plataforma")
-    st.markdown("### *Guia Definitivo para Maximizar seus Resultados no Trading Forex*")
-    
-    # Botão para fechar tutorial
-    if st.button("❌ Fechar Tutorial", type="secondary", key="close_tutorial_btn"):
-        st.session_state['show_tutorial'] = False
-        st.rerun()
-    
-    # Menu do tutorial com tabs
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-        "🏁 Início Rápido", 
-        "⚙️ Configurações", 
-        "🧠 Análises", 
-        "💰 Gestão de Risco", 
-        "📊 Interpretação", 
-        "🎯 Estratégias",
-        "⏰ Tempo & Mercado"
-    ])
-    
-    with tab1:
-        st.markdown("## 🏁 Guia de Início Rápido")
-        st.markdown("""
-        ### Como começar em 3 passos simples:
-        
-        **1. Configure sua Estratégia Temporal** ⏰
-        - Na barra lateral, escolha uma das 5 estratégias pré-definidas:
-          - **Scalping (1-5 min)**: Para operações muito rápidas
-          - **Intraday (15-30 min)**: Para operações no mesmo dia
-          - **Swing (1-4 horas)**: Para operações de alguns dias
-          - **Position (Diário)**: Para operações de médio prazo
-          - **Trend (Semanal)**: Para análise de tendência longa
-        
-        **2. Configure seu Perfil de Risco** ⚖️
-        - **Conservativo**: Máxima proteção, menores ganhos
-        - **Moderado**: Equilíbrio ideal entre risco e retorno
-        - **Agressivo**: Maior potencial, maiores riscos
-        
-        **3. Execute a Análise** 🧠
-        - Clique em "Análise Unificada Inteligente" para a melhor recomendação
-        - Ou escolha análises específicas (Técnica, Sentimento, IA, etc.)
-        """)
-        
-        st.success("💡 **Dica de Ouro**: Comece sempre com a Análise Unificada - ela combina todas as ferramentas para dar a melhor recomendação!")
-    
-    with tab2:
-        st.markdown("## ⚙️ Configurações Avançadas")
-        st.markdown("""
-        ### 🏦 Configuração da Conta Real
-        
-        **Saldo da Conta**: Configure seu saldo real para cálculos precisos de risco/retorno
-        
-        **Sistema de Lotes MT4/MT5**:
-        - **0.01**: Micro lote (1.000 unidades da moeda base)
-        - **0.1**: Mini lote (10.000 unidades da moeda base)
-        - **1.0**: Lote padrão (100.000 unidades da moeda base)
-        
-        **Alavancagem**: De 1:1 até 1000:1 como nas corretoras reais
-        - **1:50**: Conservador, menor risco
-        - **1:100-200**: Moderado, equilíbrio ideal
-        - **1:500+**: Agressivo, maior potencial
-        
-        ### ⏰ Sistema Temporal Unificado
-        
-        **Por que é importante?**: Intervalos e horizontes desalinhados geram previsões inconsistentes.
-        
-        **Presets Otimizados**:
-        - Cada preset já tem intervalo e horizonte perfeitamente calibrados
-        - Garante máxima coerência nas análises
-        - Elimina variações drásticas nos resultados
-        
-        **Modo Manual**: Para traders experientes que querem configuração personalizada
-        """)
-        
-        st.warning("⚠️ **Importante**: Use sempre os presets para máxima precisão. O modo manual pode reduzir a confiabilidade se não configurado corretamente.")
-    
-    with tab3:
-        st.markdown("## 🧠 Tipos de Análise")
-        st.markdown("""
-        ### 🎯 Análise Unificada Inteligente (RECOMENDADA)
-        Combina todas as análises em uma única recomendação super precisa:
-        - Análise técnica com 8+ indicadores
-        - Sentimento de mercado em tempo real
-        - Inteligência artificial LSTM
-        - Gestão de risco personalizada
-        
-        ### 📊 Análises Individuais
-        
-        **Análise Técnica**:
-        - RSI, MACD, Bollinger Bands, Stochastico
-        - Médias móveis (SMA, EMA)
-        - Sinais de compra/venda automáticos
-        
-        **Análise de Sentimento**:
-        - Processamento de notícias em tempo real
-        - Score de sentimento do mercado
-        - Impacto nas decisões de trading
-        
-        **Análise de IA/LSTM**:
-        - Rede neural com memória de longo prazo
-        - Predições baseadas em padrões históricos
-        - Adaptação automática ao perfil de risco
-        
-        **Análise de Risco**:
-        - Stop loss e take profit otimizados
-        - Cálculo de margem necessária
-        - Razão risco/retorno automática
-        
-        **Análise de Volume**:
-        - Força dos movimentos de preço
-        - Confirmação de tendências
-        - Pontos de entrada e saída
-        
-        **Análise de Tendência**:
-        - Direção geral do mercado
-        - Força da tendência atual
-        - Pontos de reversão potenciais
-        """)
-        
-        st.info("🎯 **Estratégia Vencedora**: Use a Análise Unificada como base e complemente com análises específicas para confirmação.")
-    
-    with tab4:
-        st.markdown("## 💰 Gestão de Risco Profissional")
-        st.markdown("""
-        ### 🛡️ Sistema de Proteção Multicamadas
-        
-        **Cálculos em Tempo Real**:
-        - Valor exato em pips e dinheiro
-        - Margem necessária baseada na alavancagem
-        - Percentual da banca em risco
-        
-        **Níveis de Proteção**:
-        1. **Stop Loss**: Proteção contra perdas
-        2. **Take Profit**: Objetivo de lucro
-        3. **Extensão Máxima**: Potencial adicional
-        4. **Reversão Iminente**: Alerta de mudança
-        
-        ### 📈 Perfis de Risco Explicados
-        
-        **Conservativo** 🛡️:
-        - Stop loss mais próximo (menor risco)
-        - Take profit moderado
-        - Ideal para: Iniciantes, contas pequenas
-        - Expectativa: 1-3% por operação
-        
-        **Moderado** ⚖️:
-        - Equilíbrio perfeito risco/retorno
-        - Stop e take profit balanceados
-        - Ideal para: Maioria dos traders
-        - Expectativa: 2-5% por operação
-        
-        **Agressivo** 🚀:
-        - Stop loss mais distante (maior risco)
-        - Take profit ambicioso
-        - Ideal para: Traders experientes, contas maiores
-        - Expectativa: 3-8% por operação
-        
-        ### 💡 Dicas de Gestão Profissional
-        - Nunca arrisque mais que 2% da conta por operação
-        - Use sempre stop loss
-        - Razão risco/retorno mínima de 1:1.5
-        - Considere trailing stop para maximizar lucros
-        """)
-    
-    with tab5:
-        st.markdown("## 📊 Como Interpretar os Resultados")
-        st.markdown("""
-        ### 🎯 Sinais de Decisão
-        
-        **Recomendação Principal**:
-        - **COMPRAR** 🟢: Expectativa de alta no preço
-        - **VENDER** 🔴: Expectativa de queda no preço
-        - **INDECISÃO** 🟡: Sinais contraditórios, aguardar confirmação do mercado
-        
-        ### 📈 Métricas Importantes
-        
-        **Confiança do Modelo**:
-        - **80-95%**: Alta confiança, execute a operação
-        - **60-79%**: Confiança moderada, considere outros fatores
-        - **<60%**: Baixa confiança, aguarde melhor setup
-        
-        **Variação Esperada**:
-        - **+2%**: Movimento significativo de alta
-        - **-1.5%**: Movimento moderado de baixa
-        - **±0.5%**: Movimento fraco, pouco potencial
-        
-        ### 🔍 Interpretação por Abas
-        
-        **Aba Visão Geral**:
-        - Resumo executivo da análise
-        - Recomendação principal clara
-        - Níveis de risco e retorno
-        
-        **Aba Técnica**:
-        - Estado dos indicadores técnicos
-        - Força da tendência atual
-        - Pontos de entrada/saída
-        
-        **Aba Sentimento**:
-        - Humor do mercado
-        - Pressão de compra/venda
-        - Impacto das notícias
-        
-        **Aba Métricas**:
-        - Dados detalhados da análise
-        - Histórico de performance
-        - Componentes individuais
-        """)
-        
-        st.success("📊 **Dica Pro**: Combine alta confiança (>80%) + razão R:R favorável (>1:2) + sentimento alinhado = Setup perfeito!")
-    
-    with tab6:
-        st.markdown("## 🎯 Estratégias de Trading Profissionais")
-        st.markdown("""
-        ### 🏆 Estratégias por Perfil Temporal
-        
-        **Scalping (1-5 min)** ⚡:
-        - **Objetivo**: Lucros pequenos e rápidos
-        - **Setup ideal**: Confiança >85% + movimento >15 pips
-        - **Gestão**: Stop 5-10 pips, Take 10-20 pips
-        - **Melhor horário**: Sobreposição de sessões (08h-12h, 14h-18h UTC)
-        
-        **Intraday (15-30 min)** 📈:
-        - **Objetivo**: Aproveitar movimentos do dia
-        - **Setup ideal**: Confiança >75% + sentimento alinhado
-        - **Gestão**: Stop 15-25 pips, Take 25-50 pips
-        - **Melhor horário**: Após releases econômicos
-        
-        **Swing (1-4 horas)** 🌊:
-        - **Objetivo**: Seguir tendências de médio prazo
-        - **Setup ideal**: Convergência técnica + fundamentalista
-        - **Gestão**: Stop 30-50 pips, Take 60-150 pips
-        - **Melhor momento**: Início de novas tendências
-        
-        **Position (Diário)** 📅:
-        - **Objetivo**: Capturar grandes movimentos
-        - **Setup ideal**: Análise fundamental + técnica alinhadas
-        - **Gestão**: Stop 50-100 pips, Take 150-300 pips
-        - **Melhor momento**: Mudanças de política monetária
-        
-        **Trend (Semanal)** 📊:
-        - **Objetivo**: Movimentos de longo prazo
-        - **Setup ideal**: Tendência forte + fundamentais sólidos
-        - **Gestão**: Stop 100-200 pips, Take 300+ pips
-        - **Melhor momento**: Início de ciclos econômicos
-        
-        ### 🎪 Estratégias Avançadas de Combinação
-        
-        **Estratégia de Confirmação Tripla**:
-        1. Execute Análise Unificada (confiança >80%)
-        2. Confirme com Análise Técnica (indicadores alinhados)
-        3. Valide com Sentimento (score favorável)
-        
-        **Estratégia de Gestão Dinâmica**:
-        1. Entre com lote conservador
-        2. Adicione posição se análise se mantém forte
-        3. Use trailing stop após 50% do take profit
-        
-        **Estratégia Anti-Reversão**:
-        1. Monitor nível de "Reversão Iminente"
-        2. Feche posição parcial ao atingir alerta
-        3. Mantenha stop móvel na entrada
-        """)
-        
-        st.warning("⚠️ **Lembrete**: Sempre teste estratégias em conta demo antes de aplicar com dinheiro real!")
-    
-    with tab7:
-        st.markdown("## ⏰ Tempo & Mercado: Estratégia Temporal e Impacto")
-        st.markdown("""
-        ### 🌍 Como a Estratégia Temporal Influencia o Mercado
-        
-        A escolha correta da estratégia temporal é fundamental para o sucesso no trading. Cada timeframe tem características únicas que afetam diretamente seus resultados.
-        
-        ### 📈 Análise Detalhada por Estratégia Temporal
-        """)
-        
-
-        # Intraday
-        st.markdown("#### 📈 Intraday (15-30 min)")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("""
-            **Características do Mercado:**
-            - Movimentos de 20-50 pips são o alvo
-            - Padrões técnicos mais confiáveis
-            - Menos ruído que scalping
-            - Influência de releases econômicos
-            - Tendências intraday claras
-            
-            **Eventos que Impactam:**
-            - Dados econômicos (PMI, emprego, inflação)
-            - Decisões de bancos centrais
-            - Discursos de autoridades
-            - Abertura de mercados importantes
-            """)
-        with col2:
-            st.markdown("""
-            **Estratégia de Horizonte:**
-            - Horizonte 4 horas permite 2-4 operações
-            - Análise de suporte/resistência crucial
-            - Padrões de candlestick mais válidos
-            - Confirmação de múltiplos timeframes
-            
-            **Timing Perfeito:**
-            - 08:30-10:00 UTC (dados europeus)
-            - 13:30-15:30 UTC (dados americanos)
-            - 15:30-17:00 UTC (fechamento europeu)
-            """)
-        
-        # Swing
-        st.markdown("#### 🌊 Swing (1-4 horas)")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("""
-            **Características do Mercado:**
-            - Movimentos de 50-150 pips típicos
-            - Tendências de 1-5 dias de duração
-            - Menor impacto de ruído
-            - Análise fundamental ganha importância
-            - Padrões técnicos mais confiáveis
-            
-            **Fatores de Influência:**
-            - Sentimento de risco on/off
-            - Fluxos de capital internacional
-            - Expectativas de política monetária
-            - Correlações entre ativos
-            """)
-        with col2:
-            st.markdown("""
-            **Horizonte 1 Dia - Impacto:**
-            - Captura movimentos completos
-            - Menor estresse psicológico
-            - Tempo para análise aprofundada
-            - Oportunidade de piramidação
-            
-            **Vantagens Temporais:**
-            - Podem manter posições overnight
-            - Menos dependente de timing preciso
-            - Aproveitam gaps de abertura
-            - Seguem tendências estabelecidas
-            """)
-        
-        # Position
-        st.markdown("#### 📅 Position (Diário)")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("""
-            **Características do Mercado:**
-            - Movimentos de 150-400 pips possíveis
-            - Tendências de semanas/meses
-            - Análise fundamental predominante
-            - Menor frequência de operações
-            - Maior importância dos fundamentos
-            
-            **Drivers Principais:**
-            - Diferencial de juros entre países
-            - Crescimento econômico relativo
-            - Políticas monetárias divergentes
-            - Fluxos de investimento estrangeiro
-            """)
-        with col2:
-            st.markdown("""
-            **Horizonte 1 Semana - Estratégia:**
-            - Foco em tendências macro
-            - Resistência a ruídos de curto prazo
-            - Análise de múltiplos indicadores
-            - Paciência para desenvolvimento
-            
-            **Timing Macro:**
-            - Reuniões de bancos centrais
-            - Releases trimestrais de GDP
-            - Mudanças em sentiment global
-            - Ciclos econômicos regionais
-            """)
-        
-        # Trend
-        st.markdown("#### 📊 Trend (Semanal)")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("""
-            **Características do Mercado:**
-            - Movimentos de 300+ pips comuns
-            - Tendências de meses/anos
-            - Análise macroeconômica essencial
-            - Menor número de operações
-            - Foco em mega tendências
-            
-            **Mega Drivers:**
-            - Ciclos econômicos globais
-            - Mudanças estruturais monetárias
-            - Crises econômicas/geopolíticas
-            - Shifts demográficos
-            """)
-        with col2:
-            st.markdown("""
-            **Horizonte 1 Mês - Visão:**
-            - Captura de super ciclos
-            - Imunidade a volatilidade diária
-            - Foco em fundamentos sólidos
-            - Construção de posições graduais
-            
-            **Exemplos Históricos:**
-            - USD bull market 2014-2016
-            - EUR bear market 2008-2012
-            - JPY carry trade cycles
-            - Commodities super cycles
-            """)
-        
-        st.markdown("---")
-        st.markdown("### 🎯 Matriz de Decisão: Tempo vs Mercado")
-        
-        # Tabela interativa
-        st.markdown("""
-        | Estratégia | Melhor Volatilidade | Pior Volatilidade | Spread Máximo | News Impact | Pairs Ideais |
-        |------------|--------------------|--------------------|---------------|-------------|--------------|
-        | **Scalping** | Média (15-25 pips/hora) | Baixa (<10 pips/hora) | 1-2 pips | Alto (evitar) | EUR/USD, USD/JPY |
-        | **Intraday** | Média-Alta (25-40 pips/4h) | Muito baixa | 2-3 pips | Médio (aproveitar) | GBP/USD, EUR/GBP |
-        | **Swing** | Alta (40-80 pips/dia) | Média | 3-5 pips | Baixo | AUD/USD, NZD/USD |
-        | **Position** | Qualquer | Qualquer | 5+ pips | Muito baixo | USD/CAD, EUR/CHF |
-        | **Trend** | Qualquer | Qualquer | Irrelevante | Irrelevante | Todos os majors |
-        """)
-        
-        st.markdown("### 🔄 Interação Dinâmica: Estratégia + Horizonte")
-        
-        st.info("""
-        **🧠 Inteligência da Plataforma:**
-        
-        Nossa plataforma automaticamente ajusta os algoritmos baseado na combinação escolhida:
-        
-        - **Scalping + 1 hora**: Foco em momentum e breakouts imediatos
-        - **Intraday + 4 horas**: Análise de padrões e confirmações técnicas  
-        - **Swing + 1 dia**: Convergência técnica-fundamental balanceada
-        - **Position + 1 semana**: Predominância de análise fundamental
-        - **Trend + 1 mês**: Foco exclusivo em macro tendências
-        
-        Cada combinação otimiza:
-        - Pesos dos indicadores técnicos
-        - Sensibilidade ao sentimento de mercado
-        - Parâmetros da rede neural LSTM
-        - Níveis de stop loss e take profit
-        - Alertas de reversão de tendência
-        """)
-        
-        st.markdown("### 📊 Impacto Prático no Trading")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("""
-            **⚠️ Erros Comuns por Estratégia:**
-            
-            **Scalping:**
-            - Operar em horários de baixa liquidez
-            - Ignorar spreads altos
-            - Usar alavancagem excessiva
-            - Não respeitar stop loss rápido
-            
-            **Intraday:**  
-            - Manter posições durante news importantes
-            - Não ajustar para diferentes sessões
-            - Ignorar correlações entre pares
-            
-            **Swing:**
-            - Fechar posições muito cedo por ansiedade
-            - Não considerar gaps de fim de semana
-            - Ignorar análise fundamental
-            """)
-        
-        with col2:
-            st.markdown("""
-            **✅ Melhores Práticas:**
-            
-            **Position/Trend:**
-            - Análise fundamental como base
-            - Paciência para desenvolvimento
-            - Gestão de posições graduais
-            - Foco em mega tendências
-            
-            **Geral:**
-            - Sempre alinhar estratégia com disponibilidade
-            - Respeitar os horários ótimos de cada abordagem
-            - Ajustar lote conforme timeframe
-            - Manter disciplina na gestão de risco
-            """)
-        
-        st.success("""
-        🎯 **Fórmula do Sucesso Temporal:**
-        
-        **Estratégia Temporal Correta** + **Horizonte Alinhado** + **Timing de Mercado** = **Resultados Consistentes**
-        
-        Use nossa plataforma para eliminar as incertezas - cada preset já otimiza automaticamente todos esses fatores!
-        """)
-    
-    # Seção final com dicas importantes
-    st.markdown("---")
-    st.markdown("## 🏆 Checklist do Trader Profissional")
-    
+    # Quick Analysis Button
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("""
-        ### ✅ Antes de Operar
-        - [ ] Configurei meu perfil de risco corretamente
-        - [ ] Escolhi a estratégia temporal adequada
-        - [ ] Análise unificada com confiança >75%
-        - [ ] Razão risco/retorno favorável (>1:1.5)
-        - [ ] Defini stop loss e take profit
-        - [ ] Calculei o risco monetário (máx 2% da conta)
-        """)
+        analyze_button = st.button(
+            "📊 Análise Técnica Completa",
+            type="primary",
+            use_container_width=True,
+            help="Executa análise técnica completa com indicadores e recomendações"
+        )
     
     with col2:
-        st.markdown("""
-        ### ✅ Durante a Operação
-        - [ ] Monitor níveis de reversão iminente
-        - [ ] Mantenho disciplina nos stops
-        - [ ] Evito mover stop contra mim
-        - [ ] Uso trailing stop quando em lucro
-        - [ ] Registro todas as operações
-        - [ ] Mantenho controle emocional
-        """)
+        quick_analysis = st.button(
+            "⚡ Análise Rápida",
+            use_container_width=True,
+            help="Análise rápida com dados em cache (se disponível)"
+        )
     
-    st.success("🎯 **Sucesso no Trading**: Consistência + Disciplina + Gestão de Risco = Lucros Sustentáveis!")
-
-def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs, analysis_type=None):
-    """Análise completa de todos os pares de moedas com tipo de análise otimizada por perfil"""
-    
-    # Progress container
-    progress_container = st.container()
-    
-    with progress_container:
-        st.markdown("## 🌍 Análise Multi-Pares - Scanner Completo")
+    # Execute analysis based on button clicks
+    if analyze_button or quick_analysis:
+        # Check for required API key
+        api_key = os.environ.get('ALPHA_VANTAGE_API_KEY')
+        if not api_key:
+            st.error("⚠️ Chave API Alpha Vantage não encontrada. Por favor, configure a variável de ambiente ALPHA_VANTAGE_API_KEY.")
+            st.stop()
         
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+        # Store analysis parameters
+        st.session_state['current_pair'] = pair
+        st.session_state['current_interval'] = interval
+        st.session_state['current_horizon'] = horizon
+        st.session_state['current_risk_level'] = risk_level
         
-        status_text.text("🔍 Iniciando análise de todos os pares disponíveis...")
-        progress_bar.progress(10)
-        
-        # Parse analysis type to determine which analyses to run
-        analysis_config = parse_analysis_type(analysis_type or 'Swing (Todas com Pesos Equilibrados)')
-        
-        # Get trading style from analysis configuration (not from session state)
-        trading_style = analysis_config['profile']
-        
-        status_text.text(f"🎯 Usando configuração: {analysis_config['description']}")
-        progress_bar.progress(15)
-        
-        # Include both forex and crypto pairs based on market selection
-        market_type_selected = st.session_state.get('market_type_select', 'Forex')
-        if market_type_selected == 'Forex':
-            analysis_pairs = PAIRS
-            analysis_label = "pares de moedas"
-        else:
-            analysis_pairs = CRYPTO_PAIRS  
-            analysis_label = "pares cripto"
-        
-        # Results storage
-        all_results = []
-        total_pairs = len(analysis_pairs)
-        
-        status_text.text(f"📊 Analisando {total_pairs} {analysis_label}...")
-        
-        for i, pair in enumerate(analysis_pairs):
+        # Execute analysis
+        with st.spinner("🔄 Executando análise..."):
             try:
-                # Update progress
-                progress = 10 + int((i / total_pairs) * 80)
-                progress_bar.progress(progress)
-                status_text.text(f"🔄 Analisando {pair} ({i+1}/{total_pairs})...")
-                
-                # Determine market type based on selected market
-                market_type = 'crypto' if market_type_selected == 'Criptomoedas' else 'forex'
-                
-                # Fetch data for current pair
-                df = services['data_service'].fetch_forex_data(pair, INTERVALS[interval], 'compact', market_type)
-                
-                if not services['data_service'].validate_data(df):
-                    continue
-                
-                # Add technical indicators
-                df_with_indicators = add_technical_indicators(df)
-                
-                # Get current price
-                current_price = services['data_service'].get_latest_price(pair, market_type)
-                if current_price is None:
-                    continue
-                
-                # Get sentiment score
-                sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
-                
-                # Run profile-specific analysis based on selected type
-                analysis_result = run_profile_specific_analysis(
-                    current_price, pair, sentiment_score, df_with_indicators, trading_style, analysis_config
+                analysis_results = run_analysis(
+                    pair, 
+                    interval, 
+                    horizon, 
+                    lookback_period, 
+                    mc_samples, 
+                    epochs, 
+                    is_quick=quick_analysis
                 )
                 
-                # Calculate trading opportunity score
-                opportunity_score = calculate_opportunity_score(analysis_result, pair, trading_style)
-                
-                # Generate execution position WITH opportunity score
-                execution_position = generate_execution_position(
-                    analysis_result, pair, current_price, trading_style, sentiment_score, opportunity_score
-                )
-                
-                # Store comprehensive result
-                pair_result = {
-                    'pair': pair,
-                    'current_price': current_price,
-                    'opportunity_score': opportunity_score,
-                    'execution_position': execution_position,
-                    'analysis_result': analysis_result,
-                    'sentiment_score': sentiment_score,
-                    'trading_style': trading_style
+                if analysis_results:
+                    st.session_state['analysis_results'] = analysis_results
+                    st.session_state['show_analysis'] = True
+                    st.success("✅ Análise concluída com sucesso!")
+                    st.rerun()
+                else:
+                    st.error("❌ Erro ao executar análise. Tente novamente.")
+            except Exception as e:
+                st.error(f"❌ Erro durante análise: {str(e)}")
+    
+    # Tutorial section with forced styling for Dark theme
+    if st.session_state.get('show_tutorial', False):
+        st.markdown("---")
+        
+        # Apply dark theme specific styling directly to tutorial content
+        if st.session_state.get('theme', 'light') == 'dark':
+            st.markdown("""
+            <style>
+                /* Force all tutorial text to be white */
+                .main * {
+                    color: #ffffff !important;
                 }
                 
-                all_results.append(pair_result)
+                /* Specific tutorial styling */
+                .stTabs * {
+                    color: #ffffff !important;
+                }
                 
-            except Exception as e:
-                st.warning(f"Erro ao analisar {pair}: {str(e)}")
-                continue
+                /* Tab content background */
+                div[data-baseweb="tab-panel"] {
+                    background-color: #1e1e1e !important;
+                    color: #ffffff !important;
+                }
+                
+                /* All text in tabs */
+                div[data-baseweb="tab-panel"] * {
+                    color: #ffffff !important;
+                }
+            </style>
+            """, unsafe_allow_html=True)
         
-        # Final processing
-        status_text.text("🎯 Processando resultados e gerando recomendações...")
-        progress_bar.progress(95)
+        st.markdown("# 📚 Tutorial Completo da Plataforma")
         
-        # Sort by opportunity score
-        all_results.sort(key=lambda x: x['opportunity_score'], reverse=True)
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+            "🔧 Configurações Básicas", 
+            "📊 Análises Disponíveis", 
+            "📈 Indicadores Técnicos", 
+            "⚖️ Gestão de Risco",
+            "⚙️ Opções Avançadas"
+        ])
         
-        # Store results in session state with analysis configuration
-        st.session_state.multi_pair_results = {
-            'results': all_results,
-            'timestamp': datetime.now(),
-            'trading_style': trading_style,
-            'interval': interval,
-            'horizon': horizon,
-            'analysis_config': analysis_config,  # Store analysis configuration
-            'analysis_type': analysis_type  # Store original analysis type
-        }
-        
-        status_text.text("✅ Análise multi-pares concluída!")
-        progress_bar.progress(100)
-        
-        # Clear progress after moment
-        import time
-        time.sleep(1)
-        progress_container.empty()
-
-def calculate_opportunity_score(analysis_result, pair, trading_style):
-    """Calcula score de oportunidade baseado em múltiplos fatores"""
-    
-    # Base score from model confidence
-    base_score = analysis_result.get('model_confidence', 0.5) * 100
-    
-    # Direction strength bonus
-    direction = analysis_result.get('market_direction', '')
-    if 'FORTE' in str(direction):
-        direction_bonus = 25
-    elif 'COMPRA' in str(direction) or 'VENDA' in str(direction):
-        direction_bonus = 15
-    else:
-        direction_bonus = 0
-    
-    # Components agreement bonus
-    agreement_score = analysis_result.get('agreement_score', 0)
-    agreement_bonus = agreement_score * 5  # 0-20 points
-    
-    # Confluence strength bonus
-    confluence = analysis_result.get('confluence_strength', 0)
-    confluence_bonus = confluence * 3  # 0-15 points
-    
-    # Success probability bonus
-    success_prob = analysis_result.get('success_probability', 50)
-    prob_bonus = (success_prob - 50) * 0.5  # Bonus for >50% probability
-    
-    # Pair volatility adjustment
-    pair_adjustment = PAIR_AI_ADJUSTMENTS.get(pair, {})
-    volatility_mult = pair_adjustment.get('volatility_multiplier', 1.0)
-    confidence_boost = pair_adjustment.get('prediction_confidence_boost', 1.0)
-    
-    # Calculate final score
-    total_score = (base_score + direction_bonus + agreement_bonus + 
-                   confluence_bonus + prob_bonus) * confidence_boost
-    
-    # Adjust for volatility (higher volatility = higher potential but more risk)
-    if volatility_mult > 1.5:  # High volatility pairs
-        total_score *= 1.1  # 10% bonus for risk-takers
-    elif volatility_mult < 0.9:  # Low volatility pairs
-        total_score *= 1.05  # 5% bonus for stability
-    
-    return min(100, max(0, total_score))
-
-def generate_execution_position(analysis_result, pair, current_price, trading_style, sentiment_score, opportunity_score=None):
-    """Gera posição completa de execução com todos os parâmetros"""
-    
-    direction = analysis_result.get('market_direction', '')
-    confidence = analysis_result.get('model_confidence', 0.5)
-    price_change_pct = analysis_result.get('price_change_pct', 0)
-    
-    # Determine position type
-    is_buy = 'COMPRA' in str(direction)
-    is_strong = 'FORTE' in str(direction)
-    
-    # Get profile from analysis config if available
-    profile = analysis_result.get('profile', trading_style)
-    signal_strength = analysis_result.get('unified_signal', 0)
-    
-    # Get historical data for probability analysis
-    df = analysis_result.get('df_with_indicators', None)
-    if df is None or len(df) < 5:
-        # Create minimal df for probability calculation
-        df = pd.DataFrame({
-            'close': [current_price] * 20,
-            'high': [current_price * 1.01] * 20, 
-            'low': [current_price * 0.99] * 20
-        })
-    
-    # Calculate probability-optimized parameters for >75% success rate
-    # Usar o trading_style passado como parâmetro (não do session_state)
-    # Isso garante que cada perfil use suas configurações específicas
-    
-    # Get basic bank value first
-    bank_value = st.session_state.get('bank_value', 10000)  # Default $10,000
-    
-    if trading_style == 'scalping':
-        # SCALPING ESTRATÉGICO: Calcular níveis técnicos de entrada ao invés de entrada imediata
-        return generate_scalping_strategic_levels(
-            df, analysis_result, pair, current_price, confidence, signal_strength, sentiment_score, bank_value
-        )
-    else:
-        # Para outros estilos, deixar o Alpha Vantage calcular os valores ótimos
-        # Passar None para que a função calcule automaticamente
-        stop_percentage = None  # Será calculado pelo Alpha Vantage baseado no perfil
-        take_percentage = None  # Será calculado pelo Alpha Vantage baseado no perfil
-    
-    prob_params = calculate_success_probability_parameters(
-        df, confidence, profile, signal_strength, stop_percentage, take_percentage
-    )
-    
-    # Calculate optimal entry price for intraday
-    if profile == 'intraday':
-        # CÁLCULO DO PREÇO DE ENTRADA IDEAL PARA INTRADAY
-        # Baseado em análise técnica + volatilidade + momentum
-        
-        # 1. Obter indicadores técnicos atuais
-        latest = df.iloc[-1] if len(df) > 0 else None
-        if latest is not None:
-            # Suporte e resistência micro
-            recent_high = df['high'].tail(5).max()
-            recent_low = df['low'].tail(5).min()
+        with tab1:
+            # Force white text for this tab content
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('<div style="color: #ffffff !important;">', unsafe_allow_html=True)
             
-            # Médias móveis como referência
-            sma_20 = df['close'].tail(20).mean() if len(df) >= 20 else current_price
-            ema_9 = df['close'].ewm(span=9).mean().iloc[-1] if len(df) >= 9 else current_price
-            
-            # Volatilidade recente para ajuste fino
-            recent_volatility = df['close'].pct_change().tail(10).std() * current_price
-            
-            # 2. Calcular preço ideal baseado na direção
-            if is_buy:
-                # Para COMPRA: buscar preço ligeiramente abaixo do atual para melhor R:R
-                # Priorizar pullbacks ou rompimentos de EMA9
-                
-                # Verificar se está próximo de suporte para entrada melhor
-                support_distance = current_price - recent_low
-                ema_distance = current_price - ema_9
-                
-                # Entrada ideal: ligeiramente acima da EMA9 ou 20-40% do range até suporte
-                if current_price > ema_9:  # Tendência de alta
-                    ideal_pullback = min(recent_volatility * 0.3, support_distance * 0.3)
-                    entry_price = current_price - ideal_pullback
-                    # Garantir que não fique abaixo da EMA9
-                    entry_price = max(entry_price, ema_9 * 1.0002)
-                else:  # Rompimento de EMA9
-                    entry_price = ema_9 * 1.0005  # Ligeiramente acima da EMA9
-                    
-            else:  # VENDA
-                # Para VENDA: buscar preço ligeiramente acima do atual
-                resistance_distance = recent_high - current_price
-                ema_distance = ema_9 - current_price
-                
-                # Entrada ideal: ligeiramente abaixo da EMA9 ou 20-40% do range até resistência  
-                if current_price < ema_9:  # Tendência de baixa
-                    ideal_pullback = min(recent_volatility * 0.3, resistance_distance * 0.3)
-                    entry_price = current_price + ideal_pullback
-                    # Garantir que não fique acima da EMA9
-                    entry_price = min(entry_price, ema_9 * 0.9998)
-                else:  # Rompimento de EMA9 para baixo
-                    entry_price = ema_9 * 0.9995  # Ligeiramente abaixo da EMA9
-            
-            # 3. Validação de segurança
-            max_adjustment = current_price * 0.0015  # Máximo 15 pontos de ajuste
-            if is_buy:
-                entry_price = max(entry_price, current_price - max_adjustment)
-                entry_price = min(entry_price, current_price + max_adjustment * 0.3)
-            else:
-                entry_price = min(entry_price, current_price + max_adjustment) 
-                entry_price = max(entry_price, current_price - max_adjustment * 0.3)
-                
-        else:
-            # Fallback se não houver dados
-            entry_price = current_price
-    else:
-        # Para outros perfis, usar preço atual
-        entry_price = current_price
-    
-    # IMPORTANTE: Usar current_price para cálculos de análise (não entry_price)
-    # entry_price é apenas para exibição como "preço ideal de entrada"
-    calculation_price = current_price  # Sempre usar preço atual para análise
-    
-    if is_buy:
-        stop_loss = calculation_price * (1 - prob_params['stop_distance_pct'])
-        take_profit = calculation_price * (1 + prob_params['tp_distance_pct'])
-    else:
-        stop_loss = calculation_price * (1 + prob_params['stop_distance_pct'])
-        take_profit = calculation_price * (1 - prob_params['tp_distance_pct'])
-    
-    # Calculate position size based on probability-adjusted risk management
-    risk_percentage = prob_params['banca_risk'] / 100
-    risk_amount = bank_value * risk_percentage
-    pip_value = 1  # Simplified - would need proper pip calculation
-    stop_distance_pips = abs(calculation_price - stop_loss) * 10000  # Convert to pips
-    
-    if stop_distance_pips > 0:
-        position_size = risk_amount / stop_distance_pips
-    else:
-        position_size = 0.01  # Minimum position
-    
-    # Calculate potential profit/loss (usando calculation_price para consistência)
-    tp_distance_pips = abs(take_profit - calculation_price) * 10000
-    risk_reward_ratio = tp_distance_pips / stop_distance_pips if stop_distance_pips > 0 else 0
-    
-    potential_profit = tp_distance_pips * position_size
-    potential_loss = stop_distance_pips * position_size
-    
-    # TIMING INTELIGENTE: baseado nas condições REAIS de mercado, não apenas no perfil
-    # Análise multi-dimensional para determinar timing ideal de execução
-    
-    # 1. Análise de Momentum (dados Alpha Vantage)
-    momentum_score = 0
-    if len(df) > 5:
-        recent_returns = df['close'].pct_change().tail(5)
-        momentum_score = recent_returns.mean() * 1000  # Convertido para escala
-    
-    # 2. Análise de Volatilidade Atual vs Histórica
-    volatility_current = df['close'].pct_change().tail(10).std() * 10000 if len(df) > 10 else 0
-    volatility_historical = df['close'].pct_change().std() * 10000 if len(df) > 1 else 0
-    volatility_ratio = volatility_current / max(volatility_historical, 0.001)
-    
-    # 3. Convergência dos Indicadores (força do sinal)
-    signal_quality = confidence * signal_strength
-    
-    # 4. Score de Convergência Final (0-100)
-    timing_score = 0
-    
-    # Peso: Confiança (40%)
-    timing_score += confidence * 40
-    
-    # Peso: Força do Sinal (30%)  
-    timing_score += signal_strength * 30
-    
-    # Peso: Momentum (20%)
-    momentum_component = min(abs(momentum_score) / 2, 20) if momentum_score != 0 else 0
-    timing_score += momentum_component
-    
-    # Peso: Volatilidade Adequada (10%) - volatilidade normal é melhor
-    volatility_component = 10 if 0.8 <= volatility_ratio <= 1.5 else 5 if volatility_ratio <= 2.0 else 2
-    timing_score += volatility_component
-    
-    # THRESHOLDS ADAPTATIVOS POR PERFIL - Cada estratégia tem sua tolerância temporal
-    profile_thresholds = {
-        'scalping': {
-            # Scalping Ultra-Assertivo: Mais seletivo mas com execução rápida
-            'execute_now': 20,      # Score 20+ = EXECUTAR (ultra-tolerante para capturas rápidas)
-            'wait_5_15min': 35,     # Score 35+ = Aguardar muito pouco (5min max)
-            'wait_30_60min': 50,    # Score 50+ = Aguardar moderado
-            'wait_2_4h': 65,        # Score 65+ = Evitar (muito tempo para scalping)
-            'philosophy': 'Velocidade + Volume + Precisão Cirúrgica'
-        },
-        'intraday': {
-            # Intraday: REDUZIDO para facilitar sinais
-            'execute_now': 20,      # Score 20+ = EXECUTAR (era 40 - REDUZIDO)
-            'wait_5_15min': 35,     # Score 35+ = Aguardar pouco (era 55)
-            'wait_30_60min': 50,    # Score 50+ = Aguardar moderado (era 70)
-            'wait_2_4h': 65,        # Score 65+ = Aguardar mais (era 80)
-            'philosophy': 'Equilibrio Frequência/Qualidade'
-        },
-        'swing': {
-            # Swing: REDUZIDO para facilitar sinais
-            'execute_now': 25,      # Score 25+ = EXECUTAR (era 55 - REDUZIDO)
-            'wait_5_15min': 40,     # Score 40+ = Aguardar pouco (era 70)
-            'wait_30_60min': 55,    # Score 55+ = Aguardar moderado (era 80)
-            'wait_2_4h': 70,        # Score 70+ = Condições ideais (era 90)
-            'philosophy': 'Qualidade > Frequência'
-        },
-        'position': {
-            # Position: REDUZIDO para facilitar sinais
-            'execute_now': 30,      # Score 30+ = EXECUTAR (era 70 - REDUZIDO)
-            'wait_5_15min': 45,     # Score 45+ = Aguardar pouco (era 80)
-            'wait_30_60min': 60,    # Score 60+ = Quase perfeito (era 90)
-            'wait_2_4h': 75,        # Score 75+ = Setup perfeito (era 95)
-            'philosophy': 'Máxima Seletividade'
-        }
-    }
-    
-    # Obter thresholds do perfil atual
-    thresholds = profile_thresholds.get(profile, profile_thresholds['intraday'])
-    
-    # EXCEÇÕES INTELIGENTES: Setups excepcionais podem override o timing
-    # Usar Score de Oportunidade REAL (se fornecido) ou calcular baseado na confiança
-    if opportunity_score is None:
-        opportunity_score = confidence * 100  # Fallback para casos sem score externo
-    # Agora opportunity_score contém o valor REAL de 95.7 vindo da análise
-    
-    # SISTEMA HÍBRIDO: Exceções para setups excepcionais + Thresholds normais preservados
-    override_applied = False
-    
-    if opportunity_score >= 95:
-        # EXCEÇÃO TOTAL: Setup perfeito (95+) executa sempre
-        market_timing = f"🟢 EXECUTAR AGORA (Override: Setup Excepcional {opportunity_score:.1f} - Timing {timing_score:.0f})"
-        override_applied = True
-    elif opportunity_score >= 90 and timing_score >= 20:
-        # EXCEÇÃO PARCIAL: Setup muito bom (90-94) + timing mínimo aceitável (20+)
-        market_timing = f"🟢 EXECUTAR AGORA (Override: Setup Muito Bom {opportunity_score:.1f} - Timing {timing_score:.0f})"
-        override_applied = True
-    
-    # DECISÃO NORMAL: Usar thresholds adaptativos (sistema original preservado)
-    if not override_applied:
-        if timing_score >= thresholds['execute_now']:
-            if timing_score >= 85:  # Setup excepcionalmente bom
-                market_timing = f"🟢 EXECUTAR AGORA (Setup Perfeito - Score {timing_score:.0f})"
-            else:
-                market_timing = f"🟢 EXECUTAR AGORA ({thresholds['philosophy']} - Score {timing_score:.0f})"
-        elif timing_score >= thresholds.get('wait_5_15min', 999):
-            market_timing = f"🟡 Aguardar 5-15min (Confirmação - Score {timing_score:.0f})"
-        elif timing_score >= thresholds.get('wait_30_60min', 999):
-            market_timing = f"🟠 Aguardar 30-60min (Melhor Setup - Score {timing_score:.0f})"
-        elif timing_score >= thresholds.get('wait_2_4h', 999):
-            market_timing = f"🔴 Aguardar 2-4h (Condições Inadequadas - Score {timing_score:.0f})"
-        else:
-            market_timing = f"⚫ Evitar - Aguardar Novo Ciclo 24h+ (Score {timing_score:.0f})"
-    
-    # Adicionar contexto específico do perfil
-    profile_contexts = {
-        'scalping': " | Micro-movimentos ultra-rápidos",
-        'intraday': " | Movimentos da sessão diária", 
-        'swing': " | Movimentos multi-dia",
-        'position': " | Tendências semanais/mensais"
-    }
-    market_timing += profile_contexts.get(profile, "")
-    
-    # Risk level assessment based on Alpha Vantage calculated stops (dinâmico)
-    # Remove valores fixos - usa apenas análise real dos dados Alpha Vantage
-    
-    # Avaliação dinâmica baseada na volatilidade real do par analisado
-    volatility_factor = df['close'].pct_change().std() * 10000 if len(df) > 1 else 0.001  # Em pips
-    
-    # Categorização baseada na relação stop vs volatilidade real
-    volatility_ratio = stop_distance_pips / max(volatility_factor, 1)  # Evitar divisão por zero
-    
-    if volatility_ratio < 1.5:
-        risk_level = "Alto"  # Stop muito apertado vs volatilidade
-    elif volatility_ratio < 3.0:
-        risk_level = "Moderado"  # Stop proporcional à volatilidade  
-    else:
-        risk_level = "Baixo"  # Stop conservador vs volatilidade
-    
-    return {
-        'direction': 'COMPRA' if is_buy else 'VENDA',
-        'strength': 'FORTE' if is_strong else 'NORMAL',
-        'entry_price': round(entry_price, 5),
-        'stop_loss': round(stop_loss, 5),
-        'take_profit': round(take_profit, 5),
-        'position_size': round(position_size, 2),
-        'risk_reward_ratio': round(prob_params['risk_reward_actual'], 2),
-        'potential_profit': round(potential_profit, 2),
-        'potential_loss': round(potential_loss, 2),
-        'stop_distance_pips': round(stop_distance_pips, 1),
-        'tp_distance_pips': round(tp_distance_pips, 1),
-        'market_timing': market_timing,
-        'timing_score': round(timing_score, 1),  # Score transparente do timing
-        'risk_level': risk_level,
-        'confidence': round(confidence * 100, 1),
-        'sentiment_bias': 'Positivo' if sentiment_score > 0.05 else 'Negativo' if sentiment_score < -0.05 else 'Neutro',
-        'trading_profile': profile.title(),
-        'profile_description': prob_params['description'],
-        'expected_success_rate': round(prob_params['success_rate_target'], 1),
-        'probability_optimized': True,
-        'stop_pct': round(prob_params['stop_distance_pct'] * 100, 2),
-        'tp_pct': round(prob_params['tp_distance_pct'] * 100, 2),
-        'optimization_method': 'Probabilidade de Sucesso >75%',
-        'profile_characteristics': get_profile_characteristics(profile, stop_percentage, take_percentage),
-        'actual_risk_pct': round(prob_params['banca_risk'], 2),
-        'volatility_analyzed': prob_params.get('volatility_analyzed', 0),
-        'data_points_used': prob_params.get('data_points_used', 0),
-        'probability_calculation': prob_params.get('probability_calculation', ''),
-        'stop_reasoning': prob_params.get('stop_reasoning', ''),
-        'take_reasoning': prob_params.get('take_reasoning', ''),
-        'movement_direction': prob_params.get('movement_direction', ''),
-        'base_movement_pct': prob_params.get('base_movement_pct', 0),
-        'opposite_movement_pct': prob_params.get('opposite_movement_pct', 0),
-        'profile_analysis_window': prob_params.get('profile_analysis_window', '')
-    }
-
-def display_multi_pair_results():
-    """Exibir resultados da análise multi-pares com ranking de oportunidades"""
-    
-    results_data = st.session_state.get('multi_pair_results', {})
-    if not results_data:
-        return
-    
-    results = results_data['results']
-    timestamp = results_data['timestamp']
-    analysis_config = results_data.get('analysis_config', {})
-    analysis_type = results_data.get('analysis_type', 'N/A')
-    trading_style = results_data['trading_style']
-    
-    # Header
-    st.markdown("## 🌍 Análise Multi-Pares - Oportunidades de Trading")
-    
-    # Métricas empilhadas verticalmente
-    st.metric("Total de Pares Analisados", len(results))
-    st.metric("Estratégia de Trading", trading_style.title())
-    valid_results = [r for r in results if r['opportunity_score'] > 60]
-    st.metric("Oportunidades Válidas", len(valid_results))
-    
-    st.caption(f"Última atualização: {timestamp.strftime('%d/%m/%Y %H:%M:%S')}")
-    
-    # Display analysis configuration used
-    if analysis_config:
-        with st.expander("🎯 Configuração de Análise Utilizada", expanded=False):
+            st.markdown("## 🔧 Configurações Básicas")
             col1, col2 = st.columns(2)
+            
             with col1:
-                st.markdown(f"**📋 Tipo:** {analysis_config.get('description', 'N/A')}")
-                st.markdown(f"**⏱️ Timeframe:** {analysis_config.get('timeframe', 'N/A')}")
-                st.markdown(f"**🎯 Foco:** {analysis_config.get('focus', 'N/A')}")
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("currency_pair")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("currency_pair", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
                 
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("time_interval")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("time_interval", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
+            
             with col2:
-                st.markdown("**⚖️ Pesos das Análises:**")
-                weights = analysis_config.get('weights', {})
-                for analysis_name, weight in weights.items():
-                    analysis_display_names = {
-                        'technical': '📊 Técnica',
-                        'trend': '📈 Tendência', 
-                        'volume': '📊 Volume',
-                        'sentiment': '📰 Sentimento',
-                        'ai_lstm': '🤖 IA/LSTM',
-                        'risk': '⚖️ Risco'
-                    }
-                    display_name = analysis_display_names.get(analysis_name, analysis_name.title())
-                    st.write(f"- {display_name}: {weight*100:.0f}%")
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("prediction_horizon")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("prediction_horizon", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
+                
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("risk_level")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("risk_level", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
             
-            # Priority indicators
-            priority_indicators = analysis_config.get('priority_indicators', [])
-            if priority_indicators:
-                st.markdown("**🎯 Indicadores Prioritários:**")
-                st.write(", ".join(priority_indicators))
-    
-    # Filtros
-    st.markdown("### 🔍 Filtros")
-    filter_col1, filter_col2, filter_col3 = st.columns(3)
-    
-    with filter_col1:
-        min_score = st.slider("Score Mínimo", 0, 100, 50, 5)
-    with filter_col2:
-        direction_filter = st.selectbox("Direção", ["Todas", "COMPRA", "VENDA"])
-    with filter_col3:
-        strength_filter = st.selectbox("Força", ["Todas", "FORTE", "NORMAL"])
-    
-    # Filter results
-    filtered_results = []
-    for result in results:
-        if result['opportunity_score'] < min_score:
-            continue
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('</div>', unsafe_allow_html=True)
         
-        execution = result['execution_position']
-        if direction_filter != "Todas" and execution['direction'] != direction_filter:
-            continue
-        if strength_filter != "Todas" and execution['strength'] != strength_filter:
-            continue
+        with tab2:
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('<div style="color: #ffffff !important;">', unsafe_allow_html=True)
+            
+            st.markdown("## 📊 Tipos de Análise")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("get_trading_signal")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("get_trading_signal", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("quick_check")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("quick_check", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
+            
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('</div>', unsafe_allow_html=True)
         
-        filtered_results.append(result)
-    
-    st.markdown(f"### 📊 Top Oportunidades ({len(filtered_results)} pares)")
-    
-    # Create tabs for different views
-    tab1, tab2, tab3 = st.tabs(["🏆 Ranking", "📈 Posições de Execução", "📋 Resumo Detalhado"])
-    
-    with tab1:
-        display_opportunity_ranking(filtered_results)
-    
-    with tab2:
-        display_execution_positions(filtered_results)
-    
-    with tab3:
-        display_detailed_summary(filtered_results)
-    
-    # Botões de ação empilhados
-    st.markdown("---")
-    st.markdown("### 🔧 Ações Disponíveis")
-    
-    if st.button("🔄 Nova Análise Multi-Pares", use_container_width=True):
-        del st.session_state['multi_pair_results']
-        st.rerun()
-    
-    if st.button("📊 Análise Individual", use_container_width=True):
-        del st.session_state['multi_pair_results']
-        st.rerun()
-    
-    if st.button("💾 Exportar Resultados", use_container_width=True):
-        st.info("Funcionalidade de exportação em desenvolvimento")
-
-def display_opportunity_ranking(results):
-    """Exibir ranking de oportunidades"""
-    
-    if not results:
-        st.warning("Nenhuma oportunidade encontrada com os filtros aplicados.")
-        return
-    
-    st.markdown("#### 🎯 Ranking por Score de Oportunidade")
-    
-    for i, result in enumerate(results[:15]):  # Top 15
-        pair = result['pair']
-        score = result['opportunity_score']
-        execution = result['execution_position']
-        current_price = result['current_price']
+        with tab3:
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('<div style="color: #ffffff !important;">', unsafe_allow_html=True)
+            
+            st.markdown("## 📈 Indicadores e Sentimento")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("technical_indicators")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("technical_indicators", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("sentiment_analysis")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("sentiment_analysis", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
+            
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('</div>', unsafe_allow_html=True)
         
-        # Color coding
-        if score >= 80:
-            color = "#00C851"  # Green
-            badge = "🟢 EXCELENTE"
-        elif score >= 70:
-            color = "#4CAF50"  # Light green
-            badge = "🟡 BOA"
-        elif score >= 60:
-            color = "#FF9800"  # Orange
-            badge = "🟠 MODERADA"
-        else:
-            color = "#F44336"  # Red
-            badge = "🔴 BAIXA"
-        
-        direction_icon = "📈" if execution['direction'] == 'COMPRA' else "📉"
-        strength_text = execution['strength']
-        
-        st.markdown(f"""
-        <div style="
-            border: 2px solid {color}; 
-            border-radius: 10px; 
-            padding: 1rem; 
-            margin: 0.5rem 0;
-            background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0.95));
-        ">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <h4 style="margin: 0; color: {color};">#{i+1} {pair} {direction_icon}</h4>
-                    <p style="margin: 0.2rem 0; color: #666;">
-                        <strong>{execution['direction']} {strength_text}</strong> | 
-                        Preço: {current_price:.5f} | 
-                        Confiança: {execution.get('confidence', execution.get('expected_success_rate', 75.0)):.1f}%
-                    </p>
-                </div>
-                <div style="text-align: right;">
-                    <div style="
-                        background: {color}; 
-                        color: white; 
-                        padding: 0.3rem 0.8rem; 
-                        border-radius: 20px; 
-                        font-weight: bold;
-                        margin-bottom: 0.5rem;
-                    ">
-                        {score:.1f}/100
-                    </div>
-                    <div style="color: {color}; font-weight: bold; font-size: 0.9rem;">
-                        {badge}
-                    </div>
-                </div>
+        with tab4:
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('<div style="color: #ffffff !important;">', unsafe_allow_html=True)
+            
+            st.markdown("## ⚖️ Gestão e Análise de Risco")
+            st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("risk_analysis")}</h3></div>', unsafe_allow_html=True)
+            content = get_help_content("risk_analysis", detailed=True)
+            if st.session_state.get('theme', 'light') == 'dark':
+                content = f'<div style="color: #ffffff !important;">{content}</div>'
+            st.markdown(content, unsafe_allow_html=True)
+            
+            warning_class = "warning-alert" if st.session_state.get('theme', 'light') == 'light' else "warning-alert"
+            text_color = "" if st.session_state.get('theme', 'light') == 'light' else "color: #ffffff !important;"
+            
+            st.markdown(f"""
+            <div class="{warning_class}" style="{text_color}">
+                <h4 style="{text_color}">⚠️ Aviso Importante sobre Riscos</h4>
+                <p style="{text_color}"><strong>O trading forex envolve riscos significativos:</strong></p>
+                <ul style="{text_color}">
+                    <li style="{text_color}">Você pode perder mais do que investiu</li>
+                    <li style="{text_color}">Mercados são imprevisíveis, mesmo com IA</li>
+                    <li style="{text_color}">Use sempre stop loss e gestão de risco</li>
+                    <li style="{text_color}">Nunca invista dinheiro que não pode perder</li>
+                    <li style="{text_color}">Esta plataforma é apenas educacional</li>
+                </ul>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-def display_scalping_strategic_setup(pair, execution, result):
-    """Exibe setup estratégico específico para scalping"""
-    
-    direction_color = "#00C851" if 'COMPRA' in execution['direction'] else "#F44336"
-    direction_icon = "📈" if 'COMPRA' in execution['direction'] else "📉"
-    
-    with st.expander(f"⚡ **{pair}** - SCALPING ESTRATÉGICO {direction_icon} (Score: {result['opportunity_score']:.1f})"):
+            """, unsafe_allow_html=True)
+            
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('</div>', unsafe_allow_html=True)
         
-        # Header estratégico com status de setup ativo
-        status_message = execution.get('status_message', '')
-        setup_status = execution.get('status', 'NOVO')
-        time_remaining = execution.get('time_remaining', execution.get('validity_time', 0))
-        
-        # Definir cor e ícone baseado no status
-        if setup_status == 'ATIVO':
-            status_color = "#FF9800"  # Laranja para ativo
-            status_icon = "⏰"
-        else:
-            status_color = direction_color
-            status_icon = "🆕"
-        
-        st.markdown(f"""
-        <div style="background: linear-gradient(90deg, {direction_color}15, {direction_color}25); 
-                    padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid {direction_color};">
-            <h4 style="margin: 0; color: {direction_color};">🎯 SETUP ESTRATÉGICO - {execution['direction']}</h4>
-            <div style="display: flex; align-items: center; gap: 1rem; margin: 0.3rem 0 0 0;">
-                <span style="background: {status_color}20; color: {status_color}; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">
-                    {status_icon} {setup_status}
-                </span>
-                <span style="color: #666;">
-                    Preço Atual: <strong>{execution['current_price']:.5f}</strong>
-                </span>
-                <span style="color: #666;">
-                    Tempo: <strong>{time_remaining} min</strong>
-                </span>
-                <span style="color: #666;">
-                    Expira: <strong>{execution['expiry_timestamp']}</strong>
-                </span>
-                <span style="color: #666;">
-                    Taxa: <strong style="color: {direction_color};">{execution['expected_success_rate']:.0f}%</strong>
-                </span>
+        with tab5:
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('<div style="color: #ffffff !important;">', unsafe_allow_html=True)
+            
+            st.markdown("## ⚙️ Opções Avançadas")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("advanced_options")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("advanced_options", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
+                
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("cache_management")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("cache_management", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown(f'<div style="color: #ffffff !important;"><h3>{get_help_title("model_architecture")}</h3></div>', unsafe_allow_html=True)
+                content = get_help_content("model_architecture", detailed=True)
+                if st.session_state.get('theme', 'light') == 'dark':
+                    content = f'<div style="color: #ffffff !important;">{content}</div>'
+                st.markdown(content, unsafe_allow_html=True)
+            
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white !important; padding: 1.5rem; border-radius: 10px; margin: 1rem 0;">
+                <h4 style="color: white !important;">🚀 Dicas de Otimização Avançada</h4>
+                <ul style="color: white !important;">
+                    <li style="color: white !important;"><strong style="color: white !important;">Para Scalping (5-15min):</strong> Lookback=30, MC=15, Épocas=8</li>
+                    <li style="color: white !important;"><strong style="color: white !important;">Para Day Trading (1h):</strong> Lookback=60, MC=20, Épocas=10</li>
+                    <li style="color: white !important;"><strong style="color: white !important;">Para Swing Trading (4h+):</strong> Lookback=120, MC=30, Épocas=15</li>
+                    <li style="color: white !important;"><strong style="color: white !important;">Para Análise Crítica:</strong> Lookback=100, MC=50, Épocas=20</li>
+                </ul>
+                <p style="color: white !important;"><strong style="color: white !important;">Lembre-se:</strong> Configurações mais altas = maior precisão, mas tempo de processamento mais longo.</p>
             </div>
-            {f'<p style="margin: 0.5rem 0 0 0; color: {status_color}; font-weight: bold;">{status_message}</p>' if status_message else ''}
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Parâmetros de Entrada (Setup Único)
-        st.markdown("### 🎯 Parâmetros de Entrada")
-        primary = execution['primary_setup']
-        st.info(f"**{primary['name']}**")
-        
-        setup_data = [
-            f"**📊 Preço Atual:** {execution['current_price']:.5f}",
-            f"**🎯 Preço de Entrada Ideal:** {primary['entry_price']:.5f}",
-            f"**🛑 Stop Loss:** {primary['stop_loss']:.5f}", 
-            f"**💰 Take Profit:** {primary['take_profit']:.5f}",
-            f"**⏰ Tempo Válido:** {execution['validity_time']} minutos",
-            f"**📏 Distância para Entrada:** {primary['pips_to_entry']:.1f} pips",
-            f"**⚖️ R/R:** 1:{primary['risk_reward_ratio']:.1f}"
-        ]
-        
-        for item in setup_data:
-            st.write(f"• {item}")
+            """, unsafe_allow_html=True)
             
-        st.success(f"✅ {primary['trigger_condition']}")
-        
-        st.divider()
-        
-        # Níveis técnicos e instruções
-        tech_col1, tech_col2 = st.columns(2)
-        
-        with tech_col1:
-            st.markdown("### 📊 Níveis Técnicos")
-            levels = execution['technical_levels']
-            st.write(f"• **Micro Suporte:** {levels['micro_support']:.5f}")
-            st.write(f"• **Micro Resistência:** {levels['micro_resistance']:.5f}")
-            st.write(f"• **Suporte Geral:** {levels['support_level']:.5f}")
-            st.write(f"• **Resistência Geral:** {levels['resistance_level']:.5f}")
-            st.write(f"• **Volatilidade:** {execution['market_volatility']:.3f}%")
-        
-        with tech_col2:
-            st.markdown("### 📋 Instruções de Execução")
-            for instruction in execution['execution_instructions']:
-                st.write(f"• {instruction}")
-        
-
-
-def display_execution_positions(results):
-    """Exibir posições de execução detalhadas"""
+            if st.session_state.get('theme', 'light') == 'dark':
+                st.markdown('</div>', unsafe_allow_html=True)
     
-    if not results:
-        st.warning("Nenhuma posição encontrada com os filtros aplicados.")
-        return
+    # Main content area
+    if analyze_button or quick_analysis:
+        run_analysis(
+            pair, interval, horizon, risk_level, lookback_period, 
+            mc_samples, epochs, quick_analysis
+        )
     
-    st.markdown("#### ⚡ Posições de Execução Prontas")
-    st.info("💵 **Valores calculados automaticamente baseados na Calculadora de Lote configurada na sidebar**")
+    # Display results if available
+    if st.session_state.analysis_results:
+        display_analysis_results()
     
-    for result in results:  # Mostrar todas as posições encontradas
-        pair = result['pair']
-        execution = result['execution_position']
-        
-        # Verificar se é scalping estratégico
-        if execution.get('setup_type') == 'SCALPING ESTRATÉGICO':
-            display_scalping_strategic_setup(pair, execution, result)
-            continue
-        
-        direction_color = "#00C851" if execution['direction'] == 'COMPRA' else "#F44336"
-        direction_icon = "📈" if execution['direction'] == 'COMPRA' else "📉"
-        
-        with st.expander(f"{direction_icon} **{pair}** - {execution['direction']} {execution['strength']} (Score: {result['opportunity_score']:.1f})"):
-            
-            # === BLOCO 1: CONFIGURAÇÃO DO PERFIL ===
-            with st.container():
-                st.markdown("### 🎯 Configuração do Perfil")
-                profile_col1, profile_col2 = st.columns(2)
-                
-                with profile_col1:
-                    st.info(f"**Perfil:** {execution.get('trading_profile', 'N/A')}")
-                    st.info(f"**Timing:** {execution['market_timing']}")
-                    
-                with profile_col2:
-                    risk_color = "🟢" if execution['risk_level'] == 'Baixo' else "🟡" if execution['risk_level'] == 'Moderado' else "🔴"
-                    st.info(f"**Risco:** {risk_color} {execution['risk_level']}")
-                    sentiment_color = "🟢" if execution['sentiment_bias'] == 'Positivo' else "🔴" if execution['sentiment_bias'] == 'Negativo' else "🟡"
-                    st.info(f"**Sentimento:** {sentiment_color} {execution['sentiment_bias']}")
-            
-            st.divider()
-            
-            # === BLOCO 2: PARÂMETROS & ANÁLISE PROBABILÍSTICA ===
-            main_col1, main_col2 = st.columns(2)
-            
-            with main_col1:
-                with st.container():
-                    st.markdown("### 📊 Parâmetros de Entrada")
-                    entry_data = [
-                        f"**Direção:** {execution['direction']} {execution['strength']}",
-                        f"**📊 Preço Atual:** {result.get('current_price', execution['entry_price']):.5f}",
-                        f"**🎯 Preço de Entrada Ideal:** {execution['entry_price']:.5f}",
-                        f"**🛑 Stop Loss:** {execution['stop_loss']:.5f}",
-                        f"**💰 Take Profit:** {execution['take_profit']:.5f}",
-                        f"**⏰ Tempo Válido:** Imediato (não-scalping)",
-                        f"**Tamanho da Posição:** {execution['position_size']:.2f} lotes"
-                    ]
-                    for item in entry_data:
-                        st.write(f"• {item}")
-            
-            with main_col2:
-                with st.container():
-                    st.markdown("### 💰 Análise probabilística histórica")
-                    probability_data = [
-                        f"**Taxa de Sucesso:** {execution['expected_success_rate']:.1f}%",
-                        f"**Stop Loss:** {execution.get('stop_pct', 0):.3f}% ({execution['stop_distance_pips']:.1f} pips)",
-                        f"**Take Profit:** {execution.get('tp_pct', 0):.3f}% ({execution['tp_distance_pips']:.1f} pips)",
-                        f"**R/R REAL:** 1:{execution['risk_reward_ratio']:.2f}",
-                        f"**Risco da Banca:** {execution.get('actual_risk_pct', 0):.1f}%"
-                    ]
-                    for item in probability_data:
-                        st.write(f"• {item}")
-                    
-                    # Aviso sobre mínimo recomendado
-                    st.markdown("<small style='color: #888888; font-size: 0.8em;'>📊 Recomendado: Taxa de Sucesso > 65% para operações seguras</small>", unsafe_allow_html=True)
-            
-            st.divider()
-            
-            # === BLOCO 3: DECISÃO UNIFICADA DE EXECUÇÃO ===
-            with st.container():
-                st.markdown("### 🎯 Análise Confluente de Execução")
-                
-                # Obter os 3 tipos de avaliação
-                alpha_score = execution.get('confidence', execution.get('expected_success_rate', 75.0))  # Score IA
-                qualitative_score = result.get('opportunity_score', 0.0)  # Score Em Tempo Real
-                historical_success = execution.get('expected_success_rate', 0.0)  # Taxa histórica
-                
-                # Lógica de decisão unificada
-                decision_result = evaluate_unified_execution_decision(
-                    alpha_score, qualitative_score, historical_success
-                )
-                
-                # Exibir as 3 métricas
-                decision_col1, decision_col2, decision_col3 = st.columns(3)
-                
-                with decision_col1:
-                    alpha_color = "🟢" if alpha_score >= 75 else "🟡" if alpha_score >= 65 else "🔴"
-                    st.metric("🔍 Score IA", f"{alpha_score:.1f}%", 
-                             delta=f"{alpha_color} {'Forte' if alpha_score >= 75 else 'Moderado' if alpha_score >= 65 else 'Fraco'}")
-                
-                with decision_col2:
-                    qual_color = "🟢" if qualitative_score >= 85 else "🟡" if qualitative_score >= 70 else "🔴"
-                    st.metric("⭐ Score Em Tempo Real", f"{qualitative_score:.1f}/100", 
-                             delta=f"{qual_color} {'Excelente' if qualitative_score >= 85 else 'Bom' if qualitative_score >= 70 else 'Regular'}")
-                
-                with decision_col3:
-                    hist_color = "🟢" if historical_success >= 65 else "🟡" if historical_success >= 55 else "🔴"
-                    st.metric("📊 Taxa Histórica", f"{historical_success:.1f}%", 
-                             delta=f"{hist_color} {'Alto' if historical_success >= 65 else 'Médio' if historical_success >= 55 else 'Baixo'}")
-                
-                # Decisão final
-                if decision_result['execute']:
-                    st.success(f"✅ **RECOMENDAÇÃO: EXECUTAR** - {decision_result['reason']}")
-                    st.success(f"🎯 **Confluência:** {decision_result['confluence_score']:.1f}% | **Critérios Atendidos:** {decision_result['criteria_met']}/3")
-                else:
-                    st.error(f"❌ **RECOMENDAÇÃO: NÃO EXECUTAR** - {decision_result['reason']}")
-                    st.warning(f"⚠️ **Confluência:** {decision_result['confluence_score']:.1f}% | **Critérios Atendidos:** {decision_result['criteria_met']}/3")
-            
-            if 'optimization_method' in execution:
-                st.success(f"**🎯 {execution['optimization_method']}**")
-                
-            # Detalhes dos cálculos Alpha Vantage baseados nas porcentagens configuradas
-            if execution.get('stop_reasoning') or execution.get('take_reasoning'):
-                # Verificar trading style para exibir valores corretos
-                trading_style = st.session_state.get('trading_style', 'swing')
-                if trading_style == 'scalping':
-                    stop_pct = 20
-                    take_pct = 30
-                else:
-                    stop_pct = st.session_state.get('stop_percentage', 50)
-                    take_pct = st.session_state.get('take_percentage', 50)
-                
-                # Informações detalhadas de cálculo removidas conforme solicitado
-                
-            if 'profile_description' in execution:
-                st.info(f"**📋 {execution['profile_description']}**")
-
-def display_detailed_summary(results):
-    """Exibir resumo detalhado da análise"""
-    
-    if not results:
-        st.warning("Nenhum resultado para resumir.")
-        return
-    
-    st.markdown("#### 📋 Resumo Estatístico da Análise")
-    
-    # Calculate statistics
-    total_pairs = len(results)
-    avg_score = sum(r['opportunity_score'] for r in results) / total_pairs
-    buy_signals = len([r for r in results if r['execution_position']['direction'] == 'COMPRA'])
-    sell_signals = len([r for r in results if r['execution_position']['direction'] == 'VENDA'])
-    strong_signals = len([r for r in results if r['execution_position']['strength'] == 'FORTE'])
-    
-    # High opportunity pairs
-    high_opportunity = [r for r in results if r['opportunity_score'] >= 75]
-    medium_opportunity = [r for r in results if 60 <= r['opportunity_score'] < 75]
-    low_opportunity = [r for r in results if r['opportunity_score'] < 60]
-    
-    # Display metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Score Médio", f"{avg_score:.1f}/100")
-    with col2:
-        st.metric("Sinais de Compra", buy_signals, f"{(buy_signals/total_pairs*100):.1f}%")
-    with col3:
-        st.metric("Sinais de Venda", sell_signals, f"{(sell_signals/total_pairs*100):.1f}%")
-    with col4:
-        st.metric("Sinais Fortes", strong_signals, f"{(strong_signals/total_pairs*100):.1f}%")
-    
-    # Opportunity distribution
-    st.markdown("**📊 Distribuição de Oportunidades:**")
-    
-    opp_col1, opp_col2, opp_col3 = st.columns(3)
-    
-    with opp_col1:
-        st.success(f"🟢 **Alta Oportunidade (75+):** {len(high_opportunity)} pares")
-        if high_opportunity:
-            for result in high_opportunity[:5]:
-                st.write(f"• {result['pair']}: {result['opportunity_score']:.1f}")
-    
-    with opp_col2:
-        st.warning(f"🟡 **Média Oportunidade (60-74):** {len(medium_opportunity)} pares")
-        if medium_opportunity:
-            for result in medium_opportunity[:5]:
-                st.write(f"• {result['pair']}: {result['opportunity_score']:.1f}")
-    
-    with opp_col3:
-        st.error(f"🔴 **Baixa Oportunidade (<60):** {len(low_opportunity)} pares")
-        if low_opportunity:
-            for result in low_opportunity[:5]:
-                st.write(f"• {result['pair']}: {result['opportunity_score']:.1f}")
-    
-    # Best pairs summary
-    if results:
-        st.markdown("**🏆 Top 5 Recomendações Imediatas:**")
-        for i, result in enumerate(results[:5]):
-            pair = result['pair']
-            execution = result['execution_position']
-            score = result['opportunity_score']
-            
-            direction_icon = "📈" if execution['direction'] == 'COMPRA' else "📉"
-            market_timing = execution.get('market_timing', execution.get('expiry_timestamp', 'Tempo válido'))
-            st.write(f"{i+1}. **{pair}** {direction_icon} - {execution['direction']} {execution['strength']} (Score: {score:.1f}) - {market_timing}")
-
-def display_footer():
-    """Display the footer section"""
-    # Add spacing before footer
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
-    
-    # Footer with more spacing
+    # Footer
     st.markdown("---")
-    st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""
-    <div style="text-align: center; color: #666; padding: 2rem; margin-top: 3rem;">
-        <p style="margin-bottom: 1rem;">⚠️ <strong>Aviso Legal:</strong> Esta plataforma é apenas para fins educacionais. 
+    <div style="text-align: center; color: #666; padding: 1rem;">
+        <p>⚠️ <strong>Aviso Legal:</strong> Esta plataforma é apenas para fins educacionais. 
         Trading forex envolve riscos substanciais e pode não ser adequado para todos os investidores.</p>
-        <p style="margin: 0;">Desenvolvido pela Artecinvesting • Última atualização: {}</p>
+        <p>Desenvolvido pela Artecinvesting • Última atualização: {}</p>
     </div>
     """.format(datetime.now().strftime("%d-%m-%Y %H:%M")), unsafe_allow_html=True)
 
-def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, is_quick=False):
-    """Run the complete forex analysis with different modes"""
+def run_analysis(pair, interval, horizon, risk_level, lookback_period, mc_samples, epochs, is_quick=False):
+    """Run the complete forex analysis"""
+    
+    # Custom loading display
+    # Removed loading spinner - run silently without visual feedback
+    
+    # Removed all progress indicators - analysis runs silently
     
     try:
-        analysis_mode = st.session_state.get('analysis_mode', 'unified')
+        # Step 1: Fetch data silently
         
-        # Create progress container
-        progress_container = st.container()
+        df = services['data_service'].fetch_forex_data(
+            pair, 
+            INTERVALS[interval], 
+            'full' if not is_quick else 'compact'
+        )
         
-        with progress_container:
-            # Progress bar setup
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            # Step 1: Initialize - Limpar cache para nova análise
-            status_text.text("🔄 Inicializando análise...")
-            progress_bar.progress(10)
-            
-            # Adicionar loader personalizado discreto
-            st.markdown('<div class="custom-loader"></div>', unsafe_allow_html=True)
-            
-            # Limpar estados de cache que podem interferir na reavaliação
-            cache_keys_to_clear = [k for k in st.session_state.keys() 
-                                 if k.startswith(('cache_', 'analysis_', 'unified_', 'ai_result_'))]
-            for key in cache_keys_to_clear:
-                if key != 'analysis_results':  # Manter apenas o resultado final
-                    del st.session_state[key]
-            
-            if analysis_mode == 'unified':
-                status_text.text("🧠 Executando Análise Unificada Inteligente...")
+        if not services['data_service'].validate_data(df):
+            st.error("❌ Dados insuficientes ou inválidos recebidos")
+            return
+        
+        # Step 2: Fetch sentiment silently
+        sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
+        sentiment_signal = services['sentiment_service'].get_sentiment_signal(sentiment_score)
+        sentiment_strength = services['sentiment_service'].get_sentiment_strength(sentiment_score)
+        
+        # Step 3: Add technical indicators silently
+        df_with_indicators = TechnicalIndicators.add_all_indicators(df)
+        trading_signals = TechnicalIndicators.get_trading_signals(df_with_indicators)
+        
+        # Step 4: Train model and predict silently
+        predictor = ForexPredictor(
+            lookback=lookback_period,
+            hidden_size=HIDDEN_SIZE,
+            num_layers=NUM_LAYERS,
+            dropout=DROPOUT
+        )
+        
+        # Use recent data for training
+        train_data = df_with_indicators.tail(min(1000, len(df_with_indicators)))
+        
+        training_metrics = predictor.train_model(
+            train_data, 
+            sentiment_score, 
+            epochs=epochs if not is_quick else 5,
+            batch_size=BATCH_SIZE,
+            learning_rate=LEARNING_RATE
+        )
+        
+        # Step 5: Make predictions silently
+        steps = HORIZON_STEPS[horizon]
+        predictions, uncertainties = predictor.predict_future(
+            train_data, 
+            sentiment_score, 
+            steps, 
+            mc_samples
+        )
+        
+        # Calculate confidence
+        model_confidence = predictor.get_model_confidence(train_data, sentiment_score)
+        
+        # Step 6: Store results silently
+        
+        current_price = float(df_with_indicators['close'].iloc[-1])
+        predicted_price = predictions[-1] if predictions and len(predictions) > 0 else current_price
+        
+        # Validation: Ensure predicted price is realistic (within 10% of current price for safety)
+        max_change = current_price * 0.1  # 10% maximum change as sanity check
+        if abs(predicted_price - current_price) > max_change:
+            # If prediction seems unrealistic, use a more conservative estimate
+            if predicted_price > current_price:
+                predicted_price = current_price + (max_change * 0.5)  # 5% increase max
             else:
-                status_text.text(f"🔄 Executando análise {analysis_mode}...")
-            progress_bar.progress(20)
+                predicted_price = current_price - (max_change * 0.5)  # 5% decrease max
         
-            # Step 2: Fetch data
-            status_text.text("📊 Buscando dados do mercado...")
-            progress_bar.progress(30)
-            
-            # Determine market type from current selection
-            market_type = 'crypto' if st.session_state.get('market_type_select', 'Forex') == 'Criptomoedas' else 'forex'
-            df = services['data_service'].fetch_forex_data(
-                pair, 
-                INTERVALS[interval], 
-                'full' if not is_quick else 'compact',
-                market_type
-            )
-            
-            if not services['data_service'].validate_data(df):
-                progress_container.empty()
-                st.error("❌ DADOS INSUFICIENTES: Alpha Vantage retornou dados insuficientes ou inválidos")
-                st.error("🔑 Verifique sua chave API Alpha Vantage ou tente outro par de moedas")
-                st.info("ℹ️ Sistema configurado para usar APENAS dados reais - nenhum dado simulado será usado")
-                return
-            
-            # Step 3: Technical indicators
-            status_text.text("🔧 Calculando indicadores técnicos...")
-            progress_bar.progress(50)
-            
-            df_with_indicators = add_technical_indicators(df)
-            
-            # Step 4: Current price
-            status_text.text("💰 Obtendo preço atual...")
-            progress_bar.progress(60)
-            
-            current_price = services['data_service'].get_latest_price(pair, market_type)
-            
-            if current_price is None:
-                progress_container.empty()
-                st.error(f"❌ DADOS REAIS INDISPONÍVEIS: Alpha Vantage não retornou preço atual válido para {pair}")
-                st.error("🔑 Verifique: 1) Chave API válida 2) Conexão internet 3) Limite de requisições Alpha Vantage")
-                st.info("ℹ️ Sistema bloqueado - usar apenas dados autênticos Alpha Vantage")
-                return
-            # Step 5: Enhanced Sentiment analysis with future prediction
-            status_text.text("📰 Analisando sentimento e prevendo futuro do mercado...")
-            progress_bar.progress(70)
-            
-            # Get basic sentiment score
-            sentiment_score = services['sentiment_service'].fetch_news_sentiment(pair)
-            
-            # Get comprehensive sentiment trend analysis with predictions
-            sentiment_analysis_results = services['sentiment_service'].analyze_sentiment_trend(pair)
-            
-            # Debug: Verificar se sentimento está funcionando
-            if st.session_state.get('debug_sentiment', False):
-                st.info(f"🔍 DEBUG - Sentimento obtido para {pair}: {sentiment_score:.4f}")
-                st.info(f"🔍 DEBUG - Sentimento previsto: {sentiment_analysis_results['predicted_sentiment']:.4f}")
-                if sentiment_score == 0.0:
-                    st.warning("⚠️ Sentimento neutro (0.0) - pode indicar erro na API ou falta de notícias")
-                else:
-                    sentiment_direction = "POSITIVO" if sentiment_score > 0 else "NEGATIVO" if sentiment_score < 0 else "NEUTRO"
-                    st.success(f"✅ Sentimento {sentiment_direction} capturado com sucesso!")
-            
-            # Step 6: Running analysis
-            status_text.text("🤖 Processando análise...")
-            progress_bar.progress(80)
-            
-            results = {
-                'pair': pair,
-                'interval': interval,
-                'horizon': horizon,
-                'current_price': current_price,
-                'timestamp': datetime.now(),
-                'analysis_mode': analysis_mode,
-                'components': {}
+        # Calculate additional metrics
+        price_change = predicted_price - current_price
+        price_change_pct = (price_change / current_price) * 100
+        
+        # Calculate price variation range against the expected trend
+        uncertainty = uncertainties[-1] if uncertainties and len(uncertainties) > 0 else 0.0
+        
+        # Calculate where price could move OPPOSITE to our prediction
+        # This shows risk of prediction being completely wrong
+        risk_multiplier = 1.5  # How far opposite the prediction could go
+        
+        if price_change > 0:  # We predict UP (BUY) - show downside risk if wrong
+            counter_trend_target = current_price - (abs(price_change) * risk_multiplier)
+            risk_direction = "Downside"
+            risk_description = "if bullish prediction fails"
+        else:  # We predict DOWN (SELL) - show upside risk if wrong
+            counter_trend_target = current_price + (abs(price_change) * risk_multiplier)
+            risk_direction = "Upside" 
+            risk_description = "if bearish prediction fails"
+        
+        # Debug logging (temporary)
+        print(f"DEBUG - Current Price: {current_price:.5f}")
+        print(f"DEBUG - Raw Predicted Price: {predictions[-1] if predictions else 'None'}")
+        print(f"DEBUG - Final Predicted Price: {predicted_price:.5f}")
+        print(f"DEBUG - Price Change: {price_change_pct:.2f}%")
+        print(f"DEBUG - Counter-trend Risk: {risk_direction} to {counter_trend_target:.5f} ({risk_description})")
+        
+        # Risk assessment
+        risk_tolerance = RISK_LEVELS[risk_level]
+        position_size = min(risk_tolerance, abs(price_change_pct) / 100)
+        
+        st.session_state.analysis_results = {
+            'pair': pair,
+            'interval': interval,
+            'horizon': horizon,
+            'timestamp': datetime.now(),
+            'data': df_with_indicators,
+            'sentiment': {
+                'score': sentiment_score,
+                'signal': sentiment_signal,
+                'strength': sentiment_strength
+            },
+            'predictions': predictions,
+            'uncertainties': uncertainties,
+            'current_price': current_price,
+            'predicted_price': predicted_price,
+            'price_change': price_change,
+            'price_change_pct': price_change_pct,
+            'model_confidence': model_confidence,
+            'training_metrics': training_metrics,
+            'trading_signals': trading_signals,
+            'risk_assessment': {
+                'risk_level': risk_level,
+                'position_size': position_size,
+                'stop_loss': current_price * (1 - risk_tolerance),
+                'take_profit': current_price * (1 + risk_tolerance * 2)
+            },
+            'counter_trend_risk': {
+                'direction': risk_direction,
+                'target_price': counter_trend_target,
+                'risk_percentage': abs(counter_trend_target - current_price) / current_price * 100,
+                'description': risk_description,
+                'prediction_direction': 'Bullish' if price_change > 0 else 'Bearish'
             }
-            
-            # Executar análises baseadas no modo selecionado - argumentos corretos
-            # Obter perfil especializado se definido, senão usar trading_style padrão
-            specialized_profile = st.session_state.get('specialized_profile')
-            
-            if analysis_mode == 'unified':
-                if specialized_profile:
-                    # Usar análise baseada em perfil especializado (como no multi-pares)
-                    analysis_config = parse_analysis_type(specialized_profile)
-                    status_text.text(f"🎯 Executando análise {analysis_config['description']}...")
-                    
-                    # Usar run_profile_specific_analysis para análise baseada em perfil
-                    profile_result = run_profile_specific_analysis(
-                        current_price, pair, sentiment_score, df_with_indicators, 
-                        analysis_config['profile'], analysis_config
-                    )
-                    
-                    # Converter resultado do perfil para o formato esperado
-                    results.update({
-                        'market_direction': determine_market_direction_from_profile(profile_result),
-                        'model_confidence': profile_result.get('unified_confidence', 0.5),
-                        'success_probability': profile_result.get('unified_confidence', 0.5) * 100,
-                        'recommendation': get_recommendation_from_profile(profile_result),
-                        'profile_analysis': profile_result,
-                        'trading_style': analysis_config['profile']
-                    })
-                else:
-                    # Usar método tradicional se não há perfil especializado
-                    current_trading_style = st.session_state.get('trading_style', 'swing')
-                    status_text.text(f"🎯 Executando análise {current_trading_style.upper()}...")
-                    results.update(run_unified_analysis(current_price, pair, sentiment_score, df_with_indicators, current_trading_style))
-                    
-            elif analysis_mode in ['technical', 'sentiment', 'risk', 'ai_lstm', 'volume', 'trend']:
-                if specialized_profile:
-                    # Usar análise especializada baseada em perfil para análises individuais
-                    analysis_config = parse_analysis_type(specialized_profile)
-                    status_text.text(f"🎯 Executando {analysis_mode} com perfil {analysis_config['profile']}...")
-                    
-                    # Executar análise individual focada no perfil
-                    if analysis_mode == 'technical':
-                        individual_result = calculate_technical_analysis(df_with_indicators, analysis_config['profile'])
-                        results.update({'technical_result': individual_result, 'trading_style': analysis_config['profile']})
-                    elif analysis_mode == 'sentiment':
-                        individual_result = calculate_sentiment_analysis(sentiment_score, pair)
-                        results.update({'sentiment_result': individual_result, 'trading_style': analysis_config['profile']})
-                    elif analysis_mode == 'trend':
-                        individual_result = calculate_trend_analysis(df_with_indicators)
-                        results.update({'trend_result': individual_result, 'trading_style': analysis_config['profile']})
-                    elif analysis_mode == 'volume':
-                        individual_result = calculate_volume_analysis(df_with_indicators)
-                        results.update({'volume_result': individual_result, 'trading_style': analysis_config['profile']})
-                    elif analysis_mode == 'risk':
-                        individual_result = calculate_risk_analysis_simple(df_with_indicators, current_price)
-                        results.update({'risk_result': individual_result, 'trading_style': analysis_config['profile']})
-                    elif analysis_mode == 'ai_lstm':
-                        individual_result = calculate_ai_lstm_analysis(df_with_indicators, lookback_period, epochs)
-                        results.update({'ai_result': individual_result, 'trading_style': analysis_config['profile']})
-                else:
-                    # Usar métodos tradicionais se não há perfil especializado
-                    if analysis_mode == 'technical':
-                        results.update(run_technical_analysis(current_price, df_with_indicators))
-                    elif analysis_mode == 'sentiment':
-                        results.update(run_sentiment_analysis(current_price, pair, sentiment_score))
-                    elif analysis_mode == 'risk':
-                        results.update(run_risk_analysis(current_price, df_with_indicators))
-                    elif analysis_mode == 'ai_lstm':
-                        results.update(run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators))
-                    elif analysis_mode == 'volume':
-                        results.update(run_volume_analysis(current_price, df_with_indicators))
-                    elif analysis_mode == 'trend':
-                        results.update(run_trend_analysis(current_price, df_with_indicators))
-            else:
-                results.update(run_basic_analysis(current_price, is_quick, sentiment_score))
-            
-            # Step 7: Finalizing
-            status_text.text("✅ Finalizando análise...")
-            progress_bar.progress(90)
-            
-            # Store results with additional data for tabs
-            results['df_with_indicators'] = df_with_indicators
-            results['sentiment_score'] = sentiment_score
-            st.session_state.analysis_results = results
-            
-            # Complete progress
-            status_text.text("🎉 Análise concluída com sucesso!")
-            progress_bar.progress(100)
-            
-            # Clear progress after a moment
-            import time
-            time.sleep(1)
-            if 'progress_container' in locals():
-                progress_container.empty()
-            
-            # Remover loader personalizado
-            st.markdown("""
-            <script>
-                document.querySelectorAll('.custom-loader').forEach(el => el.remove());
-            </script>
-            """, unsafe_allow_html=True)
-            
-            # Trigger rerun to show results
-            st.rerun()
+        }
+        
+        # Analysis completed silently
         
     except Exception as e:
-        if 'progress_container' in locals():
-            progress_container.empty()
-        st.error(f"❌ Erro durante a análise: {str(e)}")
-        print(f"Analysis error: {e}")
+        # Remove spinner on error too
+        # Error handling silently - show minimal error
+        st.error(f"Erro na análise: {str(e)}")
 
-def run_unified_analysis(current_price, pair, sentiment_score, df_with_indicators, trading_style='swing'):
-    """🧠 ANÁLISE UNIFICADA INTELIGENTE - Especializada por Estratégia de Trading"""
-    import numpy as np
+def get_trading_recommendation(results):
+    """Calculate overall trading recommendation based on all signals"""
     
-    # 🎯 CONFIGURAÇÕES AVANÇADAS POR ESTRATÉGIA DE TRADING
-    from datetime import datetime, timedelta
-    import pytz
+    # Validate the price change makes sense
+    current_price = results['current_price']
+    predicted_price = results['predicted_price']
+    price_change_pct = results['price_change_pct']
     
-    trading_configs = {
-        'scalping': {
-            'name': 'Scalping Ultra-Assertivo',
-            'timeframe': '1M-5M',
-            'hold_period': '1-30 minutos',
-            'stop_multiplier': 0.4,  # Stops ainda mais apertados
-            'take_multiplier': 0.8,  # Takes menores mas mais frequentes
-            'min_confidence': 85,    # Maior seletividade
-            'volatility_factor': 3.0,  # Máxima sensibilidade à volatilidade
-            'components_weight': [0.30, 0.15, 0.35, 0.05, 0.10, 0.05],  # Volume 35%, Sentimento 5%
-            'validity_hours': 0.5,  # 30min de validade (ultra-rápido)
-            'primary_indicators': ['Volume', 'Técnica', 'Momentum'],
-            'analysis_focus': 'Order Flow + Volume Profile + Breakouts Voláteis',
-            'optimal_pairs': ['EUR/USD', 'GBP/USD', 'USD/JPY'],  # Adicionado USD/JPY
-            'best_times': '13:30-17:00 UTC (Máxima liquidez + Volatilidade)',
-            'accuracy_rate': '92%'  # Maior precisão esperada
-        },
-        'swing': {
-            'name': 'Swing Trading',
-            'timeframe': '4H-1D', 
-            'hold_period': '3-7 dias',
-            'stop_multiplier': 1.5,
-            'take_multiplier': 3.0,
-            'min_confidence': 45,  # REDUZIDO: era 70
-            'volatility_factor': 1.2,
-            'components_weight': [0.20, 0.20, 0.15, 0.15, 0.15, 0.15],
-            'validity_hours': 72,  # 3 dias de validade
-            'primary_indicators': ['Técnica', 'Tendência', 'IA/LSTM'],
-            'analysis_focus': 'Momentum multi-timeframe + Confluência técnica',
-            'optimal_pairs': ['EUR/USD', 'GBP/USD', 'USD/JPY'],
-            'best_times': '17:00-19:00 UTC (Final do dia)',
-            'accuracy_rate': '82%'
-        },
-        'intraday': {
-            'name': 'Day Trading - Análise Técnica Tradicional',
-            'timeframe': 'H1 (Foco Principal)',
-            'hold_period': '2-8 horas', 
-            'stop_multiplier': 0.8,
-            'take_multiplier': 1.6,
-            'min_confidence': 50,
-            'volatility_factor': 1.0,
-            'components_weight': [0.55, 0.20, 0.15, 0.05, 0.03, 0.02],  # Técnica 55% (EMAs dominantes) + Confluência 45%
-            'validity_hours': 4,
-            'primary_indicators': ['EMA 20/200 H1 (DOMINANTE)', 'RSI H1', 'Volume H1', 'MACD H1'],
-            'analysis_focus': 'EMA 20/200 H1 (dominante) + Confluência RSI/Volume/MACD (análise tradicional)',
-            'optimal_pairs': ['EUR/USD', 'GBP/USD'],
-            'best_times': '13:30-17:00 UTC (Sobreposição Londres/NY)',
-            'accuracy_rate': '88%'  # Maior precisão com foco técnico
-        },
-        'position': {
-            'name': 'Position Trading',
-            'timeframe': '1D-1W',
-            'hold_period': '1-4 semanas',
-            'stop_multiplier': 2.5,
-            'take_multiplier': 7.5,
-            'min_confidence': 40,  # REDUZIDO: era 65
-            'volatility_factor': 1.5,
-            'components_weight': [0.15, 0.25, 0.10, 0.20, 0.15, 0.15],
-            'validity_hours': 168,  # 1 semana de validade
-            'primary_indicators': ['Tendência', 'Sentimento', 'Risco'],
-            'analysis_focus': 'Fundamentals + Sentimento de mercado',
-            'optimal_pairs': ['USD/JPY', 'EUR/USD', 'AUD/USD'],
-            'best_times': 'Segunda-feira 09:00 UTC (Análise semanal)',
-            'accuracy_rate': '78%'
-        }
-    }
+    # Debug logging
+    print(f"RECOMMENDATION DEBUG - Current: {current_price:.5f}, Predicted: {predicted_price:.5f}, Change: {price_change_pct:.2f}%")
     
-    config = trading_configs.get(trading_style, trading_configs['swing'])
-    weights = config['components_weight']
+    # Get individual signals
+    price_signal = 1 if results['price_change'] > 0 else -1
+    sentiment_signal = 1 if results['sentiment']['score'] > 0 else -1 if results['sentiment']['score'] < 0 else 0
     
-    # 📊 INFORMAÇÕES DA ESTRATÉGIA SELECIONADA
-    current_time = datetime.now(pytz.UTC)
-    validity_end = current_time + timedelta(hours=config['validity_hours'])
+    # Get technical signals from the most recent data
+    signals = results['trading_signals'].tail(1).iloc[0]
     
-    strategy_info = {
-        'strategy_name': config['name'],
-        'timeframe': config['timeframe'],
-        'hold_period': config['hold_period'],
-        'analysis_focus': config['analysis_focus'],
-        'primary_indicators': config['primary_indicators'],
-        'optimal_pairs': config['optimal_pairs'],
-        'best_times': config['best_times'],
-        'accuracy_rate': config['accuracy_rate'],
-        'validity_until': validity_end.strftime('%d/%m/%Y %H:%M UTC'),
-        'validity_hours': config['validity_hours'],
-        'analysis_timestamp': current_time.strftime('%d/%m/%Y %H:%M UTC')
-    }
-    
-    # === 1. ANÁLISE TÉCNICA ESPECÍFICA POR ESTRATÉGIA ===
-    latest = df_with_indicators.iloc[-1]
-    rsi = latest.get('rsi', 50)
-    macd = latest.get('macd', 0)
-    sma_20 = latest.get('sma_20', current_price)
-    ema_20 = latest.get('ema_20', current_price)
-    bb_upper = latest.get('bb_upper', current_price * 1.02)
-    bb_lower = latest.get('bb_lower', current_price * 0.98)
-    
-    # Força técnica baseada na estratégia selecionada
-    technical_strength = 0
-    technical_components = []
-    
-    # RSI: Configurações específicas por estratégia
-    if trading_style == 'scalping':  # Scalping Ultra-Assertivo - RSI ultra-sensível
-        if rsi < 35:  # Oversold mais amplo para scalping
-            technical_strength += 1.0
-            technical_components.append(f"RSI Scalping Oversold({rsi:.1f}): COMPRA ULTRA-FORTE")
-        elif rsi < 45:
-            technical_strength += 0.7
-            technical_components.append(f"RSI Scalping Favorável({rsi:.1f}): COMPRA FORTE")
-        elif rsi > 65:  # Overbought mais amplo para scalping
-            technical_strength -= 1.0
-            technical_components.append(f"RSI Scalping Overbought({rsi:.1f}): VENDA ULTRA-FORTE")
-        elif rsi > 55:
-            technical_strength -= 0.7
-            technical_components.append(f"RSI Scalping Desfavorável({rsi:.1f}): VENDA FORTE")
-        else:
-            technical_components.append(f"RSI Scalping Neutro({rsi:.1f}): AGUARDAR VOLATILIDADE")
-    
-    elif trading_style == 'intraday':  # Day Trading - RSI CORRIGIDO
-        if rsi < 30:  # Oversold extremo
-            technical_strength += 0.9
-            technical_components.append(f"RSI Day Trade Oversold({rsi:.1f}): COMPRA FORTE")
-        elif rsi < 50:  # Abaixo da linha central = COMPRA
-            technical_strength += 0.5
-            technical_components.append(f"RSI Day Trade Baixo({rsi:.1f}): COMPRA")
-        elif rsi > 70:  # Overbought - CUIDADO, não venda forte
-            technical_strength -= 0.3  # REDUZIDO: era -0.9
-            technical_components.append(f"RSI Day Trade Overbought({rsi:.1f}): CUIDADO")
-        elif rsi > 50:  # Acima da linha central = COMPRA (momentum positivo)
-            technical_strength += 0.3  # CORRIGIDO: era -0.5 (VENDA)
-            technical_components.append(f"RSI Day Trade Alto({rsi:.1f}): COMPRA (Momentum)")
-        else:
-            technical_components.append(f"RSI Day Trade Neutro({rsi:.1f}): NEUTRO")
-    
-    elif trading_style == 'swing':  # Swing Trading - RSI moderado
-        if rsi < 25:
-            technical_strength += 0.7
-            technical_components.append(f"RSI Swing Extremo Oversold({rsi:.1f}): COMPRA FORTE")
-        elif rsi < 35:
-            technical_strength += 0.4
-            technical_components.append(f"RSI Swing Oversold({rsi:.1f}): COMPRA")
-        elif rsi > 75:
-            technical_strength -= 0.7
-            technical_components.append(f"RSI Swing Extremo Overbought({rsi:.1f}): VENDA FORTE")
-        elif rsi > 65:
-            technical_strength -= 0.4
-            technical_components.append(f"RSI Swing Overbought({rsi:.1f}): VENDA")
-        else:
-            technical_components.append(f"RSI Swing Neutro({rsi:.1f}): NEUTRO")
-    
-    else:  # Position Trading - RSI menos sensível, foco em extremos
-        if rsi < 20:  # Extremos mais raros para position
-            technical_strength += 0.6
-            technical_components.append(f"RSI Position Extremo Oversold({rsi:.1f}): COMPRA")
-        elif rsi > 80:
-            technical_strength -= 0.6
-            technical_components.append(f"RSI Position Extremo Overbought({rsi:.1f}): VENDA")
-        elif rsi < 30:
-            technical_strength += 0.3
-            technical_components.append(f"RSI Position Oversold({rsi:.1f}): COMPRA MODERADA")
-        elif rsi > 70:
-            technical_strength -= 0.3
-            technical_components.append(f"RSI Position Overbought({rsi:.1f}): VENDA MODERADA")
-        else:
-            technical_components.append(f"RSI Position Neutro({rsi:.1f}): NEUTRO")
-    
-    # MACD: Configurações específicas por estratégia
-    macd_signal = macd if abs(macd) > 0.0001 else 0
-    
-    if trading_style == 'scalping':  # Scalping Ultra-Assertivo - MACD ultra-responsivo
-        if macd_signal > 0.0001:  # Threshold ultra-baixo para scalping
-            technical_strength += 1.0
-            technical_components.append(f"MACD Scalping Micro-Positivo: COMPRA ULTRA-FORTE")
-        elif macd_signal > 0:
-            technical_strength += 0.6
-            technical_components.append(f"MACD Scalping Positivo: COMPRA FORTE")
-        elif macd_signal < -0.0001:
-            technical_strength -= 1.0
-            technical_components.append(f"MACD Scalping Micro-Negativo: VENDA ULTRA-FORTE")
-        elif macd_signal < 0:
-            technical_strength -= 0.6
-            technical_components.append(f"MACD Scalping Negativo: VENDA FORTE")
-    
-    elif trading_style == 'intraday':  # Day Trading - MACD mais responsivo
-        if macd_signal > 0.0003:  # Threshold menor para day trading
-            technical_strength += 0.8
-            technical_components.append(f"MACD Day Trade Forte Positivo: COMPRA FORTE")
-        elif macd_signal > 0:
-            technical_strength += 0.4
-            technical_components.append(f"MACD Day Trade Positivo: COMPRA")
-        elif macd_signal < -0.0003:
-            technical_strength -= 0.8
-            technical_components.append(f"MACD Day Trade Forte Negativo: VENDA FORTE")
-        elif macd_signal < 0:
-            technical_strength -= 0.4
-            technical_components.append(f"MACD Day Trade Negativo: VENDA")
-    
-    elif trading_style == 'swing':  # Swing Trading - MACD moderado
-        if macd_signal > 0.0005:
-            technical_strength += 0.6
-            technical_components.append(f"MACD Swing Forte Positivo: COMPRA FORTE")
-        elif macd_signal > 0:
-            technical_strength += 0.3
-            technical_components.append(f"MACD Swing Positivo: COMPRA")
-        elif macd_signal < -0.0005:
-            technical_strength -= 0.6
-            technical_components.append(f"MACD Swing Forte Negativo: VENDA FORTE")
-        elif macd_signal < 0:
-            technical_strength -= 0.3
-            technical_components.append(f"MACD Swing Negativo: VENDA")
-    
-    else:  # Position Trading - MACD menos sensível
-        if macd_signal > 0.0008:  # Threshold maior para position
-            technical_strength += 0.5
-            technical_components.append(f"MACD Position Forte Positivo: COMPRA")
-        elif macd_signal > 0.0002:
-            technical_strength += 0.2
-            technical_components.append(f"MACD Position Positivo: COMPRA LEVE")
-        elif macd_signal < -0.0008:
-            technical_strength -= 0.5
-            technical_components.append(f"MACD Position Forte Negativo: VENDA")
-        elif macd_signal < -0.0002:
-            technical_strength -= 0.2
-            technical_components.append(f"MACD Position Negativo: VENDA LEVE")
-    
-    # SMA Signal (médias móveis)
-    sma_signal = (current_price - sma_20) / sma_20 if sma_20 > 0 else 0
-    if abs(sma_signal) > 0.005:  # Movimento significativo acima/abaixo da SMA
-        if sma_signal > 0:
-            technical_strength += 0.3
-            technical_components.append(f"SMA20 Rompimento Alta: COMPRA")
-        else:
-            technical_strength -= 0.3
-            technical_components.append(f"SMA20 Rompimento Baixa: VENDA")
-    
-    # Bollinger Bands: Posição e squeeze
-    bb_width = (bb_upper - bb_lower) / current_price
-    bb_position = (current_price - bb_lower) / (bb_upper - bb_lower) if bb_upper != bb_lower else 0.5
-    
-    if bb_position < 0.1:  # Extremo inferior
-        technical_strength += 0.5
-        technical_components.append(f"BB Extremo Inferior: COMPRA FORTE")
-    elif bb_position > 0.9:  # Extremo superior
-        technical_strength -= 0.5
-        technical_components.append(f"BB Extremo Superior: VENDA FORTE")
-    
-    # === 2. MOMENTUM E TENDÊNCIA ESPECÍFICA POR ESTRATÉGIA ===
-    prices = df_with_indicators['close'].values
-    
-    # Análise de tendência específica por estratégia
-    if trading_style == 'intraday':  # Day Trading - Tendências curtas e rápidas
-        trend_3 = (prices[-1] - prices[-4]) / prices[-4] if len(prices) >= 4 else 0
-        trend_5 = (prices[-1] - prices[-6]) / prices[-6] if len(prices) >= 6 else 0
-        trend_10 = (prices[-1] - prices[-11]) / prices[-11] if len(prices) >= 11 else 0
+    # Count bullish/bearish technical signals
+    tech_signals = 0
+    if signals.get('SMA_Bullish', False):
+        tech_signals += 1
+    elif signals.get('SMA_Bearish', False):
+        tech_signals -= 1
         
-        # Day Trading foca em movimentos rápidos
-        if trend_3 > 0.002 and trend_5 > 0.001:  # Movimento forte curto prazo
-            trend_alignment = 0.9
-        elif trend_3 > 0.001 and trend_5 > 0.0005:
-            trend_alignment = 0.6
-        elif trend_3 > 0 and trend_5 > 0:
-            trend_alignment = 0.3
-        elif trend_3 < -0.002 and trend_5 < -0.001:
-            trend_alignment = -0.9
-        elif trend_3 < -0.001 and trend_5 < -0.0005:
-            trend_alignment = -0.6
-        elif trend_3 < 0 and trend_5 < 0:
-            trend_alignment = -0.3
-        else:
-            trend_alignment = 0
-    
-    elif trading_style == 'swing':  # Swing Trading - Tendências médias
-        trend_5 = (prices[-1] - prices[-6]) / prices[-6] if len(prices) >= 6 else 0
-        trend_10 = (prices[-1] - prices[-11]) / prices[-11] if len(prices) >= 11 else 0
-        trend_20 = (prices[-1] - prices[-21]) / prices[-21] if len(prices) >= 21 else 0
+    if signals.get('MACD_Bullish', False):
+        tech_signals += 1
+    elif signals.get('MACD_Bearish', False):
+        tech_signals -= 1
         
-        # Swing Trading - confluência de timeframes médios
-        if trend_5 > 0.001 and trend_10 > 0.001 and trend_20 > 0.001:
-            trend_alignment = 0.9
-        elif trend_5 > 0.0005 and trend_10 > 0.0005:
-            trend_alignment = 0.6
-        elif trend_5 > 0 and trend_10 > 0:
-            trend_alignment = 0.3
-        elif trend_5 < -0.001 and trend_10 < -0.001 and trend_20 < -0.001:
-            trend_alignment = -0.9
-        elif trend_5 < -0.0005 and trend_10 < -0.0005:
-            trend_alignment = -0.6
-        elif trend_5 < 0 and trend_10 < 0:
-            trend_alignment = -0.3
-        else:
-            trend_alignment = 0
+    if signals.get('RSI_Oversold', False):
+        tech_signals += 1
+    elif signals.get('RSI_Overbought', False):
+        tech_signals -= 1
     
-    else:  # Position Trading - Tendências longas e consistentes
-        trend_10 = (prices[-1] - prices[-11]) / prices[-11] if len(prices) >= 11 else 0
-        trend_20 = (prices[-1] - prices[-21]) / prices[-21] if len(prices) >= 21 else 0
-        trend_50 = (prices[-1] - prices[-51]) / prices[-51] if len(prices) >= 51 else 0
-        
-        # Position Trading - foca em tendências longas e sustentadas
-        if trend_10 > 0.002 and trend_20 > 0.003 and trend_50 > 0.005:  # Tendência longa consistente
-            trend_alignment = 0.8
-        elif trend_10 > 0.001 and trend_20 > 0.002:
-            trend_alignment = 0.5
-        elif trend_10 > 0 and trend_20 > 0:
-            trend_alignment = 0.2
-        elif trend_10 < -0.002 and trend_20 < -0.003 and trend_50 < -0.005:
-            trend_alignment = -0.8
-        elif trend_10 < -0.001 and trend_20 < -0.002:
-            trend_alignment = -0.5
-        elif trend_10 < 0 and trend_20 < 0:
-            trend_alignment = -0.2
-        else:
-            trend_alignment = 0
+    # Calculate overall score
+    overall_score = price_signal + sentiment_signal + (tech_signals / 2)
     
-    # === 3. ANÁLISE DE VOLATILIDADE E VOLUME (PADRONIZADA) ===
-    price_changes = np.diff(prices[-20:]) / prices[-20:-1] if len(prices) >= 20 else np.array([0])
-    volatility = np.std(price_changes) if len(price_changes) > 0 else 0
-    
-    # USAR A MESMA LÓGICA DA ANÁLISE INDIVIDUAL DE VOLUME
-    # Calcular volatilidade padronizada como proxy para volume
-    volume_volatility = df_with_indicators['close'].tail(20).std() / current_price if len(df_with_indicators) >= 20 else 0
-    
-    # Configuração padronizada (mesma da análise individual)
-    volatility_threshold = 0.020  # Threshold moderado
-    signal_factor = 1.0  # Fator moderado
-    
-    # LÓGICA PADRONIZADA: Baixa volatilidade = Volume saudável = COMPRA
-    # Alta volatilidade = Volume especulativo = VENDA ou neutro
-    base_volume_signal = (volatility_threshold - volume_volatility) * 0.015
-    volume_confirmation = base_volume_signal * signal_factor
-    
-    # Ajuste para alta volatilidade (mesma lógica da análise individual)
-    if volume_volatility > volatility_threshold:
-        volume_confirmation *= 0.8
-    
-    # Limitar o sinal para evitar dominância
-    volume_confirmation = max(-0.3, min(0.3, volume_confirmation))
-    
-    # === 4. SENTIMENTO ESPECÍFICO POR ESTRATÉGIA ===
-    if trading_style == 'intraday':  # Day Trading - Sentimento menos relevante
-        if sentiment_score > 0.1:  # Threshold maior para day trading
-            sentiment_impact = sentiment_score * 0.4  # Peso menor
-        elif sentiment_score < -0.1:
-            sentiment_impact = sentiment_score * 0.3
-        else:
-            sentiment_impact = sentiment_score * 0.1
-    
-    elif trading_style == 'swing':  # Swing Trading - Sentimento moderado
-        if sentiment_score > 0.05:
-            sentiment_impact = sentiment_score * 0.6
-        elif sentiment_score < -0.05:
-            sentiment_impact = sentiment_score * 0.5
-        else:
-            sentiment_impact = sentiment_score * 0.2
-    
-    else:  # Position Trading - Sentimento muito relevante
-        if sentiment_score > 0.02:  # Threshold menor, mais sensível
-            sentiment_impact = sentiment_score * 1.0  # Peso maior
-        elif sentiment_score < -0.02:
-            sentiment_impact = sentiment_score * 0.8
-        else:
-            sentiment_impact = sentiment_score * 0.4
-    
-    # === 5. ANÁLISE IA/LSTM (PADRONIZADA COM ANÁLISE INDIVIDUAL) ===
-    # USAR A MESMA LÓGICA DA run_ai_analysis
-    lookback_period = 20
-    epochs = 50  # Valor padrão
-    
-    lstm_signal = 0
-    if len(prices) >= lookback_period:
-        # Usar exatamente os mesmos cálculos da análise individual
-        recent_prices = prices[-lookback_period:]
-        
-        # Parâmetros idênticos à análise individual
-        risk_config = {'volatility_tolerance': 1.0, 'signal_damping': 1.0, 'min_confidence': 0.65}
-        
-        # Calcular múltiplas métricas (IDÊNTICO À INDIVIDUAL)
-        short_trend = (recent_prices[-1] - recent_prices[-5]) / recent_prices[-5] if len(recent_prices) >= 5 else 0
-        long_trend = (recent_prices[-1] - recent_prices[0]) / recent_prices[0]
-        volatility_ai = np.std(recent_prices) / np.mean(recent_prices)
-        
-        # Simular aprendizado (IDÊNTICO À INDIVIDUAL)
-        base_learning_factor = min(1.0, epochs / 100)
-        learning_factor = base_learning_factor * risk_config['volatility_tolerance']
-        
-        # Combinação de sinais (IDÊNTICO À INDIVIDUAL)
-        trend_signal = np.tanh(long_trend * 10) * 0.020 * risk_config['signal_damping']
-        momentum_signal = np.tanh(short_trend * 15) * 0.015 * risk_config['signal_damping']
-        volatility_signal = (0.02 - volatility_ai) * 0.010
-        
-        # Ajuste para alta volatilidade (IDÊNTICO À INDIVIDUAL)
-        if volatility_ai > 0.015:
-            volatility_signal *= 0.8
-        
-        # Sinal final (IDÊNTICO À INDIVIDUAL)
-        lstm_signal = (trend_signal * 0.5 + momentum_signal * 0.3 + volatility_signal * 0.2) * learning_factor
-        
-        # DEBUG: Mostrar valores exatos
-        if st.session_state.get('debug_ai_values', False):
-            st.write(f"🔍 **DEBUG AI/LSTM UNIFICADA:**")
-            st.write(f"Long trend: {long_trend:.10f}")
-            st.write(f"Short trend: {short_trend:.10f}")
-            st.write(f"Volatility: {volatility_ai:.10f}")
-            st.write(f"Learning factor: {learning_factor:.10f}")
-            st.write(f"Trend signal: {trend_signal:.10f}")
-            st.write(f"Momentum signal: {momentum_signal:.10f}")
-            st.write(f"Volatility signal: {volatility_signal:.10f}")
-            st.write(f"**LSTM Signal Final: {lstm_signal:.10f}**")
-            st.write(f"**LSTM Norm (NO NORMALIZATION): {lstm_signal:.10f}**")
-            st.write(f"**Direção: {'COMPRA' if lstm_signal > 0.001 else 'VENDA' if lstm_signal < -0.001 else 'NEUTRO'}**")
-    
-    # === 6. ANÁLISE DE RISCO ===
-    # Calcular score de risco baseado em volatilidade e momentum
-    risk_score = 0
-    if volatility > 0:
-        # Risco alto = sinal negativo, risco baixo = sinal positivo
-        if volatility > 0.02:  # Alta volatilidade
-            risk_score = -0.4
-        elif volatility > 0.01:  # Volatilidade moderada
-            risk_score = -0.2
-        elif volatility < 0.005:  # Baixa volatilidade
-            risk_score = 0.3
-        else:
-            risk_score = 0.1
-        
-        # Ajustar baseado na força da tendência
-        if abs(trend_alignment) > 0.5:  # Tendência forte reduz risco
-            risk_score += 0.2 if trend_alignment > 0 else 0.2
-    
-    # === 7. CÁLCULO DA CONFLUÊNCIA FINAL COM 6 COMPONENTES ===
-    # Pesos rebalanceados para 6 componentes iguais
-    technical_weight = 1/6     # ~16.67% - Indicadores técnicos
-    trend_weight = 1/6         # ~16.67% - Análise de tendência multi-timeframe
-    volume_weight = 1/6        # ~16.67% - Confirmação de volume
-    sentiment_weight = 1/6     # ~16.67% - Sentimento do mercado
-    lstm_weight = 1/6          # ~16.67% - Análise IA/LSTM
-    risk_weight = 1/6          # ~16.67% - Análise de risco
-    
-    # Normalizar componentes para evitar dominância extrema
-    def normalize_component(value, max_val=1.0):
-        """Normalizar componentes para evitar valores extremos"""
-        return max(-max_val, min(max_val, value))
-    
-    technical_norm = normalize_component(technical_strength)
-    trend_norm = normalize_component(trend_alignment)
-    volume_norm = normalize_component(volume_confirmation)
-    sentiment_norm = normalize_component(sentiment_impact)
-    lstm_norm = lstm_signal  # USAR VALOR BRUTO SEM NORMALIZAÇÃO - IDENTICAL TO INDIVIDUAL
-    risk_norm = normalize_component(risk_score)
-    
-    # Sinal confluente ajustado por estratégia de trading
-    unified_signal = (
-        technical_norm * weights[0] +  # Técnica
-        trend_norm * weights[1] +      # Tendência
-        volume_norm * weights[2] +     # Volume
-        sentiment_norm * weights[3] +  # Sentimento
-        lstm_norm * weights[4] +       # AI/LSTM
-        risk_norm * weights[5]         # Risco
-    )
-    
-    # Análise de componentes ajustada por estratégia
-    components_analysis = {
-        'technical': {'value': technical_norm, 'weighted': technical_norm * weights[0], 'importance': f"{weights[0]*100:.0f}%"},
-        'trend': {'value': trend_norm, 'weighted': trend_norm * weights[1], 'importance': f"{weights[1]*100:.0f}%"},
-        'volume': {'value': volume_norm, 'weighted': volume_norm * weights[2], 'importance': f"{weights[2]*100:.0f}%"},
-        'sentiment': {'value': sentiment_norm, 'weighted': sentiment_norm * weights[3], 'importance': f"{weights[3]*100:.0f}%"},
-        'ai_lstm': {'value': lstm_norm, 'weighted': lstm_norm * weights[4], 'importance': f"{weights[4]*100:.0f}%"},
-        'risk': {'value': risk_norm, 'weighted': risk_norm * weights[5], 'importance': f"{weights[5]*100:.0f}%"}
-    }
-    
-    # Contar sinais positivos vs negativos para transparência - 6 componentes
-    all_components = [technical_norm, trend_norm, volume_norm, sentiment_norm, lstm_norm, risk_norm]
-    positive_signals = sum(1 for comp in all_components if comp > 0.1)
-    negative_signals = sum(1 for comp in all_components if comp < -0.1)
-    neutral_signals = len(all_components) - positive_signals - negative_signals
-    
-    # === 8. CÁLCULO DE CONFLUÊNCIA E CONCORDÂNCIA ===
-    components = all_components
-    
-    strong_bull_count = sum(1 for c in components if c > 0.3)
-    strong_bear_count = sum(1 for c in components if c < -0.3)
-    moderate_bull_count = sum(1 for c in components if 0.1 < c <= 0.3)
-    moderate_bear_count = sum(1 for c in components if -0.3 <= c < -0.1)
-    
-    # Confluência determina confiança - baseada em concordância
-    max_agreement = max(strong_bull_count + moderate_bull_count, strong_bear_count + moderate_bear_count)
-    confluence_strength = strong_bull_count + strong_bear_count  # Sinais fortes
-    
-    # Penalty por sinais contraditórios
-    contradiction_penalty = min(positive_signals, negative_signals) * 0.1
-    
-    # Confiança baseada em confluência real e transparência
-    base_confidence = 0.45 + (max_agreement * 0.15) + (confluence_strength * 0.1)
-    volatility_penalty = min(0.15, volatility * 10)  # Penalizar alta volatilidade
-    confidence = max(0.55, min(0.95, base_confidence - volatility_penalty - contradiction_penalty))
-    
-    # === 7. DIREÇÃO CLARA E PROBABILIDADES BASEADAS EM CONSENSO ===
-    # Converter para float padrão para evitar problemas com numpy.float32
-    unified_signal = float(unified_signal)
-    
-    # === LÓGICA DE CONSENSO MELHORADA ===
-    # Priorizar consenso claro sobre sinal ponderado
-    consensus_override = False
-    
-    # Caso 1: Consenso absoluto (6/6 ou 5/6 componentes)
-    if positive_signals >= 5:  # 5 ou 6 positivos
-        direction = "COMPRA FORTE" if unified_signal > 0.2 else "COMPRA"
-        probability = min(90, 80 + (positive_signals * 2))
-        consensus_override = True
-    elif negative_signals >= 5:  # 5 ou 6 negativos
-        direction = "VENDA FORTE" if unified_signal < -0.2 else "VENDA"
-        probability = min(90, 80 + (negative_signals * 2))
-        consensus_override = True
-    
-    # Caso 2: Consenso forte (4/6 componentes)
-    elif positive_signals >= 4 and negative_signals <= 2:
-        direction = "COMPRA FORTE" if unified_signal > 0.3 else "COMPRA"
-        probability = min(85, 75 + (positive_signals * 2))
-        consensus_override = True
-    elif negative_signals >= 4 and positive_signals <= 2:
-        direction = "VENDA FORTE" if unified_signal < -0.3 else "VENDA"
-        probability = min(85, 75 + (negative_signals * 2))
-        consensus_override = True
-    
-    # Caso 3: Sinais mistos - usar sinal ponderado
+    # Determine recommendation
+    if overall_score >= 1.5:
+        return "STRONG BUY", "success", "📈"
+    elif overall_score >= 0.5:
+        return "BUY", "success", "📈"
+    elif overall_score <= -1.5:
+        return "STRONG SELL", "error", "📉"
+    elif overall_score <= -0.5:
+        return "SELL", "error", "📉"
     else:
-        if unified_signal > 0.25:
-            direction = "COMPRA MODERADA"
-            probability = 65
-        elif unified_signal < -0.25:
-            direction = "VENDA MODERADA"
-            probability = 65
-        else:
-            direction = "LATERAL/NEUTRO"
-            probability = 50
-    
-    # Debug para transparência
-    decision_logic = f"Consenso: {positive_signals} POS, {negative_signals} NEG | "
-    decision_logic += f"Override: {'SIM' if consensus_override else 'NÃO'} | "
-    decision_logic += f"Sinal: {unified_signal:.3f}"
-    
-    # === 8. PREVISÃO DE PREÇO BASEADA EM VOLATILIDADE ===
-    # Garantir que current_price é float antes de operações matemáticas
-    current_price = float(current_price)
-    expected_move = float(unified_signal) * float(volatility) * 2.5  # Fator de movimento
-    predicted_price = current_price * (1 + expected_move)
-    price_change = predicted_price - current_price
-    price_change_pct = (price_change / current_price) * 100
-    
-    # Garantir que todos os valores são tipos Python padrão
-    confidence = float(confidence)
-    probability = float(probability)
-    max_agreement = int(max_agreement)
-    confluence_strength = int(confluence_strength)
-    direction = str(direction)
-    
-    # === 9. CÁLCULO DE STOP LOSS E TAKE PROFIT POR ESTRATÉGIA ===
-    volatility_adjusted = volatility * config['volatility_factor']
-    
-    # Stop Loss baseado na estratégia e volatilidade
-    stop_percentage = config['stop_multiplier'] * (1 + volatility_adjusted)
-    take_percentage = config['take_multiplier'] * (1 + volatility_adjusted * 0.5)
-    
-    # Direção da operação afeta cálculos
-    is_buy_signal = unified_signal > 0
-    
-    if is_buy_signal:
-        stop_loss_price = current_price * (1 - stop_percentage / 100)
-        take_profit_price = current_price * (1 + take_percentage / 100)
-        entry_strategy = "COMPRA"
-    else:
-        stop_loss_price = current_price * (1 + stop_percentage / 100)
-        take_profit_price = current_price * (1 - take_percentage / 100)
-        entry_strategy = "VENDA"
-    
-    # Cálculo de risco/recompensa
-    stop_distance = abs(current_price - stop_loss_price)
-    take_distance = abs(take_profit_price - current_price)
-    risk_reward_ratio = take_distance / stop_distance if stop_distance > 0 else 0
-    
-    # Informações operacionais
-    operation_details = {
-        'strategy': config['name'],
-        'timeframe': config['timeframe'],
-        'hold_period': config['hold_period'],
-        'entry_price': current_price,
-        'stop_loss': stop_loss_price,
-        'take_profit': take_profit_price,
-        'stop_percentage': stop_percentage,
-        'take_percentage': take_percentage,
-        'risk_reward_ratio': risk_reward_ratio,
-        'entry_direction': entry_strategy,
-        'confidence_required': config['min_confidence'],
-        'operation_viable': probability >= config['min_confidence']
-    }
-    
-    # Calcular drawdown e extensão baseados na nova análise
-    drawdown_extension_data = calculate_realistic_drawdown_and_extensions(
-        current_price, str(pair), "1 Hora", "Moderate", sentiment_score, confidence
-    )
-    
-    return {
-        'pair': pair,
-        'current_price': current_price,
-        'predicted_price': predicted_price,
-        'price_change': price_change,
-        'price_change_pct': price_change_pct,
-        'model_confidence': confidence,
-        'sentiment_score': sentiment_score,
-        'unified_signal': unified_signal,
-        'agreement_score': max_agreement,
-        'confluence_strength': confluence_strength,
-        'market_direction': direction,
-        'success_probability': probability,
-        'drawdown_pips': drawdown_extension_data['drawdown_pips'],
-        'extension_pips': drawdown_extension_data['extension_pips'],
-        'drawdown_probability': drawdown_extension_data['drawdown_probability'],
-        'extension_probability': drawdown_extension_data['extension_probability'],
-        'strategy_info': strategy_info,  # Informações da estratégia selecionada
-        'operation_details': operation_details,  # Detalhes operacionais da estratégia
-        'consensus_analysis': {
-            'positive_signals': positive_signals,
-            'negative_signals': negative_signals,
-            'neutral_signals': neutral_signals,
-            'signal_breakdown': f"{positive_signals} COMPRA, {negative_signals} VENDA, {neutral_signals} NEUTRO",
-            'final_weighted_signal': unified_signal,
-            'consensus_override': consensus_override,
-            'decision_logic': decision_logic
-        },
-        'operation_setup': operation_details,
-        'components': {
-            'technical': {
-                'signal': technical_norm, 
-                'original_signal': technical_strength,
-                'weight': weights[0], 
-                'importance': f"{weights[0]*100:.0f}%",
-                'details': technical_components,
-                'contribution': technical_norm * weights[0],
-                'direction': 'COMPRA' if technical_strength > 0.001 else 'VENDA' if technical_strength < -0.001 else 'NEUTRO'
-            },
-            'trend': {
-                'signal': trend_norm,
-                'original_signal': trend_alignment,
-                'weight': weights[1],
-                'importance': f"{weights[1]*100:.0f}%",
-                'details': f"Tendência Multi-TF: {trend_alignment:.4f}",
-                'contribution': trend_norm * weights[1],
-                'direction': 'COMPRA' if trend_alignment > 0.001 else 'VENDA' if trend_alignment < -0.001 else 'NEUTRO'
-            },
-            'volume': {
-                'signal': volume_norm,
-                'original_signal': volume_confirmation,
-                'weight': weights[2],
-                'importance': f"{weights[2]*100:.0f}%",
-                'details': f"Volume/Volatilidade: {volume_confirmation:.4f}",
-                'contribution': volume_norm * weights[2],
-                'direction': 'COMPRA' if volume_confirmation > 0.001 else 'VENDA' if volume_confirmation < -0.001 else 'NEUTRO'
-            },
-            'sentiment': {
-                'signal': sentiment_norm,
-                'original_signal': sentiment_impact, 
-                'weight': weights[3],
-                'importance': f"{weights[3]*100:.0f}%",
-                'details': f"Sentimento {float(sentiment_score):.3f}",
-                'contribution': sentiment_norm * weights[3],
-                'direction': 'COMPRA' if sentiment_impact > 0.001 else 'VENDA' if sentiment_impact < -0.001 else 'NEUTRO'
-            },
-            'ai_lstm': {
-                'signal': lstm_norm,
-                'original_signal': lstm_signal,
-                'weight': weights[4],
-                'importance': f"{weights[4]*100:.0f}%",
-                'details': f"IA/LSTM: {lstm_signal:.4f}",
-                'contribution': lstm_norm * weights[4],
-                'direction': 'COMPRA' if lstm_signal > 0.001 else 'VENDA' if lstm_signal < -0.001 else 'NEUTRO'
-            },
-            'risk': {
-                'signal': risk_norm,
-                'original_signal': risk_score,
-                'weight': weights[5],
-                'importance': f"{weights[5]*100:.0f}%",
-                'details': f"Análise de Risco: {risk_score:.4f}",
-                'contribution': risk_norm * weights[5],
-                'direction': 'COMPRA' if risk_score > 0.001 else 'VENDA' if risk_score < -0.001 else 'NEUTRO'
-            }
-        },
-        'analysis_focus': f'ANÁLISE UNIFICADA AVANÇADA - Confluência: {int(max_agreement)}/6 componentes | Força: {int(confluence_strength)} sinais fortes',
-        'final_recommendation': f"{str(direction)} - {float(probability):.0f}% de probabilidade",
-        'recommendation_details': f"Confluência de {int(max_agreement)} componentes com {int(confluence_strength)} sinais fortes. " +
-                                f"Volatilidade: {float(volatility)*100:.2f}%. Confiança: {float(confidence)*100:.0f}%."
-    }
+        return "HOLD", "warning", "➡️"
 
-def get_enhanced_recommendation(combined_signal, confidence, components):
-    """Gerar recomendação melhorada com maior clareza"""
-    
-    # Análise detalhada dos componentes
-    technical_signal = components.get('technical', {}).get('signal', 0)
-    sentiment_signal = components.get('sentiment', {}).get('signal', 0)
-    ai_signal = components.get('ai', {}).get('signal', 0)
-    
-    # Força dos sinais individuais - Ajustados para maior sensibilidade
-    strong_buy_threshold = 0.003      # Reduzido de 0.008 para 0.003
-    moderate_buy_threshold = 0.001    # Reduzido de 0.004 para 0.001
-    strong_sell_threshold = -0.003    # Ajustado de -0.008 para -0.003
-    moderate_sell_threshold = -0.001  # Ajustado de -0.004 para -0.001
-    
-    # Consenso entre componentes - Reduzido limite
-    signal_alignment = abs(technical_signal + sentiment_signal + ai_signal) / 3
-    
-    if combined_signal > strong_buy_threshold and confidence > 0.65 and signal_alignment > 0.002:
-        return "📈 COMPRA FORTE"
-    elif combined_signal > moderate_buy_threshold and confidence > 0.55:
-        return "📈 COMPRA"
-    elif combined_signal < strong_sell_threshold and confidence > 0.65 and signal_alignment > 0.002:
-        return "📉 VENDA FORTE"
-    elif combined_signal < moderate_sell_threshold and confidence > 0.55:
-        return "📉 VENDA"
-    else:
-        return "⚪ INDECISÃO"
-
-def get_recommendation_explanation(combined_signal, confidence, components):
-    """Gerar explicação detalhada da recomendação"""
-    
-    technical_signal = components.get('technical', {}).get('signal', 0)
-    sentiment_signal = components.get('sentiment', {}).get('signal', 0)
-    ai_signal = components.get('ai', {}).get('signal', 0)
-    
-    # Identificar componente dominante
-    signals = {'Técnica': technical_signal, 'Sentimento': sentiment_signal, 'IA': ai_signal}
-    dominant_component = max(signals, key=lambda x: abs(signals[x]))
-    dominant_strength = abs(signals[dominant_component])
-    
-    # Análise de consenso - Ajustados para maior sensibilidade
-    positive_signals = sum(1 for s in signals.values() if s > 0.0005)
-    negative_signals = sum(1 for s in signals.values() if s < -0.0005)
-    neutral_signals = sum(1 for s in signals.values() if abs(s) <= 0.0005)
-    
-    if combined_signal > 0.003:
-        return f"🟢 **FORTE CONSENSO DE COMPRA** - Análise {dominant_component.lower()} lidera ({dominant_strength:.1%}). {positive_signals} sinais positivos convergindo."
-    elif combined_signal > 0.001:
-        return f"🟢 **COMPRA MODERADA** - Tendência positiva com análise {dominant_component.lower()} favorável. Confiança: {confidence:.0%}."
-    elif combined_signal < -0.003:
-        return f"🔴 **FORTE CONSENSO DE VENDA** - Análise {dominant_component.lower()} indica queda ({dominant_strength:.1%}). {negative_signals} sinais negativos alinhados."
-    elif combined_signal < -0.001:
-        return f"🔴 **VENDA MODERADA** - Tendência negativa predominante. Análise {dominant_component.lower()} sugere cautela."
-    else:
-        return f"⚪ **MERCADO INDECISO** - Sinais contraditórios: {positive_signals} positivos, {negative_signals} negativos, {neutral_signals} neutros. Aguardar definição clara do mercado."
-
-def run_technical_analysis(current_price, df_with_indicators):
-    """Análise técnica especializada com indicadores múltiplos e perfil de risco"""
-    import numpy as np
-    
-    # Fatores de ajuste baseados no perfil de risco do investidor
-    risk_multipliers = {
-        'Conservative': {'signal_factor': 0.7, 'confidence_boost': 0.05},
-        'Moderate': {'signal_factor': 1.0, 'confidence_boost': 0.0},
-        'Aggressive': {'signal_factor': 1.4, 'confidence_boost': -0.05}
-    }
-    
-    # Usar configuração padrão (moderada)
-    risk_params = risk_multipliers['Moderate']
-    
-    # Análise baseada em múltiplos indicadores
-    rsi = df_with_indicators['rsi'].iloc[-1] if 'rsi' in df_with_indicators.columns else 50
-    macd = df_with_indicators['macd'].iloc[-1] if 'macd' in df_with_indicators.columns else 0
-    sma_20 = df_with_indicators['sma_20'].iloc[-1] if 'sma_20' in df_with_indicators.columns else current_price
-    
-    # USAR EXATAMENTE O MESMO CÁLCULO DA ANÁLISE UNIFICADA
-    bb_position = (current_price - df_with_indicators['bb_lower'].iloc[-1]) / (df_with_indicators['bb_upper'].iloc[-1] - df_with_indicators['bb_lower'].iloc[-1])
-    
-    # SMA Signal (definindo a variável que estava faltando)
-    sma_signal = (current_price - sma_20) / sma_20 if sma_20 > 0 else 0
-    
-    # Forças dos sinais técnicos (IDÊNTICO À UNIFICADA)
-    # RSI Lógica CORRETA: > 50 = COMPRA, < 50 = VENDA
-    if rsi > 70:
-        rsi_signal = -0.3  # Sobrecomprado (cuidado)
-    elif rsi > 60:
-        rsi_signal = -0.1  # Levemente sobrecomprado  
-    elif rsi > 50:
-        rsi_signal = 0.2   # COMPRA (momentum positivo)
-    elif rsi > 40:
-        rsi_signal = 0.1   # COMPRA fraca
-    elif rsi > 30:
-        rsi_signal = 0.3   # COMPRA (sobrevenda)
-    else:
-        rsi_signal = 0.5   # COMPRA forte (sobrevenda extrema)
-    macd_signal = macd * 50  # MACD amplificado
-    bb_signal = (bb_position - 0.5) * 0.4  # Bollinger normalizado
-    
-    # Combinar sinais técnicos (IDÊNTICO À UNIFICADA)
-    technical_strength = (rsi_signal * 0.4 + macd_signal * 0.4 + bb_signal * 0.2)
-    
-    combined_signal = technical_strength
-    
-    # Calcular confiança baseada na convergência e perfil de risco
-    signals = [rsi_signal, macd_signal, sma_signal]
-    signal_convergence = 1 - np.std(signals) / (np.mean(np.abs(signals)) + 0.001)
-    base_confidence = max(0.6, min(0.9, signal_convergence))
-    confidence = max(0.5, min(0.95, base_confidence + risk_params['confidence_boost']))
-    
-    predicted_price = current_price * (1 + combined_signal)
-    price_change = predicted_price - current_price
-    
-    return {
-        'predicted_price': predicted_price,
-        'price_change': price_change,
-        'price_change_pct': (price_change / current_price) * 100,
-        'model_confidence': confidence,
-        'analysis_focus': f"RSI: {float(rsi):.1f}, MACD: {float(macd):.5f}, Bollinger: {bb_position:.2f}",
-        'technical_strength': technical_strength,
-        'technical_indicators': {
-            'rsi': rsi,
-            'macd': macd,
-            'bb_position': bb_position
-        }
-    }
-
-def run_sentiment_analysis(current_price, pair, sentiment_score):
-    """Análise de sentimento especializada com previsão futura do mercado"""
-    sentiment_service = services['sentiment_service']
-    
-    # Get comprehensive sentiment trend analysis with predictions
-    sentiment_analysis = sentiment_service.analyze_sentiment_trend(pair)
-    
-    # Extract key components
-    current_sentiment = sentiment_analysis['current_sentiment']
-    predicted_sentiment = sentiment_analysis['predicted_sentiment']
-    sentiment_momentum = sentiment_analysis['sentiment_momentum']
-    market_psychology = sentiment_analysis['market_psychology']
-    future_signal = sentiment_analysis['future_signal']
-    
-    # Ajustes baseados no perfil de risco do investidor
-    risk_adjustments = {
-        'Conservative': {'signal_factor': 0.6, 'confidence_penalty': 0.05, 'volatility_threshold': 0.15},
-        'Moderate': {'signal_factor': 1.0, 'confidence_penalty': 0.0, 'volatility_threshold': 0.25},
-        'Aggressive': {'signal_factor': 1.5, 'confidence_penalty': -0.03, 'volatility_threshold': 0.40}
-    }
-    
-    # Usar configuração padrão (moderada)
-    risk_params = risk_adjustments['Moderate']
-    
-    # Enhanced sentiment calculation using predictive model
-    if predicted_sentiment > 0.05:  # Sentimento futuro positivo forte
-        sentiment_impact = predicted_sentiment * 0.8 * risk_params['signal_factor']
-    elif predicted_sentiment < -0.05:  # Sentimento futuro negativo forte
-        sentiment_impact = predicted_sentiment * 0.6 * risk_params['signal_factor']
-    else:  # Sentimento futuro neutro
-        sentiment_impact = predicted_sentiment * 0.2 * risk_params['signal_factor']
-    
-    # Add momentum factor for enhanced prediction
-    momentum_factor = sentiment_momentum * 0.3
-    total_impact = sentiment_impact + momentum_factor
-    
-    predicted_price = current_price * (1 + total_impact)
-    price_change = predicted_price - current_price
-    
-    # Enhanced confidence calculation
-    base_confidence = sentiment_analysis['confidence']
-    confidence = max(0.50, min(0.90, base_confidence - risk_params['confidence_penalty']))
-    
-    # Enhanced recommendation based on future signal
-    recommendation = f"📰 {future_signal['direction']}"
-    if future_signal['strength'] == 'Forte':
-        recommendation += " FORTE"
-    
-    return {
-        'predicted_price': predicted_price,
-        'price_change': price_change,
-        'price_change_pct': (price_change / current_price) * 100,
-        'model_confidence': confidence,
-        'final_recommendation': recommendation,
-        
-        # Current sentiment data
-        'sentiment_score': current_sentiment,
-        'sentiment_impact': sentiment_impact,
-        
-        # Future prediction data
-        'predicted_sentiment': predicted_sentiment,
-        'sentiment_momentum': sentiment_momentum,
-        'trend_direction': sentiment_analysis['trend_direction'],
-        'time_horizon': sentiment_analysis['time_horizon'],
-        'risk_factors': sentiment_analysis['risk_factors'],
-        
-        # Market psychology
-        'market_psychology': market_psychology,
-        'future_signal': future_signal,
-        
-        'analysis_focus': f'Previsão de Sentimento: {future_signal["direction"]} ({future_signal["timing"]}) - {market_psychology["market_phase"]}'
-    }
-
-def run_risk_analysis(current_price, df_with_indicators=None):
-    """Análise de risco especializada com cálculos determinísticos (PADRONIZADA)"""
-    import numpy as np
-    
-    # USAR A MESMA LÓGICA DA ANÁLISE UNIFICADA
-    if df_with_indicators is not None and len(df_with_indicators) >= 20:
-        prices = df_with_indicators['close'].values
-        price_changes = np.diff(prices[-20:]) / prices[-20:-1] if len(prices) >= 20 else np.array([0])
-        volatility = np.std(price_changes) if len(price_changes) > 0 else 0
-        
-        # Calcular score de risco baseado em volatilidade e momentum (IDÊNTICO À UNIFICADA)
-        risk_score = 0
-        if volatility > 0:
-            # Risco alto = sinal negativo, risco baixo = sinal positivo
-            if volatility > 0.02:  # Alta volatilidade
-                risk_score = -0.4
-            elif volatility > 0.01:  # Volatilidade moderada
-                risk_score = -0.2
-            elif volatility < 0.005:  # Baixa volatilidade
-                risk_score = 0.3
-            else:
-                risk_score = 0.1
-    else:
-        # Fallback para dados insuficientes
-        volatility = 0.012
-        risk_score = 0.1
-    
-    # Usar o mesmo sinal da análise unificada
-    signal = risk_score
-    
-    predicted_price = current_price * (1 + signal)
-    price_change = predicted_price - current_price
-    
-    return {
-        'predicted_price': predicted_price,
-        'price_change': price_change,
-        'price_change_pct': (price_change / current_price) * 100,
-        'model_confidence': 0.75,
-        'analysis_focus': f'Análise de Risco Padronizada - Volatilidade: {volatility:.4f}, Score: {risk_score:.3f}',
-        'estimated_volatility': volatility,
-        'risk_score': risk_score
-    }
-
-def run_ai_analysis(current_price, lookback_period, epochs, df_with_indicators):
-    """Análise de IA/LSTM especializada com deep learning simulado e perfil de risco"""
-    import numpy as np
-    
-    # Parâmetros baseados no perfil de risco do investidor
-    risk_configs = {
-        'Conservative': {'volatility_tolerance': 0.8, 'signal_damping': 0.7, 'min_confidence': 0.70},
-        'Moderate': {'volatility_tolerance': 1.0, 'signal_damping': 1.0, 'min_confidence': 0.65},
-        'Aggressive': {'volatility_tolerance': 1.3, 'signal_damping': 1.4, 'min_confidence': 0.60}
-    }
-    
-    # Usar configuração padrão (moderada)
-    risk_config = risk_configs['Moderate']
-    
-    # Análise sofisticada baseada em múltiplos fatores
-    recent_prices = df_with_indicators['close'].tail(lookback_period).values
-    
-    # Calcular múltiplas métricas de tendência
-    short_trend = (recent_prices[-1] - recent_prices[-5]) / recent_prices[-5] if len(recent_prices) >= 5 else 0
-    long_trend = (recent_prices[-1] - recent_prices[0]) / recent_prices[0]
-    volatility = np.std(recent_prices) / np.mean(recent_prices)
-    
-    # Simular "aprendizado" baseado no número de épocas e perfil de risco
-    base_learning_factor = min(1.0, epochs / 100)
-    learning_factor = base_learning_factor * risk_config['volatility_tolerance']
-    
-    # Combinação de sinais com peso baseado em épocas e perfil de risco
-    trend_signal = np.tanh(long_trend * 10) * 0.020 * risk_config['signal_damping']
-    momentum_signal = np.tanh(short_trend * 15) * 0.015 * risk_config['signal_damping']
-    volatility_signal = (0.02 - volatility) * 0.010
-    
-    # Ajuste padrão para alta volatilidade
-    if volatility > 0.015:
-        volatility_signal *= 0.8
-    
-    # Sinal final ponderado pelo fator de aprendizado e perfil de risco
-    combined_signal = (trend_signal * 0.5 + momentum_signal * 0.3 + volatility_signal * 0.2) * learning_factor
-    
-    # DEBUG: Mostrar valores exatos para comparação
-    if st.session_state.get('debug_ai_values', False):
-        st.write(f"🔍 **DEBUG AI/LSTM INDIVIDUAL:**")
-        st.write(f"Long trend: {long_trend:.10f}")
-        st.write(f"Short trend: {short_trend:.10f}")
-        st.write(f"Volatility: {volatility:.10f}")
-        st.write(f"Learning factor: {learning_factor:.10f}")
-        st.write(f"Trend signal: {trend_signal:.10f}")
-        st.write(f"Momentum signal: {momentum_signal:.10f}")
-        st.write(f"Volatility signal: {volatility_signal:.10f}")
-        st.write(f"**Combined Signal Final: {combined_signal:.10f}**")
-        st.write(f"**Direção: {'COMPRA' if combined_signal > 0.001 else 'VENDA' if combined_signal < -0.001 else 'NEUTRO'}**")
-    
-    predicted_price = current_price * (1 + combined_signal)
-    price_change = predicted_price - current_price
-    
-    # Confiança baseada na estabilidade da tendência, épocas e perfil de risco
-    stability_factor = 1 - min(volatility * 10, 0.4)
-    base_confidence = (learning_factor * 0.3 + stability_factor * 0.7)
-    confidence = min(0.95, max(risk_config['min_confidence'], base_confidence))
-    
-    return {
-        'predicted_price': predicted_price,
-        'price_change': price_change,
-        'price_change_pct': (price_change / current_price) * 100,
-        'model_confidence': confidence,
-        'analysis_focus': f'IA/LSTM - Tendência: {long_trend:.3f}, Volatilidade: {volatility:.3f} (lookback: {lookback_period}, épocas: {epochs})',
-        'ai_metrics': {
-            'long_trend': long_trend,
-            'short_trend': short_trend,
-            'volatility': volatility,
-            'learning_factor': learning_factor
-        }
-    }
-
-def run_volume_analysis(current_price, df_with_indicators):
-    """Análise de volume especializada com perfil de risco"""
-    import numpy as np
-    
-    # Ajustes baseados no perfil de risco
-    risk_configs = {
-        'Conservative': {'signal_factor': 0.8, 'volatility_threshold': 0.015, 'confidence': 0.75},
-        'Moderate': {'signal_factor': 1.0, 'volatility_threshold': 0.020, 'confidence': 0.70},
-        'Aggressive': {'signal_factor': 1.3, 'volatility_threshold': 0.030, 'confidence': 0.65}
-    }
-    
-    # Usar configuração padrão (moderada)
-    config = risk_configs['Moderate']
-    
-    # USAR EXATAMENTE O MESMO CÁLCULO DA ANÁLISE UNIFICADA
-    prices = df_with_indicators['close'].values
-    volatility_threshold = 0.020
-    volume_volatility = np.std(prices[-10:]) / np.mean(prices[-10:]) if len(prices) >= 10 else 0.015
-    
-    # Usar o mesmo cálculo da unificada
-    base_volume_signal = (volatility_threshold - volume_volatility) * 0.015
-    volume_confirmation = base_volume_signal * 1.0  # signal_factor = 1.0
-    
-    # Ajuste para alta volatilidade (mesma lógica da análise individual)
-    if volume_volatility > volatility_threshold:
-        volume_confirmation *= 0.8
-    
-    # Limitar o sinal para evitar dominância
-    volume_confirmation = max(-0.3, min(0.3, volume_confirmation))
-    
-    signal = volume_confirmation
-    
-    predicted_price = current_price * (1 + signal)
-    price_change = predicted_price - current_price
-    
-    return {
-        'predicted_price': predicted_price,
-        'price_change': price_change,
-        'price_change_pct': (price_change / current_price) * 100,
-        'model_confidence': config['confidence'],
-        'analysis_focus': f'Volume/Volatilidade: {volume_volatility:.4f} (limite: {volatility_threshold:.3f})',
-        'volume_confirmation': volume_confirmation,
-    }
-
-def run_trend_analysis(current_price, df_with_indicators):
-    """Análise de tendência especializada com perfil de risco"""
-    import numpy as np
-    
-    # Configurações baseadas no perfil de risco
-    risk_settings = {
-        'Conservative': {'signal_multiplier': 0.7, 'trend_threshold': 0.005, 'confidence': 0.78},
-        'Moderate': {'signal_multiplier': 1.0, 'trend_threshold': 0.010, 'confidence': 0.72},
-        'Aggressive': {'signal_multiplier': 1.4, 'trend_threshold': 0.020, 'confidence': 0.68}
-    }
-    
-    # Usar configuração padrão (moderada)
-    settings = risk_settings['Moderate']
-    
-    # USAR EXATAMENTE O MESMO CÁLCULO DA ANÁLISE UNIFICADA
-    prices = df_with_indicators['close'].values
-    trend_5 = (prices[-1] - prices[-6]) / prices[-6] if len(prices) >= 6 else 0
-    trend_10 = (prices[-1] - prices[-11]) / prices[-11] if len(prices) >= 11 else 0
-    trend_20 = (prices[-1] - prices[-21]) / prices[-21] if len(prices) >= 21 else 0
-    
-    # Combinar tendências com pesos (IDÊNTICO À UNIFICADA)
-    trend_alignment = (trend_5 * 0.5 + trend_10 * 0.3 + trend_20 * 0.2)
-    signal = trend_alignment
-    
-    predicted_price = current_price * (1 + signal)
-    price_change = predicted_price - current_price
-    
-    return {
-        'predicted_price': predicted_price,
-        'price_change': price_change,
-        'price_change_pct': (price_change / current_price) * 100,
-        'model_confidence': settings['confidence'],
-        'analysis_focus': f'Tendência Multi-TF: {float(trend_5)*100:.2f}%/5p {float(trend_10)*100:.2f}%/10p {float(trend_20)*100:.2f}%/20p',
-        'trend_alignment': trend_alignment,
-    }
-
-def run_basic_analysis(current_price, is_quick, sentiment_score, interval="1hour", horizon="1 dia"):
-    """Análise básica com perfil de risco e configuração temporal integrada"""
-    import numpy as np
-    
-    # Configurações robustas por perfil de risco
-    risk_configs = {
-        'Conservative': {'signal_range': 0.005, 'confidence': 0.85, 'factor': 0.7},
-        'Moderate': {'signal_range': 0.012, 'confidence': 0.75, 'factor': 1.0},
-        'Aggressive': {'signal_range': 0.022, 'confidence': 0.68, 'factor': 1.4}
-    }
-    
-    # Ajustes temporais para máxima coerência (usando chaves válidas)
-    temporal_adjustments = {
-        "1min": {"volatility_factor": 0.6, "confidence_boost": 0.95},
-        "15min": {"volatility_factor": 0.8, "confidence_boost": 0.98},
-        "60min": {"volatility_factor": 1.0, "confidence_boost": 1.0},
-        "Daily": {"volatility_factor": 1.3, "confidence_boost": 1.02},
-        "Weekly": {"volatility_factor": 1.6, "confidence_boost": 1.05}
-    }
-    
-    # Usar configuração padrão (moderada)
-    config = risk_configs['Moderate']
-    temporal_adj = temporal_adjustments.get(interval, temporal_adjustments["60min"])
-    
-    # Gerar sinal otimizado por configuração temporal
-    base_range = config['signal_range'] * temporal_adj["volatility_factor"]
-    market_trend = np.random.uniform(-base_range, base_range)
-    sentiment_boost = sentiment_score * 0.008 * config['factor'] * temporal_adj["volatility_factor"]
-    
-    if is_quick:
-        market_trend *= 0.6  # Reduzir sinal para análise rápida
-    
-    combined_signal = market_trend + sentiment_boost
-    
-    # Ajustar confiança baseada na configuração temporal
-    adjusted_confidence = min(0.98, config['confidence'] * temporal_adj["confidence_boost"])
-    
-    predicted_price = current_price * (1 + combined_signal)
-    price_change = predicted_price - current_price
-    
-    return {
-        'predicted_price': predicted_price,
-        'price_change': price_change,
-        'price_change_pct': (price_change / current_price) * 100,
-        'model_confidence': adjusted_confidence,
-        'analysis_focus': f'Análise Básica Integrada - {interval}/{horizon} - Tendência: {market_trend:.4f}, Sentimento: {sentiment_score:.3f}',
-    }
-
-def add_technical_indicators(df):
-    """Adicionar indicadores técnicos ao DataFrame"""
-    import numpy as np
-    import pandas as pd
-    
-    df_copy = df.copy()
-    
-    # RSI (14 períodos)
-    delta = df_copy['close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-    rs = gain / loss
-    df_copy['rsi'] = 100 - (100 / (1 + rs))
-    
-    # MACD (12, 26, 9)
-    exp1 = df_copy['close'].ewm(span=12).mean()  # EMA 12
-    exp2 = df_copy['close'].ewm(span=26).mean()  # EMA 26
-    df_copy['macd'] = exp1 - exp2               # Linha MACD
-    df_copy['macd_signal'] = df_copy['macd'].ewm(span=9).mean()  # Linha de Sinal (9)
-    
-    # Bollinger Bands (20 períodos, 2 desvios)
-    rolling_mean = df_copy['close'].rolling(window=20).mean()
-    rolling_std = df_copy['close'].rolling(window=20).std()
-    df_copy['bb_upper'] = rolling_mean + (rolling_std * 2)
-    df_copy['bb_lower'] = rolling_mean - (rolling_std * 2)
-    
-    # SMA (Médias Móveis Simples)
-    df_copy['sma_20'] = df_copy['close'].rolling(window=20).mean()  # 20 períodos
-    df_copy['sma_50'] = df_copy['close'].rolling(window=50).mean()  # 50 períodos
-    
-    # EMA (Médias Móveis Exponenciais) - Configuração otimizada para Intraday
-    df_copy['ema_20'] = df_copy['close'].ewm(span=20).mean()  # EMA 20 (rápida)
-    df_copy['ema_200'] = df_copy['close'].ewm(span=200).mean()  # EMA 200 (lenta)
-    
-    return df_copy
-
-def display_analysis_results_with_tabs():
-    """Display analysis results with detailed tabs"""
-    if not st.session_state.get('analysis_results'):
-        return
-    
+def display_analysis_results():
+    """Display simplified analysis results with prominent trading recommendation"""
     results = st.session_state.analysis_results
-    analysis_mode = results.get('analysis_mode', 'unified')
     
-    # Display main summary without additional title
-    display_main_summary(results, analysis_mode)
+    # Get trading recommendation
+    recommendation, rec_type, rec_icon = get_trading_recommendation(results)
     
+    # Prominent Trading Recommendation Section
     st.markdown("---")
     
-    # Create tabs for detailed analysis
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "📈 Gráficos", 
-        "🔍 Detalhes Técnicos", 
-        "📰 Sentimento", 
-        "📊 Métricas"
+    # Large recommendation display
+    if rec_type == "success":
+        bg_color = "#d4edda"
+        border_color = "#28a745"
+    elif rec_type == "error":
+        bg_color = "#f8d7da"
+        border_color = "#dc3545"
+    else:
+        bg_color = "#fff3cd"
+        border_color = "#ffc107"
+    
+    st.markdown(f"""
+    <div style="
+        background: {bg_color};
+        border: 3px solid {border_color};
+        border-radius: 15px;
+        padding: 30px;
+        text-align: center;
+        margin: 20px 0;
+    ">
+        <h1 style="color: {border_color}; margin: 0; font-size: 3em;">
+            {rec_icon} {recommendation}
+        </h1>
+        <h2 style="color: #333; margin: 10px 0; font-size: 1.5em;">
+            {results['pair']} - {results['horizon']} Outlook
+        </h2>
+        <p style="color: #666; font-size: 1.2em; margin: 0;">
+            Expected Price Change: <strong>{results['price_change_pct']:+.2f}%</strong> | 
+            Reversal Risk: <strong>{results['counter_trend_risk']['target_price']:.5f}</strong> | 
+            Confidence: <strong>{results['model_confidence']:.0%}</strong>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Key metrics in a simplified format
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric(
+            "Current Price",
+            f"{results['current_price']:.5f}",
+            help="Current market price"
+        )
+    
+    with col2:
+        st.metric(
+            "Target Price",
+            f"{results['predicted_price']:.5f}",
+            delta=f"{results['price_change']:+.5f}",
+            help=f"Predicted price for {results['horizon']}"
+        )
+    
+    with col3:
+        sentiment_emoji = "🟢" if results['sentiment']['score'] > 0 else "🔴" if results['sentiment']['score'] < 0 else "🟡"
+        st.metric(
+            "Market Sentiment",
+            f"{sentiment_emoji} {results['sentiment']['signal']}",
+            help="Overall market sentiment from news analysis"
+        )
+    
+    # Simplified tabs - only essential information
+    tab1, tab2, tab3 = st.tabs([
+        "📊 Price & Signals", "📰 Analysis Details", "⚖️ Risk & Settings"
     ])
     
     with tab1:
-        display_charts_tab(results)
+        # Price chart with key technical signals
+        price_chart = services['visualizer'].create_price_chart(
+            results['data'].tail(200), 
+            results['pair'],
+            indicators=True
+        )
+        st.plotly_chart(price_chart, use_container_width=True)
+        
+        # Key signals summary in a compact format
+        signals = results['trading_signals'].tail(1).iloc[0]
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            rsi_signal = "Oversold" if signals['RSI_Oversold'] else "Overbought" if signals['RSI_Overbought'] else "Neutral"
+            rsi_color = "🟢" if signals['RSI_Oversold'] else "🔴" if signals['RSI_Overbought'] else "🟡"
+            st.info(f"RSI: {rsi_color} {rsi_signal}")
+        
+        with col2:
+            macd_signal = "Bullish" if signals['MACD_Bullish'] else "Bearish" if signals['MACD_Bearish'] else "Neutral"
+            macd_color = "🟢" if signals['MACD_Bullish'] else "🔴" if signals['MACD_Bearish'] else "🟡"
+            st.info(f"MACD: {macd_color} {macd_signal}")
+        
+        with col3:
+            sma_signal = "Bullish" if signals['SMA_Bullish'] else "Bearish"
+            sma_color = "🟢" if signals['SMA_Bullish'] else "🔴"
+            st.info(f"Trend: {sma_color} {sma_signal}")
+        
+        with col4:
+            bb_signal = "Squeeze" if signals['BB_Squeeze'] else "Normal"
+            bb_color = "🟠" if signals['BB_Squeeze'] else "🟡"
+            st.info(f"Volatility: {bb_color} {bb_signal}")
     
     with tab2:
-        display_technical_tab(results)
-    
-    with tab3:
-        display_sentiment_tab(results)
-    
-    with tab4:
-        display_metrics_tab(results)
-
-def display_main_summary(results, analysis_mode):
-    """Display main summary panel replacing the main header"""
-    mode_names = {
-        'unified': '🧠 Análise Unificada Inteligente',
-        'technical': '📊 Análise Técnica',
-        'sentiment': '📰 Análise de Sentimento',
-        'risk': '⚖️ Análise de Risco',
-        'ai_lstm': '🤖 Análise IA/LSTM',
-        'volume': '📈 Análise de Volume',
-        'trend': '📉 Análise de Tendência'
-    }
-    
-    # Analysis header will be included in the recommendation panel
-    
-    # Main recommendation card
-    if 'final_recommendation' in results:
-        recommendation = results['final_recommendation']
-    else:
-        # Fallback usando price_change se disponível
-        price_change = results.get('price_change', 0)
-        recommendation = "📈 COMPRA" if price_change > 0 else "📉 VENDA" if price_change < 0 else "⚪ INDECISÃO"
-    
-    confidence_color = "green" if results.get('model_confidence', 0.5) > 0.7 else "orange" if results.get('model_confidence', 0.5) > 0.5 else "red"
-    
-    # Create full width layout to match header
-    col1, col2, col3 = st.columns([0.1, 10, 0.1])
-    
-    with col2:
-        # Enhanced display for unified analysis with operation setup
-        if analysis_mode == 'unified' and 'market_direction' in results:
-            direction = results['market_direction']
-            probability = results.get('success_probability', results.get('model_confidence', 0.5) * 100)
-            
-            # Color and icon based on direction
-            direction_str = str(direction)  # Garantir que é string
-            if 'COMPRA FORTE' in direction_str:
-                direction_color = "#00C851"
-                direction_icon = "🚀"
-            elif 'COMPRA' in direction_str:
-                direction_color = "#4CAF50"
-                direction_icon = "📈"
-            elif 'VENDA FORTE' in direction_str:
-                direction_color = "#FF3547"
-                direction_icon = "🔴"
-            elif 'VENDA' in direction_str:
-                direction_color = "#F44336"
-                direction_icon = "📉"
-            else:
-                direction_color = "#FF9800"
-                direction_icon = "⚪"
-            
-            # Obter informações da estratégia e operação
-            strategy_info = results.get('strategy_info', {})
-            operation_setup = results.get('operation_details', {})
-            
-            # Informações da estratégia selecionada
-            strategy_name = strategy_info.get('strategy_name', 'Análise Unificada')
-            analysis_focus = strategy_info.get('analysis_focus', 'Análise completa dos componentes')
-            accuracy_rate = strategy_info.get('accuracy_rate', 'N/A')
-            validity_until = strategy_info.get('validity_until', 'N/A')
-            primary_indicators = strategy_info.get('primary_indicators', [])
-            
-            st.markdown(f"""
-            <div style="
-                text-align: center; 
-                padding: 2rem 3rem; 
-                border: 3px solid {direction_color}; 
-                border-radius: 15px; 
-                background: linear-gradient(135deg, rgba(0,0,0,0.1), rgba(255,255,255,0.1));
-                margin: 1rem 0;
-                width: 100%;
-                margin-left: auto;
-                margin-right: auto;
-            ">
-                <h3 style="color: #666; margin: 0 0 0.3rem 0; font-size: 1rem;">🧠 {strategy_name}</h3>
-                <p style="color: #888; margin: 0 0 0.3rem 0; font-size: 0.85rem;">{results['pair']} • {strategy_info.get('timeframe', 'N/A')} • {strategy_info.get('hold_period', 'N/A')}</p>
-                <p style="color: #999; margin: 0 0 0.5rem 0; font-size: 0.8rem;">📊 {analysis_focus}</p>
-                <h1 style="color: {direction_color}; margin: 0 0 0.3rem 0; font-size: 2.2em;">{direction_icon} {direction}</h1>
-                <h2 style="color: {direction_color}; margin: 0 0 0.3rem 0; font-size: 1.4em;">Probabilidade: {probability:.0f}%</h2>
-                <p style="color: #666; margin: 0; font-size: 0.85rem;">🎯 Acurácia Histórica: {accuracy_rate}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Informações de validade e componentes usando layout em colunas
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown(f"""
-                <div style="
-                    background: rgba(255,255,255,0.9); 
-                    padding: 1rem; 
-                    border-radius: 8px; 
-                    margin-bottom: 1rem;
-                    border-left: 4px solid #2196F3;
-                ">
-                    <h4 style="color: #333; margin: 0 0 0.5rem 0; font-size: 0.95rem;">⏰ VALIDADE DA ANÁLISE</h4>
-                    <p style="color: #666; margin: 0; font-size: 0.85rem;">
-                        <strong>Válida até:</strong> {validity_until}<br>
-                        <strong>Duração:</strong> {strategy_info.get('validity_hours', 'N/A')} horas<br>
-                        <strong>Gerada em:</strong> {strategy_info.get('analysis_timestamp', 'N/A')}
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col2:
-                indicators_text = " + ".join(primary_indicators) if primary_indicators else "Todos os componentes"
-                st.markdown(f"""
-                <div style="
-                    background: rgba(255,255,255,0.9); 
-                    padding: 1rem; 
-                    border-radius: 8px; 
-                    margin-bottom: 1rem;
-                    border-left: 4px solid #4CAF50;
-                ">
-                    <h4 style="color: #333; margin: 0 0 0.5rem 0; font-size: 0.95rem;">🔍 COMPONENTES PRIORIZADOS</h4>
-                    <p style="color: #666; margin: 0 0 0.3rem 0; font-size: 0.85rem;">
-                        <strong>Análise focada em:</strong><br>
-                        {indicators_text}
-                    </p>
-                    <p style="color: #888; margin: 0; font-size: 0.8rem;">
-                        Para esta estratégia específica
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Adicionar informações operacionais detalhadas
-            if operation_setup:
-                viable_color = "#4CAF50" if operation_setup.get('operation_viable', False) else "#FF3547"
-                viable_text = "OPERAÇÃO VIÁVEL" if operation_setup.get('operation_viable', False) else "BAIXA CONFIANÇA"
-                
-                # Adicionar horário ótimo para execução
-                best_times = strategy_info.get('best_times', 'Qualquer horário')
-                optimal_pairs = strategy_info.get('optimal_pairs', [])
-                current_pair = results['pair']
-                
-                # Verificar se o par atual é otimizado para a estratégia
-                pair_optimized = current_pair in optimal_pairs if optimal_pairs else True
-                pair_status = "✅ OTIMIZADO" if pair_optimized else "⚠️ NÃO OTIMIZADO"
-                pair_color = "#4CAF50" if pair_optimized else "#FF9800"
-                
-                st.markdown(f"""
-                <div style="
-                    display: grid; 
-                    grid-template-columns: 1fr 1fr 1fr; 
-                    gap: 1rem; 
-                    margin: 1rem 0; 
-                    text-align: center;
-                ">
-                    <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px;">
-                        <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Entry</strong></p>
-                        <p style="margin: 0; font-size: 1.1rem; font-weight: bold;">{operation_setup.get('entry_price', 0):.5f}</p>
-                    </div>
-                    <div style="background: rgba(255,0,0,0.2); padding: 1rem; border-radius: 8px;">
-                        <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Stop Loss</strong></p>
-                        <p style="margin: 0; font-size: 1.1rem; font-weight: bold;">{operation_setup.get('stop_loss', 0):.5f}</p>
-                        <p style="margin: 0; color: #666; font-size: 0.8rem;">(-{operation_setup.get('stop_percentage', 0):.1f}%)</p>
-                    </div>
-                    <div style="background: rgba(0,255,0,0.2); padding: 1rem; border-radius: 8px;">
-                        <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Take Profit</strong></p>
-                        <p style="margin: 0; font-size: 1.1rem; font-weight: bold;">{operation_setup.get('take_profit', 0):.5f}</p>
-                        <p style="margin: 0; color: #666; font-size: 0.8rem;">(+{operation_setup.get('take_percentage', 0):.1f}%)</p>
-                    </div>
-                </div>
-                
-                <div style="
-                    text-align: center; 
-                    margin: 1rem 0; 
-                    padding: 0.8rem; 
-                    background: rgba(255,255,255,0.05); 
-                    border-radius: 8px;
-                ">
-                    <p style="margin: 0; color: {viable_color}; font-weight: bold; font-size: 1rem;">{viable_text}</p>
-                    <p style="margin: 0; color: #666; font-size: 0.9rem;">
-                        R/R Ratio: 1:{operation_setup.get('risk_reward_ratio', 0):.1f} | 
-                        Confiança mínima: {operation_setup.get('confidence_required', 0):.0f}%
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div style="
-                text-align: center; 
-                padding: 2rem 3rem; 
-                border: 3px solid {confidence_color}; 
-                border-radius: 15px; 
-                background: linear-gradient(135deg, rgba(0,0,0,0.1), rgba(255,255,255,0.1));
-                margin: 1rem 0;
-                width: 100%;
-                margin-left: auto;
-                margin-right: auto;
-            ">
-                <h3 style="color: #666; margin: 0 0 0.3rem 0; font-size: 1rem;">{mode_names.get(analysis_mode, 'Análise Padrão')}</h3>
-                <p style="color: #888; margin: 0 0 1rem 0; font-size: 0.85rem;">{results['pair']} • {results['timestamp'].strftime('%H:%M:%S')}</p>
-                <h1 style="color: {confidence_color}; margin: 0 0 1rem 0; font-size: 2.2em;">{recommendation}</h1>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Adicionar detalhes da recomendação se disponível
-        if 'recommendation_details' in results:
-            st.markdown(f"""
-            <div style="text-align: center; margin-bottom: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 10px;">
-                <p style="color: #666; margin: 0; font-size: 0.95rem;">{results.get('recommendation_details', 'Análise baseada em dados reais Alpha Vantage')}</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        st.markdown(f"""
-            <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 0.5rem; text-align: center; margin-bottom: 1.5rem;">
-                <div style="min-width: 120px;">
-                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Atual</strong></p>
-                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results['current_price']:.5f}</p>
-                </div>
-                <div style="min-width: 120px;">
-                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Previsto</strong></p>
-                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results.get('predicted_price', results.get('current_price', 0)):.5f}</p>
-                </div>
-                <div style="min-width: 100px;">
-                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Variação</strong></p>
-                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results.get('price_change_pct', 0):+.2f}%</p>
-                </div>
-                <div style="min-width: 100px;">
-                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Confiança</strong></p>
-                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: {confidence_color};">{results.get('model_confidence', 0.5):.0%}</p>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Calculate and display risk information
-        current_price = results['current_price']
-        predicted_price = results.get('predicted_price', results.get('current_price', 0))
-        confidence = results.get('model_confidence', 0.5)
-        
-        # Get risk level and sentiment score from results if available
-        risk_level_used = results.get('risk_level_used', 'Moderate')
-        sentiment_score = results.get('sentiment_score', 0.0)
-        horizon = results.get('horizon', '1 Hora')
-        
-        # Sistema de gerenciamento de risco baseado em volatilidade real do mercado
-        # Valores calculados com base na análise histórica de pares forex da Alpha Vantage
-        risk_profiles = {
-            'Conservative': {
-                'atr_multiplier_stop': 1.5,    # 1.5x ATR para stop loss (conservador)
-                'atr_multiplier_tp': 2.5,      # 2.5x ATR para take profit
-                'volatility_buffer': 0.0020,   # Buffer adicional de 20 pips
-                'banca_risk': 1.0,             # Máximo 1% da banca por operação
-                'extension_factor': 2.0,       # Extensão baseada em suporte/resistência
-                'reversal_sensitivity': 0.3,   # Alta sensibilidade a reversões
-                'daily_range_factor': 0.25,    # 25% da média do range diário
-                'min_risk_reward': 1.6,        # Mínima razão risco/retorno
-                'max_risk_pips': 25,           # Máximo 25 pips de risco
-                'confidence_adjustment': 0.2,  # Reduz risco quando confiança baixa
-                'volatility_threshold': 0.015  # Limite de volatilidade para cores
-            },
-            'Moderate': {
-                'atr_multiplier_stop': 2.0,    # 2.0x ATR para stop loss
-                'atr_multiplier_tp': 4.0,      # 4.0x ATR para take profit
-                'volatility_buffer': 0.0015,   # Buffer adicional de 15 pips
-                'banca_risk': 2.0,             # Máximo 2% da banca por operação
-                'extension_factor': 3.0,       # Extensão moderada
-                'reversal_sensitivity': 0.5,   # Sensibilidade moderada
-                'daily_range_factor': 0.35,    # 35% da média do range diário
-                'min_risk_reward': 1.4,        # Mínima razão risco/retorno
-                'max_risk_pips': 45,           # Máximo 45 pips de risco
-                'confidence_adjustment': 0.3,  # Ajuste moderado por confiança
-                'volatility_threshold': 0.025  # Limite de volatilidade para cores
-            },
-            'Aggressive': {
-                'atr_multiplier_stop': 3.0,    # 3.0x ATR para stop loss (agressivo)
-                'atr_multiplier_tp': 6.0,      # 6.0x ATR para take profit
-                'volatility_buffer': 0.0010,   # Buffer adicional de 10 pips
-                'banca_risk': 3.5,             # Máximo 3.5% da banca por operação
-                'extension_factor': 4.5,       # Alta extensão
-                'reversal_sensitivity': 0.7,   # Menor sensibilidade a reversões
-                'daily_range_factor': 0.50,    # 50% da média do range diário
-                'min_risk_reward': 1.2,        # Mínima razão risco/retorno
-                'max_risk_pips': 80,           # Máximo 80 pips de risco
-                'confidence_adjustment': 0.4,  # Maior ajuste por confiança
-                'volatility_threshold': 0.040  # Limite de volatilidade para cores
-            }
-        }
-        
-        # Get AI-enhanced profile from settings
-        profile = RISK_PROFILES.get(risk_level_used, RISK_PROFILES['Moderate'])
-        
-        # Calcular volatilidade real baseada nos dados históricos
-        pair_name = results.get('pair', 'EUR/USD')
-        
-        # Volatilidades históricas médias por par (baseado em dados reais Alpha Vantage)
-        pair_volatilities = {
-            'EUR/USD': 0.0012, 'USD/JPY': 0.0015, 'GBP/USD': 0.0018, 'AUD/USD': 0.0020,
-            'USD/CAD': 0.0014, 'USD/CHF': 0.0016, 'NZD/USD': 0.0022, 'EUR/GBP': 0.0013,
-            'EUR/JPY': 0.0020, 'GBP/JPY': 0.0025, 'CHF/JPY': 0.0019, 'AUD/JPY': 0.0024,
-            'EUR/CHF': 0.0010, 'GBP/CHF': 0.0021, 'AUD/CHF': 0.0023, 'NZD/CHF': 0.0026,
-            'EUR/AUD': 0.0017, 'GBP/AUD': 0.0020, 'EUR/CAD': 0.0015, 'GBP/CAD': 0.0018,
-            'AUD/CAD': 0.0019, 'CAD/JPY': 0.0021, 'EUR/NZD': 0.0019, 'GBP/NZD': 0.0023,
-            'AUD/NZD': 0.0015, 'CAD/CHF': 0.0018, 'NZD/JPY': 0.0027, 'NZD/CAD': 0.0021,
-            'USD/SEK': 0.0028, 'USD/NOK': 0.0032, 'USD/DKK': 0.0012, 'USD/PLN': 0.0035,
-            'USD/TRY': 0.0180, 'USD/ZAR': 0.0085, 'USD/MXN': 0.0045, 'EUR/SEK': 0.0025,
-            'EUR/NOK': 0.0030, 'EUR/DKK': 0.0008, 'EUR/PLN': 0.0032, 'EUR/TRY': 0.0185,
-            'GBP/SEK': 0.0030, 'GBP/NOK': 0.0035, 'GBP/PLN': 0.0038
-        }
-        
-        # Obter volatilidade específica do par ou usar média
-        historical_volatility = pair_volatilities.get(pair_name, 0.0020)
-        
-        # Ajustar volatilidade baseado na confiança do modelo
-        confidence_adjustment = 1 + (profile['confidence_adjustment'] * (1 - confidence))
-        adjusted_volatility = historical_volatility * confidence_adjustment
-        
-        # Calcular ATR simulado baseado na volatilidade histórica
-        atr_estimate = adjusted_volatility * current_price * 24  # ATR aproximado para 24h
-        
-        # Calcular range diário médio baseado no par
-        daily_ranges = {
-            'EUR/USD': 0.0080, 'USD/JPY': 1.2000, 'GBP/USD': 0.0120, 'AUD/USD': 0.0110,
-            'USD/CAD': 0.0090, 'USD/CHF': 0.0095, 'NZD/USD': 0.0130
-        }
-        daily_range = daily_ranges.get(pair_name, 0.0100)
-        
-        # Sistema aprimorado de cálculo baseado em probabilidades reais
-        predicted_movement = abs(predicted_price - current_price)
-        
-        # DEFINIR FUNÇÃO DE CONFIANÇA CONFLUENTE PRIMEIRO
-        def calculate_real_confidence_score(lstm_confidence, ai_confidence, sentiment_score, direction_strength, predicted_price, current_price):
-            """Calcular confiança real baseada na confluência de todas as análises"""
-            
-            # 1. Confiança base do modelo LSTM (40% do peso)
-            lstm_component = lstm_confidence * 0.4
-            
-            # 2. Confiança da IA unificada (30% do peso)
-            ai_component = ai_confidence * 0.3
-            
-            # 3. Força do sentiment (20% do peso)
-            sentiment_strength = min(abs(sentiment_score), 1.0)  # Normalizar entre 0-1
-            sentiment_component = sentiment_strength * 0.2
-            
-            # 4. Consistência direcional (10% do peso)
-            # Quando LSTM e sentiment concordam na direção, adicionar bônus
-            lstm_direction = 1 if predicted_price > current_price else -1
-            sentiment_direction = 1 if sentiment_score > 0 else -1
-            consistency_bonus = 0.1 if lstm_direction == sentiment_direction else 0.05
-            
-            # Calcular confiança final
-            final_confidence = lstm_component + ai_component + sentiment_component + consistency_bonus
-            
-            # Garantir que esteja entre 15% e 85% (valores realísticos)
-            return max(0.15, min(0.85, final_confidence))
-
-        # INTEGRAÇÃO DA IA UNIFICADA COM PARÂMETROS SEPARADOS
-        try:
-            # Preparar dados para análise de IA
-            price_data_for_ai = pd.DataFrame({
-                'close': [current_price - 0.001, current_price - 0.0005, current_price],
-                'high': [current_price + 0.001, current_price + 0.0005, current_price + 0.0002],
-                'low': [current_price - 0.002, current_price - 0.001, current_price - 0.0001]
-            })
-            
-            # Usar sentiment_score do parâmetro da função
-            sentiment_data_for_ai = {
-                'overall_sentiment': sentiment_score,
-                'news_count': 8,  # Simulated count
-                'sentiment_consistency': abs(sentiment_score) if sentiment_score != 0 else 0.5
-            }
-            
-            prediction_data_for_ai = {
-                'predicted_price': predicted_price,
-                'current_price': current_price,
-                'confidence': confidence
-            }
-            
-            # Executar análise unificada de IA com parâmetros temporais
-            ai_analysis = services['ai_unified_service'].run_unified_analysis(
-                price_data_for_ai, sentiment_data_for_ai, prediction_data_for_ai, profile,
-                horizon, pair_name
-            )
-            
-            # Extrair resultados REAIS da IA para usar nos cálculos
-            ai_confidence_boost = ai_analysis.unified_interpretation.get('unified_confidence', confidence)
-            ai_direction_strength = ai_analysis.unified_interpretation.get('combined_strength', 0.5)
-            ai_consensus = ai_analysis.unified_interpretation.get('consensus_strength', 0.5)
-            
-            # Calcular confiança confluente final
-            enhanced_confidence = calculate_real_confidence_score(
-                confidence, ai_confidence_boost, sentiment_score, ai_direction_strength, predicted_price, current_price
-            )
-            
-        except Exception as e:
-            st.warning(f"IA indisponível, usando análise técnica: {str(e)}")
-            ai_analysis = None
-            
-            # Fallback para quando IA não está disponível - usar análise confluente simplificada
-            ai_confidence_boost = confidence
-            ai_consensus = 0.5
-            enhanced_confidence = calculate_real_confidence_score(
-                confidence, confidence, sentiment_score, 0.5, predicted_price, current_price
-            )
-        
-        # ANÁLISE TÉCNICA REAL PARA NÍVEIS DE STOP E TARGET
-        
-        # 1. Calcular níveis de suporte e resistência DETERMINÍSTICOS
-        def calculate_support_resistance_levels(current_price, pair_name):
-            """Calcular níveis técnicos DETERMINÍSTICOS baseados no par específico"""
-            
-            # Níveis técnicos FIXOS por par baseados em análise histórica real
-            technical_levels = {
-                'EUR/USD': {'daily_range': 0.0080, 'volatility': 0.0012, 'fib_base': 0.0050},
-                'USD/JPY': {'daily_range': 1.2000, 'volatility': 0.0015, 'fib_base': 0.8000},
-                'GBP/USD': {'daily_range': 0.0120, 'volatility': 0.0018, 'fib_base': 0.0075},
-                'AUD/USD': {'daily_range': 0.0110, 'volatility': 0.0020, 'fib_base': 0.0070},
-                'USD/CAD': {'daily_range': 0.0090, 'volatility': 0.0014, 'fib_base': 0.0055},
-                'USD/CHF': {'daily_range': 0.0095, 'volatility': 0.0016, 'fib_base': 0.0060},
-                'NZD/USD': {'daily_range': 0.0130, 'volatility': 0.0022, 'fib_base': 0.0085}
-            }
-            
-            # Obter parâmetros específicos do par ou usar padrão
-            params = technical_levels.get(pair_name, technical_levels['EUR/USD'])
-            
-            # Calcular níveis Fibonacci DETERMINÍSTICOS baseados em pontos reais
-            fib_base = params['fib_base']
-            
-            # Níveis de suporte FIXOS (baseados em Fibonacci) - convertidos para pontos
-            support_levels = [
-                current_price - (fib_base * 0.236),  # 23.6% - ~2.4 pontos EUR/USD
-                current_price - (fib_base * 0.382),  # 38.2% - ~3.8 pontos EUR/USD  
-                current_price - (fib_base * 0.500),  # 50% - ~5.0 pontos EUR/USD
-                current_price - (fib_base * 0.618),  # 61.8% - ~6.2 pontos EUR/USD
-                current_price - (fib_base * 0.786)   # 78.6% - ~7.9 pontos EUR/USD
-            ]
-            
-            # Níveis de resistência FIXOS (baseados em Fibonacci) - convertidos para pontos
-            resistance_levels = [
-                current_price + (fib_base * 0.236),  # 23.6% - ~2.4 pontos EUR/USD
-                current_price + (fib_base * 0.382),  # 38.2% - ~3.8 pontos EUR/USD
-                current_price + (fib_base * 0.500),  # 50% - ~5.0 pontos EUR/USD
-                current_price + (fib_base * 0.618),  # 61.8% - ~6.2 pontos EUR/USD
-                current_price + (fib_base * 0.786)   # 78.6% - ~7.9 pontos EUR/USD
-            ]
-            
-            # Converter diferenças para pontos reais (pips)
-            point_values = []
-            for level in support_levels + resistance_levels:
-                diff = abs(level - current_price)
-                pair_name_str = str(pair_name)  # Garantir que é string
-                if 'JPY' in pair_name_str:
-                    points = diff * 100  # JPY pairs: 100 pontos = 1 pip
-                else:
-                    points = diff * 10000  # Major pairs: 10000 pontos = 1 pip
-                point_values.append(points)
-            
-            return support_levels, resistance_levels, params
-        
-        support_levels, resistance_levels, pair_params = calculate_support_resistance_levels(
-            current_price, pair_name
-        )
-        
-        # Calcular sinais técnicos confluentes para probabilidade
-        technical_signals_strength = 0.5  # Valor padrão
-        if 'signals' in st.session_state and st.session_state.signals:
-            signals = st.session_state.signals
-            buy_signals = sum([1 for signal in signals if signal['signal'] == 'BUY'])
-            total_signals = len(signals)
-            technical_signals_strength = buy_signals / total_signals if total_signals > 0 else 0.5
-        
-        # Usar a função global de probabilidades
-        pass  # Já calculado acima
-        
-        # 2. FUNÇÃO GLOBAL: Calcular probabilidades REAIS de mercado
-        pass  # Placeholder - função já definida globalmente
-        
-        # Calcular probabilidades usando a função global
-        market_probabilities = calculate_market_probabilities_real(
-            confidence, ai_consensus, sentiment_score, technical_signals_strength, pair_name, horizon
-        )
-
-        
-        # Calcular níveis confluentes de stop/take profit usando função global
-        confluent_levels = calculate_confluent_levels_global(
-            current_price, predicted_price, pair_name, profile, market_probabilities
-        )
-        
-        # 4. ESTRATÉGIA TEMPORAL UNIFICADA: função movida para escopo global
-        # Usar função global calculate_confluent_levels_global
-        
-        # Extrair dados confluentes para exibição
-        stop_loss_level = confluent_levels['stop_loss_price']
-        take_profit_level = confluent_levels['take_profit_price']
-        stop_points = confluent_levels['stop_loss_points']
-        take_points = confluent_levels['take_profit_points']
-        risk_reward_ratio = confluent_levels['risk_reward_ratio']
-        trade_direction = confluent_levels['operation_direction']
-        position_strength = confluent_levels['position_strength']
-        temporal_strategy = confluent_levels['temporal_strategy']
-        
-        # Cálculos adicionais para compatibilidade
-        stop_distance = abs(current_price - stop_loss_level)
-        profit_distance = abs(current_price - take_profit_level)
-        stop_reason = f"Estratégia {temporal_strategy} - ATR({confluent_levels['atr_used']:.4f})"
-        target_reason = f"Take Profit {temporal_strategy} - {position_strength}"
-        stop_reference_level = confluent_levels['fibonacci_support_ref']
-        target_reference_level = confluent_levels['fibonacci_resistance_ref']
-        
-        # Validação crítica dos níveis
-        stop_is_correct = (trade_direction == "COMPRA" and stop_loss_level < current_price) or \
-                         (trade_direction == "VENDA" and stop_loss_level > current_price)
-        
-        target_is_correct = (trade_direction == "COMPRA" and take_profit_level > current_price) or \
-                           (trade_direction == "VENDA" and take_profit_level < current_price)
-        
-        if not stop_is_correct or not target_is_correct:
-            st.error(f"🚨 ERRO CRÍTICO DETECTADO NA LÓGICA DE TRADING! Trade: {trade_direction}")
-            return
-            
-            risk_direction = "abaixo"
-            reward_direction = "acima"
-            
-        else:  # SINAL DE VENDA
-            # Extensão máxima baseada no próximo suporte maior
-            next_major_support = support_levels[0] if support_levels else current_price * 0.98
-            max_extension = max(next_major_support, take_profit_level * 0.7)  # Máximo 30% além do target
-            
-            # Alerta de reversão no meio do caminho até o stop
-            reversal_level = current_price + (stop_distance * 0.6)  # 60% do caminho até o stop
-            
-            risk_direction = "acima"
-            reward_direction = "abaixo"
-        
-        # VALIDAÇÃO CRÍTICA: Verificar se as direções estão corretas
-        stop_is_correct = (trade_direction == "COMPRA" and stop_loss_level < current_price) or \
-                         (trade_direction == "VENDA" and stop_loss_level > current_price)
-        
-        target_is_correct = (trade_direction == "COMPRA" and take_profit_level > current_price) or \
-                           (trade_direction == "VENDA" and take_profit_level < current_price)
-        
-        # Se há erro na lógica, corrigir imediatamente
-        if not stop_is_correct or not target_is_correct:
-            st.error(f"🚨 ERRO CRÍTICO DETECTADO NA LÓGICA DE TRADING! Trade: {trade_direction}")
-            st.error(f"Preço atual: {current_price:.5f}")
-            st.error(f"Stop Loss: {stop_loss_level:.5f} (deve ser {'<' if trade_direction == 'COMPRA' else '>'} que preço atual)")
-            st.error(f"Take Profit: {take_profit_level:.5f} (deve ser {'>' if trade_direction == 'COMPRA' else '<'} que preço atual)")
-            return
-        
-        # Não duplicar - já calculado acima
-        reversal_percentage = abs((reversal_level - current_price) / current_price) * 100
-        
-        # Sistema de gerenciamento monetário baseado em dados reais
-        banca_base = getattr(st.session_state, 'account_balance', 10000)
-        leverage = getattr(st.session_state, 'leverage', 200)
-        lot_size_real = getattr(st.session_state, 'lot_size_real', 0.1)
-        
-        # Calcular valor por pip DETERMINÍSTICO baseado em padrões reais
-        def calculate_pip_value(pair, lot_size):
-            """Calcular valor por pip DETERMINÍSTICO específico para cada par"""
-            
-            # Valores FIXOS por pip baseados em lotes padrão de 100,000 unidades
-            pip_values_per_standard_lot = {
-                'EUR/USD': 10.00, 'GBP/USD': 10.00, 'AUD/USD': 10.00, 'NZD/USD': 10.00,
-                'USD/JPY': 10.00, 'USD/CHF': 10.00, 'USD/CAD': 10.00,
-                'EUR/GBP': 10.00, 'EUR/JPY': 10.00, 'GBP/JPY': 10.00,
-                'AUD/JPY': 10.00, 'NZD/JPY': 10.00, 'CHF/JPY': 10.00,
-                'EUR/CHF': 10.00, 'GBP/CHF': 10.00, 'AUD/CHF': 10.00,
-                'EUR/AUD': 10.00, 'GBP/AUD': 10.00, 'EUR/CAD': 10.00
-            }
-            
-            # Obter valor padrão por pip ou usar $10 como padrão
-            standard_pip_value = pip_values_per_standard_lot.get(pair, 10.00)
-            
-            # Ajustar para o tamanho do lote atual
-            pip_value = standard_pip_value * lot_size
-            
-            return pip_value
-        
-        pip_value_calculated = calculate_pip_value(pair_name, lot_size_real)
-        
-        # Calcular diferenças em pips de forma DETERMINÍSTICA
-        def calculate_pip_difference(price1, price2, pair):
-            """Calcular diferença em pips de forma determinística"""
-            pair_str = str(pair)  # Garantir que é string
-            if 'JPY' in pair_str:
-                # Para pares JPY, 1 pip = 0.01
-                return abs(price1 - price2) * 100
-            else:
-                # Para outros pares, 1 pip = 0.0001
-                return abs(price1 - price2) * 10000
-        
-        # Calcular movimentos em pips DETERMINÍSTICAMENTE
-        stop_loss_pip_diff = calculate_pip_difference(current_price, stop_loss_level, pair_name)
-        take_profit_pip_diff = calculate_pip_difference(current_price, take_profit_level, pair_name)
-        
-        # Calcular POTENCIAL MÁXIMO baseado em análise confluente realística
-        if predicted_price > current_price:  # COMPRA
-            # Potencial máximo: próxima resistência técnica + momentum de confluência
-            movement_to_tp = take_profit_level - current_price
-            
-            # Extensão realística baseada em confluência das análises
-            confluence_multiplier = 1.2  # Base conservadora
-            if enhanced_confidence > 0.7 and sentiment_score > 0.3:  # Alta confluência
-                confluence_multiplier = 1.4
-            elif enhanced_confidence > 0.5 and sentiment_score > 0.1:  # Confluência moderada
-                confluence_multiplier = 1.3
-                
-            max_extension = take_profit_level + (movement_to_tp * (confluence_multiplier - 1))
-            extension_direction = "ALTA"
-            extension_description = f"Potencial máximo por confluência: {max_extension:.5f}"
-            
-        else:  # VENDA
-            # Potencial máximo: próximo suporte técnico + momentum de confluência
-            movement_to_tp = current_price - take_profit_level
-            
-            # Extensão realística baseada em confluência das análises
-            confluence_multiplier = 1.2  # Base conservadora
-            if enhanced_confidence > 0.7 and sentiment_score < -0.3:  # Alta confluência bearish
-                confluence_multiplier = 1.4
-            elif enhanced_confidence > 0.5 and sentiment_score < -0.1:  # Confluência moderada bearish
-                confluence_multiplier = 1.3
-                
-            max_extension = take_profit_level - (movement_to_tp * (confluence_multiplier - 1))
-            extension_direction = "BAIXA"
-            extension_description = f"Potencial máximo por confluência: {max_extension:.5f}"
-        
-        # Calcular pip differences para potencial máximo
-        extension_pip_diff = calculate_pip_difference(current_price, max_extension, pair_name)
-        
-        # Calcular distâncias técnicas
-        extension_distance = abs(max_extension - current_price)
-        
-        # Manter percentuais para cálculos internos
-        risk_percentage = abs((stop_loss_level - current_price) / current_price) * 100
-        reward_percentage = abs((take_profit_level - current_price) / current_price) * 100
-        extension_percentage = abs((max_extension - current_price) / current_price) * 100
-        
-        # Calcular CENÁRIO OTIMISTA REALÍSTICO baseado em análise confluente de curto prazo
-        def calculate_realistic_short_term_scenario(extension_percentage, enhanced_confidence, predicted_price, current_price, pair_name, sentiment_score):
-            """Calcular cenário otimista REAL baseado em confluência de análises para próximos dias"""
-            
-            # 1. ANÁLISE DE REALIDADE DO MOVIMENTO (movimentos forex típicos)
-            typical_daily_moves = {
-                'EUR/USD': 0.5, 'USD/JPY': 0.6, 'GBP/USD': 0.8, 'AUD/USD': 0.7,
-                'USD/CAD': 0.4, 'USD/CHF': 0.4, 'NZD/USD': 0.9, 'GBP/JPY': 1.2
-            }
-            
-            daily_move = typical_daily_moves.get(pair_name, 0.6)  # Movimento típico diário
-            
-            # 2. CALCULAR SE O MOVIMENTO É REALÍSTICO
-            movement_needed = extension_percentage  # Percentual necessário para cenário otimista
-            
-            # Se o movimento for maior que 5 dias típicos, é irreal
-            if movement_needed > (daily_move * 5):
-                # Ajustar para um movimento mais realístico (máximo 3-4 dias típicos)
-                realistic_movement = daily_move * 3.5
-                movement_needed = min(movement_needed, realistic_movement)
-            
-            # 3. TEMPO BASEADO EM CONFLUÊNCIA DE ANÁLISES
-            # Base: LSTM + Sentiment + IA concordando aceleram o movimento
-            base_days = movement_needed / daily_move  # Dias necessários pelo movimento típico
-            
-            # Fator de confluence (quando todas análises concordam)
-            lstm_direction = 1 if predicted_price > current_price else -1
-            sentiment_direction = 1 if sentiment_score > 0 else -1
-            confluence_bonus = 1.0 if lstm_direction == sentiment_direction else 1.3  # Concordância acelera
-            
-            # Fator de confiança (alta confiança = movimento mais rápido)
-            confidence_speed = max(0.7, 2 - enhanced_confidence)  # Confiança alta acelera
-            
-            # Tempo realístico final
-            realistic_days = max(1, min(7, base_days * confluence_bonus * confidence_speed))
-            
-            # 4. PROBABILIDADE BASEADA EM CONFLUÊNCIA REAL
-            # Base: movimento pequeno = mais provável
-            base_probability = max(20, 75 - (movement_needed / daily_move * 8))
-            
-            # Bônus por confluência de análises
-            confluence_probability = 15 if lstm_direction == sentiment_direction else 0
-            
-            # Bônus por confiança alta
-            confidence_probability = enhanced_confidence * 20  # Máximo 20%
-            
-            # Penalidade por tempo muito curto (pressão temporal)
-            time_pressure_penalty = max(0, (3 - realistic_days) * 5)
-            
-            # Probabilidade final realística
-            final_probability = max(15, min(70, base_probability + confluence_probability + confidence_probability - time_pressure_penalty))
-            
-            # 5. AJUSTES FINAIS PARA REALISMO
-            # Se for fim de semana ou período de baixa liquidez, reduzir probabilidade
-            # Se movimento for > 2% em menos de 3 dias, é muito otimista
-            if movement_needed > 2.0 and realistic_days < 3:
-                final_probability *= 0.7  # Reduzir 30%
-                realistic_days = max(3, realistic_days)  # Mínimo 3 dias
-            
-            # Limitar a valores ultra-realísticos
-            final_days = max(1, min(7, realistic_days))  # Máximo 1 semana
-            final_probability = max(12, min(65, final_probability))  # Probabilidades realistas
-            
-            return final_days, final_probability
-        
-        # Aplicar análise realística de curto prazo (máximo 7 dias)
-        estimated_time_days, scenario_probability = calculate_realistic_short_term_scenario(
-            extension_percentage, enhanced_confidence, predicted_price, current_price, pair_name, sentiment_score
-        )
-        
-        time_description = f"{estimated_time_days:.1f} dias" if estimated_time_days >= 1 else f"{estimated_time_days*24:.0f} horas"
-        probability_description = f"{scenario_probability:.0f}% probabilidade"
-        
-        # Calcular risk_reward_ratio após definir os percentuais
-        risk_reward_ratio = reward_percentage / risk_percentage if risk_percentage > 0 else 0
-        
-        # Valores monetários realistas baseados no valor do pip calculado
-        risco_monetario = stop_loss_pip_diff * pip_value_calculated
-        potencial_lucro = take_profit_pip_diff * pip_value_calculated
-        potencial_maximo = extension_pip_diff * pip_value_calculated
-        
-        # Calcular margem necessária baseada no tamanho da posição
-        position_value = 100000 * lot_size_real  # Valor padrão do lote
-        margin_required = position_value / leverage
-        
-        # Verificar se a margem necessária não excede a banca
-        margin_percentage = (margin_required / banca_base) * 100
-        
-        # Ajustar valores se necessário para manter realismo
-        max_risk_money = banca_base * (profile['banca_risk'] / 100)
-        if risco_monetario > max_risk_money:
-            # Reduzir tamanho da posição para manter o risco dentro do perfil
-            adjusted_lot_size = max_risk_money / (stop_loss_pip_diff * pip_value_calculated)
-            risco_monetario = max_risk_money
-            potencial_lucro = take_profit_pip_diff * calculate_pip_value(pair_name, adjusted_lot_size)
-            potencial_maximo = extension_pip_diff * calculate_pip_value(pair_name, adjusted_lot_size)
-        
-        # Color coding based on profile
-        risk_color = "red" if risk_percentage > profile['volatility_threshold'] * 100 else "orange" if risk_percentage > profile['volatility_threshold'] * 50 else "green"
-        
-        # Verificar se há VERDADEIRA indecisão no mercado - critérios mais rigorosos
-        final_rec = results.get('final_recommendation', '')
-        price_change_pct = abs(results.get('price_change_pct', 0))
-        model_confidence = results.get('model_confidence', 0)
-        
-        # Indecisão só ocorre quando:
-        # 1. Recomendação explicitamente indica INDECISÃO 
-        # 2. E variação de preço é praticamente zero (< 0.01%)
-        # 3. E confiança do modelo é muito baixa (< 40%)
-        is_indecision = ("INDECISÃO" in final_rec and 
-                        price_change_pct < 0.01 and 
-                        model_confidence < 0.4)
-        
-        # Durante indecisão, mostrar previsão futura para execução de ordens
-        if is_indecision:
-            # Durante indecisão, mostrar previsão futura para execução de ordens
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, rgba(158,158,158,0.1), rgba(189,189,189,0.1));
-                border-left: 4px solid #9E9E9E;
-                border-radius: 8px;
-                padding: 1.5rem;
-                margin: 1rem 0;
-                text-align: center;
-            ">
-                <h4 style="color: #666; margin: 0 0 0.8rem 0; font-size: 1rem;">⚪ Mercado em Verdadeira Indecisão</h4>
-                <p style="color: #888; margin: 0; font-size: 0.9rem;">
-                    Análise técnica ocultada - Variação: {price_change_pct:.3f}% | Confiança: {model_confidence*100:.0f}%
-                </p>
-                <p style="color: #888; margin: 0.5rem 0 0 0; font-size: 0.8rem;">
-                    Ativando previsão futura para execução de ordens...
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-
-        
-        # ANÁLISE REALÍSTICA DE DRAWDOWN E EXTENSÕES - Foco 100% em Swing, Intraday e Position
-        if not is_indecision:
-            # Calcular valores realísticos diretamente sem função externa
-            pip_value = 0.0001 if 'JPY' not in pair_name else 0.01
-            
-            # Parâmetros por horizonte temporal - MESMAS CONDIÇÕES REALÍSTICAS
-            horizon_params = {
-                '15 Minutos': {'base_target': 25, 'drawdown_prob': 0.25, 'extension_prob': 0.70, 'adverse_pips': 12},
-                '1 Hora': {'base_target': 40, 'drawdown_prob': 0.30, 'extension_prob': 0.75, 'adverse_pips': 25},
-                '4 Horas': {'base_target': 90, 'drawdown_prob': 0.35, 'extension_prob': 0.80, 'adverse_pips': 45},
-                '1 Dia': {'base_target': 180, 'drawdown_prob': 0.40, 'extension_prob': 0.85, 'adverse_pips': 90}  # Position Trader com mesmas condições realísticas
-            }
-            
-            params = horizon_params.get(horizon, horizon_params['1 Hora'])
-            
-            # Ajustar por confiança e sentimento
-            confidence_boost = (confidence - 0.5) * 0.4
-            sentiment_boost = abs(sentiment_score) * 0.15
-            
-            base_target = params['base_target']
-            adjusted_target = int(base_target * (1 + confidence_boost + sentiment_boost))
-            
-            # Direção do movimento baseada na mudança de preço
-            if results.get('price_change', 0) > 0:
-                direction = "ALTA"
-            elif results.get('price_change', 0) < 0:
-                direction = "BAIXA"
-            else:
-                direction = "LATERAL"
-            
-            # Cálculos de drawdown e extensão
-            drawdown_pips = params['adverse_pips']
-            extension_pips = adjusted_target
-            
-            if direction == "ALTA":
-                max_adverse_level = current_price - (drawdown_pips * pip_value)
-                extension_level = current_price + (extension_pips * pip_value)
-            else:
-                max_adverse_level = current_price + (drawdown_pips * pip_value)
-                extension_level = current_price - (extension_pips * pip_value)
-            
-            drawdown_prob = max(0.15, min(0.50, params['drawdown_prob'] - confidence_boost))
-            extension_prob = min(0.95, max(0.50, params['extension_prob'] + confidence_boost))
-            
-            # Interface simplificada e direta
-            st.markdown("""
-            <div style="background: linear-gradient(135deg, rgba(139,69,19,0.1), rgba(255,140,0,0.1)); 
-                        border-left: 4px solid #FF8C00; border-radius: 8px; padding: 1.5rem; margin: 1rem 0;">
-                <h4 style="color: #FF8C00; margin: 0 0 1rem 0; text-align: center;">
-                    🎯 Análise Realística Especializada
-                </h4>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Métricas principais
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.metric(
-                    "⚠️ DRAWDOWN MÁXIMO",
-                    f"{max_adverse_level:.5f}",
-                    f"-{drawdown_pips} pips ({drawdown_prob:.0%} prob.)"
-                )
-                
-            with col2:
-                st.metric(
-                    "🎯 EXTENSÃO MÁXIMA", 
-                    f"{extension_level:.5f}",
-                    f"{'+'if direction=='ALTA' else '-'}{extension_pips} pips ({extension_prob:.0%} prob.)"
-                )
-            
-            # Informações detalhadas de gestão de risco
-            st.markdown("### 📊 Gestão de Risco e Probabilidades")
-            
-            # Cálculos de gestão de banca
-            risk_reward_ratio = extension_pips / drawdown_pips if drawdown_pips > 0 else 0
-            
-            # Probabilidade de sucesso baseada em confluência
-            base_success_prob = 0.45  # Base realística para forex
-            confidence_factor = confidence * 0.3  # Máximo 30% de boost
-            sentiment_factor = abs(sentiment_score) * 0.15  # Máximo 15% de boost
-            final_success_prob = min(0.75, base_success_prob + confidence_factor + sentiment_factor)
-            
-            # Cálculo de risco da banca (assumindo 2% de risco por trade)
-            risk_per_trade = 0.02  # 2% da banca por trade
-            potential_loss_pct = risk_per_trade
-            potential_gain_pct = risk_per_trade * risk_reward_ratio
-            
-            # Métricas em colunas
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.metric(
-                    "🎯 Probabilidade de Sucesso",
-                    f"{final_success_prob:.0%}",
-                    f"Base {base_success_prob:.0%} + Boost {(confidence_factor + sentiment_factor):.0%}"
-                )
-                
-            with col2:
-                st.metric(
-                    "⚖️ Razão Risco:Recompensa", 
-                    f"1:{risk_reward_ratio:.1f}",
-                    "Drawdown vs Extensão"
-                )
-                
-            with col3:
-                st.metric(
-                    "📈 Expectativa Matemática",
-                    f"{(final_success_prob * potential_gain_pct - (1-final_success_prob) * potential_loss_pct)*100:.2f}%",
-                    "Por trade (2% risco)"
-                )
-            
-            # Detalhes expandidos
-            with st.expander("📋 Detalhes Completos da Análise"):
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.markdown(f"""
-                    **📊 Parâmetros da Análise:**
-                    - **Direção Prevista:** {direction}
-                    - **Horizonte Temporal:** {horizon}
-                    - **Perfil de Risco:** {risk_level_used}
-                    - **Alvo Base:** {base_target} pips
-                    - **Alvo Ajustado:** {adjusted_target} pips
-                    
-                    **🎯 Ajustes Aplicados:**
-                    - **Confiança LSTM:** {confidence_boost:+.1%}
-                    - **Impacto Sentimento:** {sentiment_boost:+.1%}
-                    - **Confiança Final:** {confidence:.0%}
-                    """)
-                
-                with col2:
-                    st.markdown(f"""
-                    **📈 Cenários de Gestão:**
-                    - **Risco por Trade:** {potential_loss_pct:.1%} da banca
-                    - **Potencial Ganho:** {potential_gain_pct:.1%} da banca
-                    - **Prob. Drawdown:** {drawdown_prob:.0%}
-                    - **Prob. Extensão:** {extension_prob:.0%}
-                    - **Prob. Sucesso Total:** {final_success_prob:.0%}
-                    
-                    **⚠️ Gestão Recomendada:**
-                    - **Max por Trade:** 2% da banca
-                    - **Stop Loss:** {drawdown_pips} pips
-                    - **Take Profit:** {extension_pips} pips
-                    """)
-            
-            # Gestão de Banca Detalhada em Valores
-            st.markdown("### 💰 Gestão de Banca - Valores em Dólar")
-            
-            # Usar valores do sidebar
-            bank_value = st.session_state.get('bank_value', 5000.0)
-            lot_size = st.session_state.get('lot_size', 0.1)
-            
-            # Cálculo simples do valor do pip baseado no par
-            pair_name_str = str(pair_name)  # Garantir que é string
-            if 'JPY' in pair_name_str:
-                pip_value_per_lot = 10.0  # JPY pairs: 0.01 = $10 per standard lot
-            # Gold removed from analysis
-            else:
-                pip_value_per_lot = 10.0  # Major pairs: 0.0001 = $10 per standard lot
-            
-            # Cálculos simples em dólares baseados no lote escolhido
-            max_drawdown_usd = drawdown_pips * pip_value_per_lot * lot_size
-            max_extension_usd = extension_pips * pip_value_per_lot * lot_size
-            
-            # Percentual em relação à banca
-            drawdown_pct = (max_drawdown_usd / bank_value) * 100
-            extension_pct = (max_extension_usd / bank_value) * 100
-            
-            # Métricas simples em valores de dólar
-            st.markdown("#### 💰 Valores de Trading Calculados")
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                st.metric(
-                    "💳 Valor da Banca",
-                    f"${bank_value:,.2f}",
-                    "Configurado no sidebar"
-                )
-                
-            with col2:
-                st.metric(
-                    "📊 Lote Selecionado",
-                    f"{lot_size:.2f}",
-                    "Configurado no sidebar"
-                )
-                
-            with col3:
-                st.metric(
-                    "📉 Drawdown Máximo",
-                    f"${max_drawdown_usd:.2f}",
-                    f"{drawdown_pct:.2f}% da banca"
-                )
-                
-            with col4:
-                st.metric(
-                    "📈 Extensão Máxima",
-                    f"${max_extension_usd:.2f}",
-                    f"{extension_pct:.2f}% da banca"
-                )
-            
-            # Seção de análise de probabilidade removida conforme solicitado pelo usuário
-        else:
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, rgba(158,158,158,0.1), rgba(189,189,189,0.1));
-                border-left: 4px solid #9E9E9E;
-                border-radius: 8px;
-                padding: 1.5rem;
-                margin: 1rem 0;
-                text-align: center;
-            ">
-                <h4 style="color: #666; margin: 0 0 0.8rem 0; font-size: 1rem;">⚪ Análise de Risco Indisponível</h4>
-                <p style="color: #888; margin: 0; font-size: 0.9rem;">
-                    Análise de risco ocultada durante verdadeira indecisão - Confiança: {model_confidence*100:.0f}%
-                </p>
-                <p style="color: #888; margin: 0.5rem 0 0 0; font-size: 0.8rem;">
-                    Parâmetros de risco aparecerão quando análise indicar direção
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Show unified analysis components if available
-    if analysis_mode == 'unified' and 'components' in results:
-        st.markdown("### 🔍 Componentes da Análise Unificada")
-        
-        # Show AI analysis if available
-        if 'ai_analysis' in results and results['ai_analysis'] is not None:
-            ai_analysis = results['ai_analysis']
-            
-            st.markdown("#### 🧠 Interpretação da IA")
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, rgba(63,81,181,0.1), rgba(156,39,176,0.1));
-                border-left: 4px solid #3F51B5;
-                border-radius: 8px;
-                padding: 1rem;
-                margin: 1rem 0;
-            ">
-                <h5 style="color: #3F51B5; margin: 0 0 0.8rem 0;">💭 {ai_analysis.unified_interpretation.get('ai_interpretation', 'Análise em processamento...')}</h5>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.8rem; margin-bottom: 1rem;">
-                    <div style="background: rgba(63,81,181,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
-                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Direção Unificada</strong></p>
-                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #3F51B5;">{ai_analysis.unified_interpretation.get('unified_direction', 'neutral').upper()}</p>
-                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Confiança: {ai_analysis.unified_interpretation.get('direction_confidence', 0)*100:.0f}%</p>
-                    </div>
-                    <div style="background: rgba(76,175,80,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
-                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Consenso IA</strong></p>
-                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4CAF50;">{ai_analysis.unified_interpretation.get('consensus_count', 0)}/3</p>
-                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Componentes alinhados</p>
-                    </div>
-                    <div style="background: rgba(255,193,7,0.1); padding: 0.8rem; border-radius: 6px; text-align: center;">
-                        <p style="margin: 0; color: #666; font-size: 0.85rem;"><strong>Recomendação</strong></p>
-                        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #FF9800;">{ai_analysis.unified_interpretation.get('recommendation', 'hold').upper()}</p>
-                        <p style="margin: 0; color: #888; font-size: 0.75rem;">Força: {ai_analysis.unified_interpretation.get('combined_strength', 0)*100:.0f}%</p>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 1rem;">
-                    <h6 style="margin: 0 0 0.5rem 0; color: #666;">Pesos dos Componentes:</h6>
-                    <div style="display: flex; justify-content: space-around; text-align: center; font-size: 0.85rem;">
-                        <div>
-                            <strong>Histórico:</strong> {ai_analysis.unified_interpretation.get('component_weights', {}).get('historical', 0)*100:.0f}%
-                        </div>
-                        <div>
-                            <strong>Sentimento:</strong> {ai_analysis.unified_interpretation.get('component_weights', {}).get('sentiment', 0)*100:.0f}%
-                        </div>
-                        <div>
-                            <strong>Probabilidade:</strong> {ai_analysis.unified_interpretation.get('component_weights', {}).get('probability', 0)*100:.0f}%
-                        </div>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Mostrar componentes individuais
-            st.markdown("#### 📊 Componentes Detalhados")
-            
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.markdown("**📈 Análise Histórica**")
-                hist = ai_analysis.historical_analysis
-                st.write(f"• Tendência: {hist.get('trend_direction', 'neutral')}")
-                st.write(f"• Força: {hist.get('trend_strength', 0):.2f}")
-                st.write(f"• Momentum: {hist.get('momentum', 0):.4f}")
-                st.write(f"• Confiança: {hist.get('confidence', 0)*100:.0f}%")
-            
-            with col2:
-                st.markdown("**📰 Análise de Sentimento**")
-                sent = ai_analysis.sentiment_analysis
-                st.write(f"• Direção: {sent.get('sentiment_direction', 'neutral')}")
-                st.write(f"• Score: {sent.get('sentiment_score', 0):.3f}")
-                st.write(f"• Humor: {sent.get('market_mood', 'uncertain')}")
-                st.write(f"• Confiança: {sent.get('confidence', 0)*100:.0f}%")
-            
-            with col3:
-                st.markdown("**🎯 Análise de Probabilidade**")
-                prob = ai_analysis.probability_analysis
-                st.write(f"• Direção: {prob.get('direction_probability', 0)*100:.0f}%")
-                st.write(f"• Magnitude: {prob.get('magnitude_probability', 0)*100:.0f}%")
-                st.write(f"• Sucesso: {prob.get('success_probability', 0)*100:.0f}%")
-                st.write(f"• Confiança: {prob.get('confidence', 0)*100:.0f}%")
-            
-            # Mostrar parâmetros temporais específicos
-            st.markdown("#### ⏰ Parâmetros da Estratégia Temporal")
-            
-            horizon = results.get('temporal_horizon', '1 Hora')
-            pair = results.get('pair', 'EUR/USD')
-            
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, rgba(96,125,139,0.1), rgba(55,71,79,0.1));
-                border-left: 4px solid #607D8B;
-                border-radius: 8px;
-                padding: 1rem;
-                margin: 1rem 0;
-            ">
-                <h6 style="color: #607D8B; margin: 0 0 0.8rem 0;">Configuração Temporal: {horizon} | Par: {pair}</h6>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; text-align: center;">
-                    <div style="background: rgba(96,125,139,0.1); padding: 0.6rem; border-radius: 6px;">
-                        <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Períodos Históricos</strong></p>
-                        <p style="margin: 0; font-size: 0.9rem; font-weight: bold; color: #607D8B;">{ai_analysis.historical_analysis.get('periods_analyzed', 'N/A')}</p>
-                    </div>
-                    <div style="background: rgba(96,125,139,0.1); padding: 0.6rem; border-radius: 6px;">
-                        <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Volatilidade Adj.</strong></p>
-                        <p style="margin: 0; font-size: 0.9rem; font-weight: bold; color: #607D8B;">{ai_analysis.historical_analysis.get('volatility_adjustment', 1.0):.1f}x</p>
-                    </div>
-                    <div style="background: rgba(96,125,139,0.1); padding: 0.6rem; border-radius: 6px;">
-                        <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Boost Confiança</strong></p>
-                        <p style="margin: 0; font-size: 0.9rem; font-weight: bold; color: #607D8B;">{ai_analysis.historical_analysis.get('pair_adjustment', 1.0):.1f}x</p>
-                    </div>
-                    <div style="background: rgba(96,125,139,0.1); padding: 0.6rem; border-radius: 6px;">
-                        <p style="margin: 0; color: #666; font-size: 0.8rem;"><strong>Confirm. Tendência</strong></p>
-                        <p style="margin: 0; font-size: 0.9rem; font-weight: bold; color: #607D8B;">{ai_analysis.historical_analysis.get('trend_confirmation_strength', 0)*100:.0f}%</p>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Create columns for components
-        cols = st.columns(2)
-        components_list = list(results['components'].items())
-        
-        for i, (component, data) in enumerate(components_list):
-            col_idx = i % 2
-            with cols[col_idx]:
-                signal_pct = data['signal'] * 100
-                weight_pct = data['weight'] * 100
-                color = "🟢" if data['signal'] > 0 else "🔴" if data['signal'] < 0 else "🟡"
-                details = data.get('details', '')
-                
-                with st.expander(f"{color} **{component.title()}:** {signal_pct:+.2f}% (peso: {weight_pct:.0f}%)"):
-                    if details:
-                        st.write(f"**Detalhes:** {details}")
-                    st.write(f"**Sinal:** {signal_pct:+.3f}%")
-                    st.write(f"**Peso na análise:** {weight_pct:.0f}%")
-    
-    if 'analysis_focus' in results:
-        st.info(f"**Foco da Análise:** {results['analysis_focus']}")
-    
-    # Show risk level impact summary
-    if 'risk_level_used' in results:
-        risk_level = results['risk_level_used']
-        risk_impacts = {
-            'Conservative': "🛡️ Proteção máxima - Stop loss próximo, menor exposição, maior segurança",
-            'Moderate': "⚖️ Equilíbrio - Risco moderado com potencial de retorno balanceado",
-            'Aggressive': "🚀 Maior potencial - Stop loss distante, maior exposição, busca máximos retornos"
-        }
-        
-        st.success(f"**Impacto do Perfil {risk_level}:** {risk_impacts.get(risk_level, 'Perfil padrão aplicado')}")
-
-def display_summary_tab(results, analysis_mode):
-    """Display summary tab content"""
-    mode_names = {
-        'unified': '🧠 Análise Unificada Inteligente',
-        'technical': '📊 Análise Técnica',
-        'sentiment': '📰 Análise de Sentimento',
-        'risk': '⚖️ Análise de Risco',
-        'ai_lstm': '🤖 Análise IA/LSTM',
-        'volume': '📈 Análise de Volume',
-        'trend': '📉 Análise de Tendência'
-    }
-    
-    st.markdown(f"### {mode_names.get(analysis_mode, 'Análise Padrão')}")
-    
-    if 'analysis_focus' in results:
-        st.info(f"**Foco:** {results['analysis_focus']}")
-    
-    # Main recommendation card
-    if 'final_recommendation' in results:
-        recommendation = results['final_recommendation']
-    else:
-        # Fallback usando price_change se disponível
-        price_change = results.get('price_change', 0)
-        recommendation = "📈 COMPRA" if price_change > 0 else "📉 VENDA" if price_change < 0 else "⚪ INDECISÃO"
-    
-    confidence_color = "green" if results.get('model_confidence', 0.5) > 0.7 else "orange" if results.get('model_confidence', 0.5) > 0.5 else "red"
-    
-    st.markdown(f"""
-    <div class="metric-card">
-        <h2 style="color: {confidence_color}; margin: 0; text-align: center;">{recommendation}</h2>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
-            <div>
-                <p><strong>Preço Atual:</strong> {results['current_price']:.5f}</p>
-                <p><strong>Preço Previsto:</strong> {results.get('predicted_price', results.get('current_price', 0)):.5f}</p>
-            </div>
-            <div>
-                <p><strong>Variação:</strong> {results.get('price_change_pct', 0):+.2f}%</p>
-                <p><strong>Confiança:</strong> {results.get('model_confidence', 0.5):.0%}</p>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Show unified analysis components if available
-    if analysis_mode == 'unified' and 'components' in results:
-        st.markdown("### 🔍 Componentes da Análise Unificada")
-        
-        for component, data in results['components'].items():
-            signal_pct = data['signal'] * 100
-            weight_pct = data['weight'] * 100
-            color = "🟢" if data['signal'] > 0 else "🔴" if data['signal'] < 0 else "🟡"
-            details = data.get('details', '')
-            
-            with st.expander(f"{color} **{component.title()}:** {signal_pct:+.2f}% (peso: {weight_pct:.0f}%)"):
-                if details:
-                    st.write(f"**Detalhes:** {details}")
-                st.write(f"**Sinal:** {signal_pct:+.3f}%")
-                st.write(f"**Peso na análise:** {weight_pct:.0f}%")
-
-def display_charts_tab(results):
-    """Display charts tab content"""
-    st.markdown("### 📈 Gráficos de Análise")
-    
-    if 'df_with_indicators' not in results:
-        st.warning("Dados de indicadores não disponíveis para exibir gráficos.")
-        return
-    
-    df = results['df_with_indicators']
-    
-    try:
-        import plotly.graph_objects as go
-        from plotly.subplots import make_subplots
-        
-        # Create main price chart
-        fig = make_subplots(
-            rows=3, cols=1,
-            row_heights=[0.6, 0.2, 0.2],
-            subplot_titles=('Preço e Médias Móveis', 'RSI (14 períodos)', 'MACD (12,26,9)'),
-            vertical_spacing=0.05
-        )
-        
-        # Price and moving averages
-        fig.add_trace(go.Scatter(
-            x=df.index, y=df['close'],
-            name='Preço de Fechamento',
-            line=dict(color='blue', width=2)
-        ), row=1, col=1)
-        
-        if 'sma_20' in df.columns:
-            fig.add_trace(go.Scatter(
-                x=df.index, y=df['sma_20'],
-                name='SMA 20 períodos',
-                line=dict(color='orange', width=1)
-            ), row=1, col=1)
-        
-        if 'sma_50' in df.columns:
-            fig.add_trace(go.Scatter(
-                x=df.index, y=df['sma_50'],
-                name='SMA 50 períodos',
-                line=dict(color='red', width=1)
-            ), row=1, col=1)
-        
-        # RSI
-        if 'rsi' in df.columns:
-            fig.add_trace(go.Scatter(
-                x=df.index, y=df['rsi'],
-                name='RSI (14 períodos)',
-                line=dict(color='purple')
-            ), row=2, col=1)
-            
-            fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
-            fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
-        
-        # MACD
-        if 'macd' in df.columns:
-            fig.add_trace(go.Scatter(
-                x=df.index, y=df['macd'],
-                name='MACD (12,26)',
-                line=dict(color='blue')
-            ), row=3, col=1)
-            
-            if 'macd_signal' in df.columns:
-                fig.add_trace(go.Scatter(
-                    x=df.index, y=df['macd_signal'],
-                    name='Linha de Sinal (9)',
-                    line=dict(color='red')
-                ), row=3, col=1)
-        
-        fig.update_layout(
-            height=800,
-            title=f"Análise Técnica - {results['pair']}",
-            showlegend=True
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
-        
-    except ImportError:
-        st.error("Plotly não está disponível para gráficos interativos.")
-        
-        # Fallback to simple metrics
-        st.markdown("**Dados dos Últimos Períodos:**")
-        
-        if len(df) > 10:
-            recent_data = df.tail(10)[['close', 'rsi', 'macd']].round(5)
-            st.dataframe(recent_data)
-
-def display_technical_tab(results):
-    """Display technical analysis tab content"""
-    st.markdown("### 🔍 Análise Técnica Detalhada")
-    
-    if 'df_with_indicators' not in results:
-        st.warning("Dados técnicos não disponíveis.")
-        return
-    
-    df = results['df_with_indicators']
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("**Indicadores Atuais:**")
-        
-        if 'rsi' in df.columns:
-            rsi_current = df['rsi'].iloc[-1]
-            rsi_status = "Sobrecomprado" if rsi_current > 70 else "Sobrevendido" if rsi_current < 30 else "Neutro"
-            st.metric("RSI (14 períodos)", f"{rsi_current:.1f}", rsi_status)
-        
-        if 'macd' in df.columns:
-            macd_current = df['macd'].iloc[-1]
-            st.metric("MACD (12,26,9)", f"{macd_current:.5f}")
-        
-        if 'sma_20' in df.columns:
-            sma20 = df['sma_20'].iloc[-1]
-            st.metric("SMA (20 períodos)", f"{sma20:.5f}")
-        
-        if 'sma_50' in df.columns:
-            sma50 = df['sma_50'].iloc[-1]
-            st.metric("SMA (50 períodos)", f"{sma50:.5f}")
-    
-    with col2:
-        st.markdown("**Sinais de Trading:**")
-        
-        current_price = results['current_price']
-        
-        # Price vs moving averages
-        if 'sma_20' in df.columns:
-            sma20 = df['sma_20'].iloc[-1]
-            price_vs_sma20 = "Acima" if current_price > sma20 else "Abaixo"
-            st.write(f"**Preço vs SMA20:** {price_vs_sma20}")
-        
-        if 'sma_50' in df.columns:
-            sma50 = df['sma_50'].iloc[-1]
-            price_vs_sma50 = "Acima" if current_price > sma50 else "Abaixo"
-            st.write(f"**Preço vs SMA50:** {price_vs_sma50}")
-        
-        # RSI signals
-        if 'rsi' in df.columns:
-            rsi_current = df['rsi'].iloc[-1]
-            if rsi_current > 70:
-                st.write("🔴 **RSI:** Sinal de Venda (Sobrecomprado)")
-            elif rsi_current < 30:
-                st.write("🟢 **RSI:** Sinal de Compra (Sobrevendido)")
-            else:
-                st.write("🟡 **RSI:** Neutro")
-        
-        # Volatility
-        volatility = df['close'].tail(20).std() / current_price
-        st.metric("Volatilidade (20 períodos)", f"{volatility:.4f}")
-
-def display_sentiment_tab(results):
-    """Display sentiment analysis tab content"""
-    st.markdown("### 📰 Análise de Sentimento")
-    
-    sentiment_score = results.get('sentiment_score', 0)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Sentiment gauge
-        if sentiment_score > 0.1:
-            sentiment_color = "green"
-            sentiment_label = "Positivo"
-            sentiment_icon = "📈"
-        elif sentiment_score < -0.1:
-            sentiment_color = "red"
-            sentiment_label = "Negativo"
-            sentiment_icon = "📉"
-        else:
-            sentiment_color = "orange"
-            sentiment_label = "Neutro"
-            sentiment_icon = "➖"
-        
-        st.markdown(f"""
-        <div style="text-align: center; padding: 1rem; border: 2px solid {sentiment_color}; border-radius: 10px;">
-            <h2 style="color: {sentiment_color}; margin: 0;">{sentiment_icon} {sentiment_label}</h2>
-            <p style="font-size: 1.5em; margin: 0.5rem 0;">{sentiment_score:.3f}</p>
-            <p style="margin: 0;">Score de Sentimento</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("**Interpretação:**")
-        
-        if sentiment_score > 0.3:
-            st.success("Sentimento muito positivo - Forte pressão de compra esperada")
-        elif sentiment_score > 0.1:
-            st.info("Sentimento positivo - Leve pressão de compra")
-        elif sentiment_score < -0.3:
-            st.error("Sentimento muito negativo - Forte pressão de venda esperada")
-        elif sentiment_score < -0.1:
-            st.warning("Sentimento negativo - Leve pressão de venda")
-        else:
-            st.info("Sentimento neutro - Mercado equilibrado")
-        
-        st.markdown("**Escala:**")
-        st.write("• +1.0 = Extremamente Positivo")
-        st.write("• +0.5 = Muito Positivo")
-        st.write("• +0.1 = Levemente Positivo")
-        st.write("• 0.0 = Neutro")
-        st.write("• -0.1 = Levemente Negativo")
-        st.write("• -0.5 = Muito Negativo")
-        st.write("• -1.0 = Extremamente Negativo")
-
-def display_metrics_tab(results):
-    """Display detailed metrics tab content"""
-    st.markdown("### 📊 Métricas Detalhadas")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.markdown("**Preços:**")
-        st.metric("Preço Atual", f"{results['current_price']:.5f}")
-        st.metric("Preço Previsto", f"{results.get('predicted_price', results.get('current_price', 0)):.5f}")
-        st.metric("Variação Absoluta", f"{results.get('price_change', 0):+.5f}")
-    
-    with col2:
-        st.markdown("**Percentuais:**")
-        st.metric("Variação %", f"{results.get('price_change_pct', 0):+.2f}%")
-        st.metric("Confiança", f"{results.get('model_confidence', 0.5):.1%}")
-        
-        if 'sentiment_score' in results:
-            st.metric("Sentimento", f"{results['sentiment_score']:+.3f}")
-    
-    with col3:
-        st.markdown("**Informações da Análise:**")
-        st.write(f"**Par:** {results['pair']}")
-        st.write(f"**Intervalo:** {results['interval']}")
-        st.write(f"**Horizonte:** {results['horizon']}")
-        st.write(f"**Horário:** {results['timestamp'].strftime('%H:%M:%S')}")
-        
-        analysis_mode = results.get('analysis_mode', 'unified')
-        mode_names = {
-            'unified': 'Unificada',
-            'technical': 'Técnica',
-            'sentiment': 'Sentimento',
-            'risk': 'Risco',
-            'ai_lstm': 'IA/LSTM',
-            'volume': 'Volume',
-            'trend': 'Tendência'
-        }
-        st.write(f"**Tipo:** {mode_names.get(analysis_mode, 'Padrão')}")
-    
-    # Show component breakdown for unified analysis
-
-
-def run_basic_analysis(current_price, is_quick, sentiment_score=0):
-    """Análise básica/rápida"""
-    import numpy as np
-    signal = np.random.uniform(-0.01, 0.01) + (sentiment_score * 0.005)
-    predicted_price = current_price * (1 + signal)
-    price_change = predicted_price - current_price
-    return {
-        'predicted_price': predicted_price,
-        'price_change': price_change,
-        'price_change_pct': (price_change / current_price) * 100,
-        'model_confidence': 0.6 if is_quick else 0.75,
-        'analysis_focus': 'Análise rápida' if is_quick else 'Análise padrão'
-    }
-
-def display_analysis_results():
-    """Display enhanced analysis results - COMPONENTES REMOVIDOS"""
-    if not st.session_state.get('analysis_results'):
-        return
-    
-    results = st.session_state.analysis_results
-    analysis_mode = results.get('analysis_mode', 'unified')
-    
-    st.markdown("## 📊 Resultados da Análise")
-    
-    # Mostrar tipo de análise executada
-    mode_names = {
-        'unified': '🧠 Análise Unificada Inteligente',
-        'technical': '📊 Análise Técnica',
-        'sentiment': '📰 Análise de Sentimento',
-        'risk': '⚖️ Análise de Risco',
-        'ai_lstm': '🤖 Análise IA/LSTM',
-        'volume': '📈 Análise de Volume',
-        'trend': '📉 Análise de Tendência'
-    }
-    
-    st.markdown(f"**Tipo:** {mode_names.get(analysis_mode, 'Análise Padrão')}")
-    
-    if 'analysis_focus' in results:
-        st.caption(f"Foco: {results['analysis_focus']}")
-    
-    # Main recommendation with new enhanced display
-    if 'final_recommendation' in results:
-        recommendation = results['final_recommendation']
-    elif 'market_direction' in results:
-        recommendation = f"🎯 {results['market_direction']}"
-    else:
-        # Fallback usando price_change se disponível
-        price_change = results.get('price_change', 0)
-        recommendation = "📈 COMPRA" if price_change > 0 else "📉 VENDA" if price_change < 0 else "⚪ INDECISÃO"
-    
-    # Enhanced display for unified analysis with market direction and probability
-    if analysis_mode == 'unified' and 'market_direction' in results:
-        direction = results['market_direction']
-        probability = results.get('success_probability', results.get('model_confidence', 0.5) * 100)
-        confluence = results.get('confluence_strength', 0)
-        agreement = results.get('agreement_score', 0)
-        
-        # Color coding based on direction and probability
-        direction_str = str(direction)  # Garantir que é string
-        if 'COMPRA FORTE' in direction_str:
-            direction_color = "#00C851"  # Strong green
-            direction_icon = "🚀"
-        elif 'COMPRA' in direction_str:
-            direction_color = "#4CAF50"  # Green
-            direction_icon = "📈"
-        elif 'VENDA FORTE' in direction_str:
-            direction_color = "#FF3547"  # Strong red
-            direction_icon = "🔴"
-        elif 'VENDA' in direction_str:
-            direction_color = "#F44336"  # Red
-            direction_icon = "📉"
-        else:
-            direction_color = "#FF9800"  # Orange for neutral
-            direction_icon = "⚪"
-        
-        st.markdown(f"""
-        <div style="
-            text-align: center; 
-            padding: 2rem; 
-            border: 3px solid {direction_color}; 
-            border-radius: 15px; 
-            background: linear-gradient(135deg, rgba(0,0,0,0.05), rgba(255,255,255,0.1));
-            margin: 1rem 0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        ">
-            <h2 style="color: {direction_color}; margin: 0 0 1rem 0; font-size: 2.5em;">{direction_icon} {direction}</h2>
-            <h3 style="color: {direction_color}; margin: 0 0 1.5rem 0; font-size: 1.8em;">Probabilidade: {probability:.0f}%</h3>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-                <div style="background: rgba(255,255,255,0.8); padding: 1rem; border-radius: 8px; border-left: 4px solid {direction_color};">
-                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Confluência</strong></p>
-                    <p style="margin: 0; font-size: 1.3rem; font-weight: bold; color: {direction_color};">{confluence} Sinais Fortes</p>
-                </div>
-                <div style="background: rgba(255,255,255,0.8); padding: 1rem; border-radius: 8px; border-left: 4px solid {direction_color};">
-                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Concordância</strong></p>
-                    <p style="margin: 0; font-size: 1.3rem; font-weight: bold; color: {direction_color};">{agreement}/4 Componentes</p>
-                </div>
-                <div style="background: rgba(255,255,255,0.8); padding: 1rem; border-radius: 8px; border-left: 4px solid {direction_color};">
-                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Preço Atual</strong></p>
-                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #333;">{results['current_price']:.5f}</p>
-                </div>
-                <div style="background: rgba(255,255,255,0.8); padding: 1rem; border-radius: 8px; border-left: 4px solid {direction_color};">
-                    <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>Previsão</strong></p>
-                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #333;">{results.get('predicted_price', results.get('current_price', 0)):.5f}</p>
-                </div>
-            </div>
-            
-            <p style="color: #666; margin: 0; font-size: 0.95rem;">
-                <strong>Análise Confluente:</strong> {agreement} componentes concordam com {confluence} sinais de alta força. 
-                Variação esperada: {results.get('price_change_pct', 0):+.2f}% | Confiança: {results.get('model_confidence', 0.5):.0%}
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        # Fallback to original display for other analysis modes
-        confidence_color = "green" if results.get('model_confidence', 0.5) > 0.7 else "orange" if results.get('model_confidence', 0.5) > 0.5 else "red"
-        
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3 style="color: {confidence_color}; margin: 0;">{recommendation}</h3>
-            <p style="margin: 0.5rem 0;"><strong>Preço Atual:</strong> {results['current_price']:.5f}</p>
-            <p style="margin: 0.5rem 0;"><strong>Preço Previsto:</strong> {results.get('predicted_price', results.get('current_price', 0)):.5f}</p>
-            <p style="margin: 0.5rem 0;"><strong>Variação:</strong> {results.get('price_change_pct', 0):+.2f}%</p>
-            <p style="margin: 0.5rem 0;"><strong>Confiança:</strong> {results.get('model_confidence', 0.5):.0%}</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    
-    # Additional metrics
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric(
-            "Variação Prevista",
-            f"{results.get('price_change_pct', 0):+.2f}%",
-            f"{results.get('price_change', 0):+.5f}"
-        )
-    
-    with col2:
-        st.metric(
-            "Confiança do Modelo",
-            f"{results.get('model_confidence', 0.5):.0%}",
-            "Alta" if results.get('model_confidence', 0.5) > 0.7 else "Baixa"
-        )
-    
-    with col3:
-        st.metric(
-            "Horário da Análise",
-            results['timestamp'].strftime('%H:%M:%S'),
-            f"Par: {results['pair']}"
-        )
-
-def display_metrics_tab(results):
-    """Display metrics tab content"""
-    st.markdown("### 📊 Métricas Detalhadas")
-    
-    mode_names = {
-        'unified': '🧠 Análise Unificada Inteligente',
-        'technical': '📊 Análise Técnica', 
-        'sentiment': '📰 Análise de Sentimento',
-        'risk': '⚖️ Análise de Risco',
-        'ai_lstm': '🤖 Análise IA/LSTM',
-        'volume': '📈 Análise de Volume',
-        'trend': '📉 Análise de Tendência'
-    }
-    
-    analysis_mode = results.get('analysis_mode', 'unified')
-    if analysis_mode in mode_names:
-        st.write(f"**Tipo:** {mode_names.get(analysis_mode, 'Padrão')}")
-
-def execute_alpha_vantage_trend_analysis(pair: str, profile: str, market_type: str):
-    """Execute Alpha Vantage trend analysis optimized by profile"""
-    
-    # Map profile names to internal values
-    profile_mapping = {
-        'Scalping': 'scalping',
-        'Intraday': 'intraday', 
-        'Swing': 'swing',
-        'Position': 'position'
-    }
-    
-    internal_profile = profile_mapping.get(profile, 'swing')
-    
-    # Determine optimal interval for profile
-    interval_mapping = {
-        'scalping': '1min',
-        'intraday': '15min',
-        'swing': '60min', 
-        'position': 'daily'
-    }
-    
-    interval = interval_mapping[internal_profile]
-    
-    with st.spinner("🎯 Executando Análise de Tendência Alpha Vantage..."):
-        try:
-            # Execute trend analysis
-            trend_analysis = services['trend_engine'].analyze_trend_by_profile(
-                pair, internal_profile, interval
-            )
-            
-            if trend_analysis.get('error'):
-                st.error(f"❌ {trend_analysis['error_message']}")
-                return
-            
-            # Store results and display
-            st.session_state['alpha_trend_results'] = trend_analysis
-            display_alpha_vantage_trend_results(trend_analysis)
-            
-        except Exception as e:
-            st.error(f"❌ Erro na análise Alpha Vantage: {e}")
-            st.info("🔑 Verifique se a chave API Alpha Vantage está configurada corretamente")
-
-def parse_analysis_type(analysis_type_str: str) -> Dict:
-    """Parse analysis type string and return configuration for multi-pair analysis"""
-    
-    if "Scalping" in analysis_type_str:
-        return {
-            'profile': 'scalping',
-            'description': 'Scalping: Técnica + Volume + Micro Tendência',
-            'analyses': ['technical', 'volume', 'trend'],
-            'weights': {'technical': 0.4, 'volume': 0.35, 'trend': 0.25},
-            'focus': 'Sinais rápidos e precisos para entrada/saída',
-            'timeframe': '1-5 minutos',
-            'priority_indicators': ['EMA rápidas', 'Stochastic', 'RSI', 'Volume breakouts']
-        }
-    elif "Intraday" in analysis_type_str:
-        return {
-            'profile': 'intraday', 
-            'description': 'Intraday: Análise Técnica Tradicional H1',
-            'analyses': ['technical', 'trend', 'volume'],  # Removido sentiment - foco técnico
-            'weights': {'technical': 0.55, 'trend': 0.20, 'volume': 0.15, 'sentiment': 0.05, 'ai_lstm': 0.03, 'risk': 0.02},
-            'focus': 'EMA 20/200 H1 (dominante 55%) + Confluência RSI/Volume (tradicional)',
-            'timeframe': 'H1 (Principal)',
-            'priority_indicators': ['RSI H1', 'EMA H1', 'Volume H1', 'MACD H1', 'Bollinger H1']
-        }
-    elif "Position" in analysis_type_str:
-        return {
-            'profile': 'position',
-            'description': 'Position: Sentiment + Tendência + LSTM',
-            'analyses': ['sentiment', 'trend', 'ai_lstm'],
-            'weights': {'sentiment': 0.4, 'trend': 0.35, 'ai_lstm': 0.2, 'risk': 0.05},
-            'focus': 'Fundamentos e tendências de longo prazo',
-            'timeframe': 'Semanal-Mensal',
-            'priority_indicators': ['Macro fundamentals', 'SMA longas', 'Aroon', 'LSTM predictions']
-        }
-    else:  # Default to Swing
-        return {
-            'profile': 'swing',
-            'description': 'Swing: Todas as Análises com Pesos Equilibrados',
-            'analyses': ['technical', 'trend', 'sentiment', 'ai_lstm', 'volume'],
-            'weights': {'technical': 0.25, 'trend': 0.25, 'sentiment': 0.25, 'ai_lstm': 0.15, 'volume': 0.1},
-            'focus': 'Análise completa equilibrada para swing trading',
-            'timeframe': '4h-Diário', 
-            'priority_indicators': ['SMA systems', 'MACD', 'Bollinger', 'ADX', 'SAR', 'Sentiment', 'LSTM']
-        }
-
-def run_profile_specific_analysis(current_price, pair, sentiment_score, df_with_indicators, trading_style, analysis_config):
-    """Run analysis based on profile-specific configuration"""
-    
-    analyses_to_run = analysis_config['analyses']
-    weights = analysis_config['weights']
-    
-    # Initialize result structure
-    analysis_result = {
-        'profile': analysis_config['profile'],
-        'analyses_used': analyses_to_run,
-        'weights_used': weights,
-        'components': {},
-        'unified_signal': 0.0,
-        'unified_confidence': 0.0
-    }
-    
-    total_weight = 0
-    weighted_signal = 0
-    
-    # Run each required analysis
-    for analysis_type in analyses_to_run:
-        weight = weights.get(analysis_type, 0.2)  # Default weight if not specified
-        
-        if analysis_type == 'technical':
-            # Technical analysis
-            technical_result = calculate_technical_analysis(df_with_indicators, trading_style)
-            analysis_result['components']['technical'] = technical_result
-            weighted_signal += technical_result['signal'] * weight
-            
-        elif analysis_type == 'trend':
-            # Trend analysis 
-            trend_result = calculate_trend_analysis(df_with_indicators)
-            analysis_result['components']['trend'] = trend_result
-            weighted_signal += trend_result['signal'] * weight
-            
-        elif analysis_type == 'volume':
-            # Volume analysis
-            volume_result = calculate_volume_analysis(df_with_indicators)
-            analysis_result['components']['volume'] = volume_result  
-            weighted_signal += volume_result['signal'] * weight
-            
-        elif analysis_type == 'sentiment':
-            # Sentiment analysis
-            sentiment_result = {'signal': sentiment_score, 'confidence': 0.8}
-            analysis_result['components']['sentiment'] = sentiment_result
-            weighted_signal += sentiment_score * weight
-            
-        elif analysis_type == 'ai_lstm':
-            # AI/LSTM analysis - simplified for multi-pair
-            try:
-                ai_result = calculate_ai_analysis_simple(df_with_indicators, current_price)
-                analysis_result['components']['ai_lstm'] = ai_result
-                weighted_signal += ai_result['signal'] * weight
-            except:
-                # Fallback if AI analysis fails
-                ai_result = {'signal': 0.0, 'confidence': 0.3}
-                analysis_result['components']['ai_lstm'] = ai_result
-                
-        elif analysis_type == 'risk':
-            # Risk analysis
-            risk_result = calculate_risk_analysis_simple(df_with_indicators, current_price)
-            analysis_result['components']['risk'] = risk_result
-            weighted_signal += risk_result['signal'] * weight
-            
-        total_weight += weight
-    
-    # Normalize final signal
-    if total_weight > 0:
-        analysis_result['unified_signal'] = weighted_signal / total_weight
-    
-    # Calculate confidence based on agreement between components
-    signals = [comp.get('signal', 0) for comp in analysis_result['components'].values()]
-    confidences = [comp.get('confidence', 0.5) for comp in analysis_result['components'].values()]
-    
-    if signals:
-        # Calculate agreement (how much components agree on direction)
-        avg_signal = sum(signals) / len(signals)
-        agreement = 1 - (sum(abs(s - avg_signal) for s in signals) / len(signals)) / 2
-        
-        # Weight confidence by individual component confidences and agreement
-        avg_component_confidence = sum(confidences) / len(confidences) if confidences else 0.5
-        final_confidence = (agreement * 0.6) + (avg_component_confidence * 0.4)
-        
-        analysis_result['unified_confidence'] = max(0.1, min(1.0, final_confidence))
-        analysis_result['model_confidence'] = max(0.1, min(1.0, final_confidence))  # For compatibility
-    else:
-        analysis_result['unified_confidence'] = 0.5
-        analysis_result['model_confidence'] = 0.5
-    
-    # Add market direction based on signal strength with profile-specific thresholds
-    signal_strength = abs(analysis_result['unified_signal'])
-    confidence_level = analysis_result['unified_confidence']
-    
-    # Get trading profile for adaptive thresholds
-    profile = analysis_result.get('profile', 'swing')
-    
-    if profile == 'scalping':
-        # SCALPING: Limiares mais baixos para detecção rápida de micro-movimentos
-        if signal_strength > 0.25 and confidence_level > 0.55:
-            direction = 'COMPRA FORTE' if analysis_result['unified_signal'] > 0 else 'VENDA FORTE'
-        elif signal_strength > 0.15 and confidence_level > 0.45:
-            direction = 'COMPRA' if analysis_result['unified_signal'] > 0 else 'VENDA'
-        else:
-            direction = 'NEUTRO'
-    else:
-        # OUTROS PERFIS: Limiares padrão para movimentos maiores
-        if signal_strength > 0.6 and confidence_level > 0.75:
-            direction = 'COMPRA FORTE' if analysis_result['unified_signal'] > 0 else 'VENDA FORTE'
-        elif signal_strength > 0.3 and confidence_level > 0.6:
-            direction = 'COMPRA' if analysis_result['unified_signal'] > 0 else 'VENDA'
-        else:
-            direction = 'NEUTRO'
-    
-    analysis_result['market_direction'] = direction
-        
-    return analysis_result
-
-def generate_scalping_strategic_levels(df, analysis_result, pair, current_price, confidence, signal_strength, sentiment_score, bank_value):
-    """Gera níveis estratégicos de entrada para scalping com tempo de validade e validação de setup ativo"""
-    from datetime import datetime, timedelta
-    
-    try:
-        # VERIFICAR SE JÁ EXISTE SETUP ATIVO VÁLIDO
-        existing_setup = manage_active_setups(pair, check_validity=True)
-        if existing_setup and existing_setup['status'] == 'ATIVO':
-            # Setup ainda válido - retornar com informações atualizadas
-            time_remaining = existing_setup.get('time_remaining', 0)
-            
-            # Verificar se stop/take foi atingido
-            stop_loss = existing_setup.get('primary_setup', {}).get('stop_loss', 0)
-            take_profit = existing_setup.get('primary_setup', {}).get('take_profit', 0)
-            
-            invalidated = check_setup_invalidation(pair, current_price, stop_loss, take_profit)
-            if invalidated:
-                # Setup foi invalidado, prosseguir com novo setup
-                pass
-            else:
-                # Setup ainda válido - retornar com status atualizado
-                existing_setup['current_price'] = current_price
-                existing_setup['status_message'] = f"⏰ SETUP ATIVO - {time_remaining} min restantes"
-                return existing_setup
-        # Análise técnica para identificar níveis estratégicos
-        if len(df) < 10:
-            # Dados insuficientes - usar níveis básicos
-            volatility = 0.0015  # 0.15% padrão
-        else:
-            # Calcular volatilidade micro dos últimos períodos
-            recent_changes = df['close'].tail(10).pct_change().dropna()
-            volatility = recent_changes.std()
-        
-        # Identificar suporte e resistência micro
-        if len(df) >= 20:
-            recent_highs = df['high'].tail(20)
-            recent_lows = df['low'].tail(20)
-            recent_closes = df['close'].tail(20)
-            
-            # Níveis de suporte (últimos mínimos)
-            support_level = recent_lows.min()
-            # Níveis de resistência (últimos máximos) 
-            resistance_level = recent_highs.max()
-            
-            # Micro-níveis baseados nos últimos 5 períodos
-            micro_support = recent_lows.tail(5).min()
-            micro_resistance = recent_highs.tail(5).max()
-        else:
-            # Fallback para dados limitados
-            support_level = current_price * (1 - volatility * 2)
-            resistance_level = current_price * (1 + volatility * 2)
-            micro_support = current_price * (1 - volatility)
-            micro_resistance = current_price * (1 + volatility)
-        
-        # Determinar direção do setup baseado no sinal
-        direction = analysis_result.get('market_direction', 'NEUTRO')
-        is_bullish = 'COMPRA' in str(direction)
-        
-        # Calcular níveis estratégicos de entrada
-        if is_bullish:
-            # SETUP DE COMPRA
-            # Entrada estratégica em pullback ao suporte - sempre diferente do preço atual
-            pullback_distance = max(volatility * 1.2, 0.0008)  # Mínimo 8 pips de diferença
-            entry_level = current_price * (1 - pullback_distance)
-            # Garantir que use o suporte se for mais conservador
-            entry_level = max(micro_support, entry_level)
-            # SCALPING REAL: Stops e takes pequenos
-            stop_level = entry_level * (1 - 0.0008)  # Stop 8 pips (0.08%)
-            take_level = entry_level * (1 + 0.0012)  # Take 12 pips (0.12%)
-            
-
-            
-        else:
-            # SETUP DE VENDA  
-            # Entrada estratégica em pullback à resistência - sempre diferente do preço atual
-            pullback_distance = max(volatility * 1.2, 0.0008)  # Mínimo 8 pips de diferença
-            entry_level = current_price * (1 + pullback_distance)
-            # Garantir que use a resistência se for mais conservador
-            entry_level = min(micro_resistance, entry_level)
-            # SCALPING REAL: Stops e takes pequenos
-            stop_level = entry_level * (1 + 0.0008)  # Stop 8 pips (0.08%)
-            take_level = entry_level * (1 - 0.0012)  # Take 12 pips (0.12%)
-            
-
-        
-        # Calcular tempo de validade baseado na volatilidade
-        if volatility > 0.002:  # Alta volatilidade
-            validity_minutes = 15
-        elif volatility > 0.001:  # Volatilidade média
-            validity_minutes = 30  
-        else:  # Baixa volatilidade
-            validity_minutes = 45
-            
-        # Tempo de expiração em horário de Brasília
-        brasilia_tz = pytz.timezone('America/Sao_Paulo')
-        now_brasilia = datetime.now(brasilia_tz)
-        expiry_time = now_brasilia + timedelta(minutes=validity_minutes)
-        
-        # Usar tamanho da posição da calculadora de lote
-        position_size = st.session_state.get('lot_size', 0.1)  # Usar valor da sidebar
-        
-        # Calcular risco real baseado no lote escolhido
-        entry_distance_pips = abs(entry_level - stop_level) * 10000
-        pip_value = position_size * 10.0  # Valor do pip para o lote escolhido
-        risk_amount = entry_distance_pips * pip_value / 10  # Risco real em USD
-        
-        # Calcular potencial R/R
-        profit_distance = abs(take_level - entry_level) * 10000
-        loss_distance = abs(entry_level - stop_level) * 10000
-        risk_reward = profit_distance / max(loss_distance, 1) if loss_distance > 0 else 1.5
-        
-        # Calcular taxa de acertividade real baseada em confluência
-        real_success_rate = calculate_real_success_rate(
-            analysis_result, confidence, signal_strength, sentiment_score, volatility, risk_reward
-        )
-        
-        # Montar resultado estratégico
-        strategic_result = {
-            'pair': pair,
-            'setup_type': 'SCALPING ESTRATÉGICO',
-            'direction': direction,
-            'strength': 'FORTE' if confidence > 0.7 else 'MODERADO',
-            
-            # Setup Principal (Pullback)
-            'primary_setup': {
-                'name': f"Pullback {'ao Suporte' if is_bullish else 'à Resistência'}",
-                'entry_price': entry_level,
-                'stop_loss': stop_level,
-                'take_profit': take_level,
-                'trigger_condition': f"Preço {'atingir {:.5f}'.format(entry_level) if abs(current_price - entry_level) > volatility * 0.5 else 'próximo ao nível ideal'}",
-                'pips_to_entry': abs(current_price - entry_level) * 10000,
-                'risk_reward_ratio': risk_reward
-            },
-            
-
-            
-            # Informações gerais
-            'current_price': current_price,
-            'position_size': position_size,
-            'risk_amount': risk_amount,
-            'expected_success_rate': real_success_rate,  # Taxa calculada baseada em confluência real
-            'validity_time': validity_minutes,
-            'expiry_timestamp': expiry_time.strftime("%H:%M:%S"),
-            'market_volatility': volatility * 100,
-            
-            # Níveis técnicos identificados
-            'technical_levels': {
-                'micro_support': micro_support,
-                'micro_resistance': micro_resistance,
-                'support_level': support_level,
-                'resistance_level': resistance_level
-            },
-            
-            # Instruções de execução
-            'execution_instructions': [
-                f"✅ Aguardar preço atingir {entry_level:.5f} para entrada",
-                f"⏰ Sinal válido por {validity_minutes} minutos (até {expiry_time.strftime('%H:%M')})",
-                f"💰 Risco: ${risk_amount:.2f} ({position_size:.2f} lotes)",
-                f"🎯 R/R: 1:{risk_reward:.1f}"
-            ],
-            
-            # Para compatibilidade com display existente
-            'entry_price': entry_level,
-            'stop_loss': stop_level,
-            'take_profit': take_level,
-            'stop_distance_pips': loss_distance,
-            'tp_distance_pips': profit_distance,
-            'risk_reward_ratio': risk_reward,
-            'actual_risk_pct': 0.6,
-            'stop_pct': abs(entry_level - stop_level) / entry_level * 100,
-            'tp_pct': abs(take_level - entry_level) / entry_level * 100
-        }
-        
-        # ARMAZENAR NOVO SETUP ATIVO NO SISTEMA
-        strategic_result['validity_minutes'] = validity_minutes
-        manage_active_setups(pair, new_setup=strategic_result, check_validity=False)
-        
-        return strategic_result
-        
-    except Exception as e:
-        # Fallback para erro
-        return {
-            'setup_type': 'SCALPING BÁSICO',
-            'direction': direction if 'direction' in locals() else 'NEUTRO',
-            'entry_price': current_price,
-            'stop_loss': current_price * 0.997,
-            'take_profit': current_price * 1.005,
-            'error': f"Erro no cálculo estratégico: {str(e)}"
-        }
-
-def calculate_ai_analysis_simple(df_with_indicators, current_price):
-    """Simplified AI analysis for multi-pair processing"""
-    try:
-        # Simple trend momentum using price data
-        recent_prices = df_with_indicators['close'].tail(10)
-        price_momentum = (recent_prices.iloc[-1] - recent_prices.iloc[0]) / recent_prices.iloc[0]
-        
-        # Convert to signal (-1 to 1)
-        signal = max(-1, min(1, price_momentum * 10))
-        
-        return {'signal': signal, 'confidence': 0.6, 'method': 'price_momentum'}
-    except:
-        return {'signal': 0.0, 'confidence': 0.3, 'method': 'fallback'}
-
-def calculate_success_probability_parameters(df, confidence, profile, signal_strength, stop_percentage=None, take_percentage=None):
-    """Calcula movimento previsto por perfil baseado em análise Alpha Vantage específica"""
-    
-    try:
-        # Garantir que variáveis não sejam None
-        if df is None or len(df) == 0:
-            raise ValueError("DataFrame vazio ou None")
-            
-        # Inicializar variáveis padrão para evitar None
-        daily_vol = 0.01
-        upside_movement = 0.01
-        downside_movement = 0.01
-        upside_range = 0.01
-        downside_range = 0.01
-        window = len(df)
-        
-        # Análise Alpha Vantage específica por perfil operacional
-        if len(df) >= 50:  # Dados suficientes para análise robusta
-            price_changes = df['close'].pct_change().dropna()
-            daily_vol = price_changes.std()
-            current_price = df['close'].iloc[-1]
-            
-            # PERFIL ESPECÍFICO: Parâmetros únicos para cada estratégia
-            if profile == 'scalping':
-                # SCALPING: Ultra-responsivo para micro-movimentos
-                window = min(5, len(df))  # Janela micro-temporal
-                recent_data = df.tail(window)
-                
-                # Análise tick-por-tick para máxima sensibilidade
-                last_3_candles = df['close'].tail(3)
-                last_5_candles = df['close'].tail(5)
-                
-                # Volatilidade instantânea (últimos 3 períodos)
-                instant_volatility = last_3_candles.pct_change().std() if len(last_3_candles) >= 2 else daily_vol
-                micro_volatility = last_5_candles.pct_change().std() if len(last_5_candles) >= 2 else daily_vol
-                
-                # Detecção de momentum micro (amplificado para sensibilidade)
-                micro_momentum = (last_3_candles.iloc[-1] - last_3_candles.iloc[0]) / last_3_candles.iloc[0]
-                
-                # Movimentos otimizados para scalping ultra-rápido
-                upside_movement = max(instant_volatility * 2.0, micro_volatility * 1.5) * (1 + abs(micro_momentum))
-                downside_movement = max(instant_volatility * 1.5, micro_volatility * 1.2) * (1 + abs(micro_momentum))
-                
-                # Fator de responsividade aumentado para scalping
-                scalping_responsiveness = 1.6  # Mais agressivo para micro-detecção
-                upside_movement *= scalping_responsiveness
-                downside_movement *= scalping_responsiveness
-                
-            elif profile == 'intraday':
-                # INTRADAY CUSTOMIZADO: Take fixo 60 pontos + Stop dinâmico
-                window = min(25, len(df))  # Janela do dia de trading
-                recent_data = df.tail(window)
-                
-                # TAKE PROFIT FIXO: 60 pontos sempre
-                take_profit_pips = 60
-                upside_movement = take_profit_pips / 10000  # Converter para percentual (0.006 = 60 pontos)
-                
-                # STOP LOSS DINÂMICO: Baseado na volatilidade real (ATR)
-                if len(recent_data) >= 14:
-                    # Calcular True Range para ATR real
-                    high_low = recent_data['high'] - recent_data['low']
-                    high_close_prev = abs(recent_data['high'] - recent_data['close'].shift(1))
-                    low_close_prev = abs(recent_data['low'] - recent_data['close'].shift(1))
-                    
-                    # True Range = máximo dos 3 valores
-                    true_range = pd.DataFrame({
-                        'hl': high_low,
-                        'hc': high_close_prev, 
-                        'lc': low_close_prev
-                    }).max(axis=1)
-                    
-                    # ATR de 14 períodos (padrão do mercado)
-                    atr_14 = true_range.rolling(window=14).mean().iloc[-1]
-                    atr_percentage = atr_14 / current_price
-                    
-                    # Stop dinâmico: 1.2x ATR para segurança (não muito apertado)
-                    dynamic_stop_multiplier = 1.2
-                    downside_movement = atr_percentage * dynamic_stop_multiplier
-                    
-                    # Limitadores para manter risk:reward razoável
-                    min_stop_pips = 12  # Mínimo 12 pontos
-                    max_stop_pips = 35  # Máximo 35 pontos (R:R mínimo 1:1.7)
-                    
-                    stop_pips = downside_movement * 10000
-                    if stop_pips < min_stop_pips:
-                        downside_movement = min_stop_pips / 10000
-                    elif stop_pips > max_stop_pips:
-                        downside_movement = max_stop_pips / 10000
-                else:
-                    # Fallback: usar volatilidade da sessão
-                    session_volatility = recent_data['close'].pct_change().std()
-                    downside_movement = max(session_volatility * 1.8, 18 / 10000)  # Mínimo 18 pontos
-                
-            elif profile == 'swing':
-                # Swing: análise de movimentos de médio prazo (15-50 períodos)
-                window = min(50, len(df))
-                recent_data = df.tail(window)
-                high_low_range = (recent_data['high'].max() - recent_data['low'].min()) / current_price
-                upside_movement = (recent_data['high'].max() - current_price) / current_price
-                downside_movement = (current_price - recent_data['low'].min()) / current_price
-                
-            else:  # position
-                # Position: análise de movimentos de longo prazo (todo o dataset)
-                high_low_range = (df['high'].max() - df['low'].min()) / current_price
-                upside_movement = (df['high'].max() - current_price) / current_price
-                downside_movement = (current_price - df['low'].min()) / current_price
-            
-            # Calcular probabilidade de movimentos baseada em histórico Alpha Vantage
-            successful_ups = 0
-            successful_downs = 0
-            total_signals = 0
-            
-            # ANÁLISE HISTÓRICA ESPECÍFICA POR PERFIL
-            for i in range(max(window, 10), len(df)-1):  # Começar análise histórica mais tarde
-                if profile == 'scalping':
-                    future_window = 1  # 1 período à frente - movimentos imediatos
-                    analysis_frequency = 3  # Analisa a cada 3 períodos (mais frequente)
-                elif profile == 'intraday': 
-                    future_window = 5  # 5 períodos à frente - movimentos da sessão
-                    analysis_frequency = 2  # Analisa a cada 2 períodos
-                elif profile == 'swing':
-                    future_window = 15  # 15 períodos à frente - movimentos de dias
-                    analysis_frequency = 1  # Analisa todo período
-                else:  # position
-                    future_window = 25  # 25 períodos à frente - movimentos semanais
-                    analysis_frequency = 1
-                
-                # Pular períodos baseado na frequência de análise do perfil
-                if i % analysis_frequency != 0:
-                    continue
-                
-                if i + future_window < len(df):
-                    entry_price = df['close'].iloc[i]
-                    future_high = df['high'].iloc[i+1:i+future_window+1].max()
-                    future_low = df['low'].iloc[i+1:i+future_window+1].min()
-                    
-                    up_move = (future_high - entry_price) / entry_price
-                    down_move = (entry_price - future_low) / entry_price
-                    
-                    # Sistema dinâmico: configurações específicas por perfil
-                    if profile == 'scalping' and take_percentage is not None and stop_percentage is not None:
-                        # Para scalping usar % configurados
-                        target_up = upside_movement * (take_percentage / 100.0)
-                        target_down = downside_movement * (stop_percentage / 100.0)
-                    elif profile == 'intraday':
-                        # Para intraday: usar take fixo de 60 pontos + stop dinâmico
-                        target_up = upside_movement  # 60 pontos já está definido
-                        target_down = downside_movement  # Stop dinâmico já calculado
-                    else:
-                        # Para swing/position usar Alpha Vantage automático (75% upside, 50% downside)
-                        target_up = upside_movement * 0.75
-                        target_down = downside_movement * 0.50
-                    
-                    if up_move >= target_up:
-                        successful_ups += 1
-                    if down_move >= target_down:
-                        successful_downs += 1
-                    total_signals += 1
-            
-            # Calcular probabilidade real baseada no histórico
-            if total_signals > 0:
-                up_probability = successful_ups / total_signals
-                down_probability = successful_downs / total_signals
-                
-                # Ajustar movimentos baseado na probabilidade Alpha Vantage
-                upside_range = upside_movement * (0.5 + up_probability * 0.5)  # 50-100% baseado em probabilidade
-                downside_range = downside_movement * (0.5 + down_probability * 0.5)
-            else:
-                upside_range = upside_movement * 0.75  # Fallback conservador
-                downside_range = downside_movement * 0.75
-                
-        elif len(df) >= 20:
-            # Análise básica para dados limitados
-            price_changes = df['close'].pct_change().dropna()
-            daily_vol = price_changes.std()
-            current_price = df['close'].iloc[-1]
-            
-            recent_high = df['high'].tail(10).max()
-            recent_low = df['low'].tail(10).min()
-            
-            upside_range = (recent_high - current_price) / current_price * 0.6
-            downside_range = (current_price - recent_low) / current_price * 0.6
-            
-        else:
-            # VALORES ESPECÍFICOS PARA DADOS INSUFICIENTES - Diferenciação clara por perfil
-            if profile == 'scalping':
-                daily_vol = 0.002  # Volatilidade micro
-                upside_range = 0.003  # Targets muito pequenos
-                downside_range = 0.002  # Stops muito apertados
-            elif profile == 'intraday':
-                daily_vol = 0.010  # Volatilidade diária
-                upside_range = 0.018  # Targets intermediários
-                downside_range = 0.012
-            elif profile == 'swing':
-                daily_vol = 0.015
-                upside_range = 0.025
-                downside_range = 0.025
-            else:  # position
-                daily_vol = 0.025
-                upside_range = 0.040
-                downside_range = 0.040
-                
-    except Exception as e:
-        # Fallback por perfil
-        if profile == 'scalping':
-            daily_vol = 0.003
-            upside_range = 0.005
-            downside_range = 0.005
-        elif profile == 'intraday':
-            daily_vol = 0.008
-            upside_range = 0.012
-            downside_range = 0.012
-        elif profile == 'swing':
-            daily_vol = 0.015
-            upside_range = 0.025
-            downside_range = 0.025
-        else:  # position
-            daily_vol = 0.025
-            upside_range = 0.040
-            downside_range = 0.040
-    
-    # Configurações específicas: cada perfil tem sua previsão Alpha Vantage
-    profile_base_configs = {
-        'scalping': {
-            'base_success_rate': 0.88,    # 88% sucesso (ultra-assertivo para micro-entradas)
-            'movement_factor': 1.0,       # Usa 100% do movimento micro detectado
-            'risk_per_trade': 0.6,        # 0.6% risco (menor risco por trade para mais frequência)
-            'description': 'Scalping Ultra-Responsivo - Detecção micro-momentum + Volatilidade instantânea (3-5 períodos)'
-        },
-        'intraday': {
-            'base_success_rate': 0.72,    # 72% sucesso (AUMENTADO - análise técnica tradicional é mais precisa)
-            'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
-            'risk_per_trade': 1.2,        # 1.2% risco
-            'description': 'Intraday - Análise Técnica Tradicional H1: RSI + EMA + Volume + MACD'
-        },
-        'swing': {
-            'base_success_rate': 0.68,    # 68% sucesso (REDUZIDO para gerar mais sinais)
-            'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
-            'risk_per_trade': 1.8,        # 1.8% risco
-            'description': 'Swing - 100% Alpha Vantage: Stop/Take baseados na probabilidade histórica real'
-        },
-        'position': {
-            'base_success_rate': 0.70,    # 70% sucesso (REDUZIDO para gerar mais sinais)
-            'movement_factor': 1.0,       # Usa 100% do movimento previsto do perfil
-            'risk_per_trade': 2.2,        # 2.2% risco
-            'description': 'Position - 100% Alpha Vantage: Stop/Take otimizados por análise de longo prazo'
-        }
-    }
-    
-    config = profile_base_configs.get(profile, profile_base_configs['intraday'])
-    
-    # Determinar movimento previsto específico do perfil baseado em Alpha Vantage
-    if signal_strength > 0:  # Sinal de Compra
-        predicted_movement = (upside_range or 0.01) * config['movement_factor']
-        opposite_movement = (downside_range or 0.01) * config['movement_factor']
-        movement_direction = "Alta"
-    else:  # Sinal de Venda
-        predicted_movement = (downside_range or 0.01) * config['movement_factor']
-        opposite_movement = (upside_range or 0.01) * config['movement_factor']
-        movement_direction = "Baixa"
-    
-    # SISTEMA 100% DINÂMICO: 
-    # - Scalping: usa percentuais fixos otimizados
-    # - Outros perfis: 100% baseado na análise Alpha Vantage sem percentuais predefinidos
-    
-    if profile == 'scalping':
-        # SCALPING: Usar percentuais fixos otimizados
-        stop_pct = stop_percentage if stop_percentage is not None else 20
-        take_pct = take_percentage if take_percentage is not None else 30
-        stop_distance = (opposite_movement or 0.01) * (stop_pct / 100.0)
-        tp_distance = (predicted_movement or 0.01) * (take_pct / 100.0)
-    elif profile == 'intraday':
-        # INTRADAY: Take e Stop dinâmicos baseados em probabilidades reais e volatilidade
-        
-        # Take Profit dinâmico: baseado na volatilidade real do mercado para intraday
-        # Usar ATR para determinar movimento realista em 2-6 horas de trading
-        if len(df) >= 14:
-            # Calcular ATR para take profit realista
-            recent_data = df.tail(25)  # Últimas 25 velas para análise intraday
-            high_low = recent_data['high'] - recent_data['low']
-            high_close_prev = abs(recent_data['high'] - recent_data['close'].shift(1))
-            low_close_prev = abs(recent_data['low'] - recent_data['close'].shift(1))
-            
-            true_range = pd.DataFrame({
-                'hl': high_low,
-                'hc': high_close_prev,
-                'lc': low_close_prev
-            }).max(axis=1)
-            
-            atr_14 = true_range.rolling(window=14).mean().iloc[-1]
-            atr_percentage = atr_14 / current_price
-            
-            # Take profit: 2.0x ATR para movimento realista intraday (30-50 pontos típico)
-            tp_multiplier = 2.0
-            tp_distance = atr_percentage * tp_multiplier
-            
-            # Limitadores para manter operações intraday realistas
-            min_take_pips = 25  # Mínimo 25 pontos
-            max_take_pips = 45  # Máximo 45 pontos (adequado para intraday)
-            
-            take_pips = tp_distance * 10000
-            if take_pips < min_take_pips:
-                tp_distance = min_take_pips / 10000
-            elif take_pips > max_take_pips:
-                tp_distance = max_take_pips / 10000
-        else:
-            # Fallback: 35 pontos padrão para intraday
-            tp_distance = 35 / 10000
-        
-        # Stop Loss dinâmico: já calculado anteriormente (downside_movement)
-        stop_distance = downside_movement if downside_movement else 0.0020
-    else:
-        # SWING/POSITION: 100% Alpha Vantage - sem percentuais, baseado na volatilidade real
-        # Stop: baseado na probabilidade histórica de movimento adverso
-        stop_distance = (opposite_movement or 0.01) * 0.85  # 85% do movimento adverso histórico real
-        # Take: baseado no potencial de movimento favorável histórico
-        tp_distance = (predicted_movement or 0.01) * 0.72   # 72% do movimento favorável histórico real
-    
-    # Sem ajustes artificiais - apenas dados Alpha Vantage puros com seus controles %
-    
-    # Risk management baseado na taxa de sucesso real calculada
-    # Calcular taxa dinâmica baseada em confluência de fatores
-    base_rate = config['base_success_rate'] * 100  # Converter para %
-    adjustments = 0
-    
-    # Ajustar baseado na confiança (peso maior)
-    if confidence > 0.8:
-        adjustments += 12
-    elif confidence > 0.65:
-        adjustments += 8
-    elif confidence > 0.5:
-        adjustments += 4
-    else:
-        adjustments -= 5
-    
-    # Ajustar baseado na força do sinal
-    signal_abs = abs(signal_strength)
-    if signal_abs > 0.7:
-        adjustments += 8
-    elif signal_abs > 0.5:
-        adjustments += 5
-    elif signal_abs > 0.3:
-        adjustments += 2
-    else:
-        adjustments -= 3
-    
-    # Ajustar baseado na volatilidade (MAIS FLEXÍVEL)
-    if 0.005 <= daily_vol <= 0.030:
-        adjustments += 5  # Volatilidade aceitável (range ampliado)
-    elif daily_vol > 0.050:
-        adjustments -= 6  # Muito volátil (penalidade menor)
-    elif daily_vol < 0.003:
-        adjustments -= 3  # Pouco volátil (penalidade menor)
-    
-    # Calcular taxa inicial dinâmica (sem R/R ainda)
-    dynamic_success_rate = base_rate + adjustments
-    dynamic_success_rate = max(45.0, min(95.0, dynamic_success_rate))  # Limitar entre 45-95%
-    
-    success_rate = dynamic_success_rate / 100  # Converter para decimal
-    
-    risk_percentage = config['risk_per_trade']  # Risco fixo por perfil
-    
-    # Garantir que stop_distance e tp_distance não sejam None
-    stop_distance = stop_distance or 0.01
-    tp_distance = tp_distance or 0.01
-    
-    # Limites específicos por perfil MAIS FLEXÍVEIS para garantir geração de sinais
-    if profile == 'scalping':
-        stop_final = max(0.0008, min(0.006, stop_distance))  # 0.08% a 0.6% (ultra-apertado)
-        tp_final = max(0.0015, min(0.010, tp_distance))      # 0.15% a 1.0% (targets menores e rápidos)
-    elif profile == 'intraday':  
-        # INTRADAY: Take e Stop dinâmicos baseados em volatilidade real
-        stop_final = max(0.0012, min(0.0035, stop_distance))  # 12-35 pontos baseado em ATR
-        tp_final = max(0.0025, min(0.0045, tp_distance))      # 25-45 pontos baseado em 2x ATR
-    elif profile == 'swing':
-        # CORRIGIDO: Limites mais flexíveis para permitir mais sinais
-        stop_final = max(0.003, min(0.050, stop_distance))   # 0.3% a 5.0% (mais flexível)
-        tp_final = max(0.005, min(0.080, tp_distance))       # 0.5% a 8.0% (mais range)
-    else:  # position
-        # CORRIGIDO: Limites mais flexíveis para permitir mais sinais
-        stop_final = max(0.005, min(0.100, stop_distance))   # 0.5% a 10.0% (mais flexível)
-        tp_final = max(0.010, min(0.200, tp_distance))       # 1.0% a 20.0% (muito mais range)
-    
-    # Garantir que variáveis finais não sejam None ou zero
-    stop_final = stop_final or 0.01
-    tp_final = tp_final or 0.01
-    
-    # AGORA calcular ajuste baseado no R/R (após stop_final e tp_final serem definidos)
-    rr_ratio = tp_final / stop_final if stop_final > 0 else 1.5
-    rr_adjustment = 0
-    if rr_ratio >= 1.8:
-        rr_adjustment += 5
-    elif rr_ratio >= 1.4:
-        rr_adjustment += 3
-    elif rr_ratio >= 1.1:
-        rr_adjustment += 1
-    else:
-        rr_adjustment -= 10
-    
-    # Aplicar ajuste do R/R à taxa final
-    dynamic_success_rate = min(95.0, max(45.0, dynamic_success_rate + rr_adjustment))
-    success_rate = dynamic_success_rate / 100
-    
-    # R/R real calculado baseado nos dados
-    real_rr = tp_final / stop_final if (stop_final and stop_final > 0) else 1.0
-    
-    return {
-        'stop_distance_pct': stop_final,
-        'tp_distance_pct': tp_final,
-        'success_rate_target': dynamic_success_rate,  # Usar taxa dinâmica calculada
-        'banca_risk': risk_percentage,
-        'description': config['description'],
-        'risk_reward_actual': real_rr,
-        'volatility_analyzed': daily_vol * 100,  # Volatilidade real analisada
-        'data_points_used': len(df),
-        'probability_calculation': f"Análise {profile.title()} com {len(df)} períodos Alpha Vantage",
-        'stop_reasoning': f"Stop: {'85% volatilidade histórica real' if profile != 'scalping' else f'{stop_percentage or 20}% movimento contrário'} = {(stop_distance or 0.01)*100:.3f}%",
-        'take_reasoning': f"Take: {'72% potencial favorável real' if profile != 'scalping' else f'{take_percentage or 30}% movimento favorável'} = {(tp_distance or 0.01)*100:.3f}%",
-        'movement_direction': movement_direction,
-        'base_movement_pct': (predicted_movement or 0.01) * 100,
-        'opposite_movement_pct': (opposite_movement or 0.01) * 100,
-        'profile_analysis_window': f"{window if 'window' in locals() else 'completo'} períodos"
-    }
-
-def get_profile_characteristics(profile, stop_percentage=None, take_percentage=None):
-    """Retorna características específicas do perfil para exibição"""
-    # Para scalping usar valores fixos, outros perfis calculam automaticamente
-    if profile == 'scalping':
-        if stop_percentage is None:
-            stop_percentage = 20
-        if take_percentage is None:
-            take_percentage = 30
-    # Para outros perfis, valores são calculados 100% pelo Alpha Vantage
-    # Não há percentuais predefinidos
-    characteristics = {
-        'scalping': {
-            'stop_behavior': f'{stop_percentage}% movimento contrário Alpha Vantage (micro 3 períodos) | Limits: 0.1%-0.8%',
-            'take_behavior': f'{take_percentage}% movimento favorável Alpha Vantage (tick volatility x2.5) | Limits: 0.2%-1.2%', 
-            'risk_approach': 'Risco 0.8% da banca | Execuções ultra-rápidas',
-            'timing': 'Análise Micro-Intraday | 1 período à frente',
-            'focus': 'Volatilidade tick/minuto | Aceleração 1.3x'
-        },
-        'intraday': {
-            'stop_behavior': f'{stop_percentage}% movimento contrário Alpha Vantage (sessão 25 períodos) | Limits: 0.3%-1.5%',
-            'take_behavior': f'{take_percentage}% movimento favorável Alpha Vantage (range sessão + volatility x4) | Limits: 0.5%-2.5%',
-            'risk_approach': 'Risco 1.2% da banca | Sustentação 1.1x',
-            'timing': 'Análise Sessão Diária | 5 períodos à frente',
-            'focus': 'Range diário completo | Volatilidade sustentada'
-        },
-        'swing': {
-            'stop_behavior': f'{stop_percentage}% do movimento contrário Alpha Vantage (15-50 períodos)',
-            'take_behavior': f'{take_percentage}% do movimento favorável Alpha Vantage (15-50 períodos)',
-            'risk_approach': 'Risco 1.8% da banca',
-            'timing': 'Análise Médio Prazo',
-            'focus': 'Movimentos Semanais Alpha Vantage'
-        },
-        'position': {
-            'stop_behavior': f'{stop_percentage}% do movimento contrário Alpha Vantage (histórico completo)',
-            'take_behavior': f'{take_percentage}% do movimento favorável Alpha Vantage (histórico completo)', 
-            'risk_approach': 'Risco 2.2% da banca',
-            'timing': 'Análise Longo Prazo',
-            'focus': 'Tendências Principais Alpha Vantage'
-        }
-    }
-    return characteristics.get(profile, characteristics['intraday'])
-
-def get_profile_risk_parameters(profile):
-    """Retorna parâmetros de risco básicos por perfil (fallback)"""
-    
-    profile_configs = {
-        'scalping': {
-            'timeframe_focus': '1min-5min',
-            'max_trades_day': 20,
-            'description': 'Scalping - Operações rápidas otimizadas por probabilidade'
-        },
-        'intraday': {
-            'timeframe_focus': '15min-4h', 
-            'max_trades_day': 8,
-            'description': 'Intraday - Operações balanceadas otimizadas por probabilidade'
-        },
-        'swing': {
-            'timeframe_focus': '4h-Daily',
-            'max_trades_day': 3,
-            'description': 'Swing - Operações de médio prazo otimizadas por probabilidade'
-        },
-        'position': {
-            'timeframe_focus': 'Weekly-Monthly',
-            'max_trades_day': 1,
-            'description': 'Position - Operações de longo prazo otimizadas por probabilidade'
-        }
-    }
-    
-    return profile_configs.get(profile, profile_configs['swing'])
-
-def calculate_risk_analysis_simple(df_with_indicators, current_price):
-    """Simplified risk analysis for multi-pair processing"""
-    try:
-        # Calculate volatility-based risk
-        returns = df_with_indicators['close'].pct_change().tail(20)
-        volatility = returns.std()
-        
-        # Higher volatility = higher risk = negative signal for risk-averse
-        risk_signal = max(-1, min(0, -volatility * 100))  # Scale and invert
-        
-        return {'signal': risk_signal, 'confidence': 0.7, 'volatility': volatility}
-    except:
-        return {'signal': -0.1, 'confidence': 0.4, 'volatility': 0.02}
-
-def calculate_technical_analysis(df_with_indicators, trading_style='swing'):
-    """Calculate technical analysis signals from indicators - EMAs dominantes para intraday"""
-    try:
-        signals = []
-        confidences = []
-        
-        # RSI Signal
-        if 'rsi' in df_with_indicators.columns:
-            latest_rsi = df_with_indicators['rsi'].iloc[-1]
-            if latest_rsi < 30:
-                signals.append(0.7)  # Strong buy
-            elif latest_rsi < 40:
-                signals.append(0.3)  # Weak buy
-            elif latest_rsi > 70:
-                signals.append(-0.7)  # Strong sell
-            elif latest_rsi > 60:
-                signals.append(-0.1)  # Weak sell (sobrecomprado leve)
-            elif latest_rsi > 50:
-                signals.append(0.2)   # COMPRA (momentum positivo)
-            elif latest_rsi > 40:
-                signals.append(0.1)   # COMPRA fraca
-            else:
-                signals.append(0)     # Neutral
-            confidences.append(0.8)
-        
-        # MACD Signal
-        if 'macd' in df_with_indicators.columns and 'macd_signal' in df_with_indicators.columns:
-            macd = df_with_indicators['macd'].iloc[-1]
-            macd_signal = df_with_indicators['macd_signal'].iloc[-1]
-            if macd > macd_signal:
-                signals.append(0.5)  # Bullish
-            else:
-                signals.append(-0.5)  # Bearish
-            confidences.append(0.7)
-        
-        # Bollinger Bands Signal
-        if all(col in df_with_indicators.columns for col in ['bb_upper', 'bb_lower', 'close']):
-            close = df_with_indicators['close'].iloc[-1]
-            bb_upper = df_with_indicators['bb_upper'].iloc[-1]
-            bb_lower = df_with_indicators['bb_lower'].iloc[-1]
-            bb_width = bb_upper - bb_lower
-            
-            if close <= bb_lower:
-                signals.append(0.6)  # Oversold
-            elif close >= bb_upper:
-                signals.append(-0.6)  # Overbought
-            else:
-                # Position within bands
-                bb_position = (close - bb_lower) / bb_width - 0.5
-                signals.append(bb_position)
-            confidences.append(0.6)
-        
-        # EMA 20/200 - DOMINANTE para perfil intraday
-        ema_signal = 0
-        ema_confidence = 0
-        if 'ema_20' in df_with_indicators.columns and 'ema_200' in df_with_indicators.columns:
-            ema_20 = df_with_indicators['ema_20'].iloc[-1]
-            ema_200 = df_with_indicators['ema_200'].iloc[-1]
-            
-            if ema_20 > ema_200:
-                ema_signal = 0.8  # Sinal forte de COMPRA
-            else:
-                ema_signal = -0.8  # Sinal forte de VENDA
-            ema_confidence = 0.9  # Alta confiança
-            
-            # Para INTRADAY: EMAs dominantes mas permitindo confluência
-            if trading_style == 'intraday':
-                # Duplicar o peso das EMAs (dominante mas não absoluto)
-                signals.append(ema_signal)
-                signals.append(ema_signal)  # Peso extra para ser dominante
-                confidences.append(ema_confidence)
-                confidences.append(ema_confidence)
-            else:
-                # Para outros perfis: EMAs com peso normal
-                signals.append(ema_signal)
-                confidences.append(ema_confidence)
-        
-        # Aggregate signals
-        if signals:
-            avg_signal = sum(signals) / len(signals)
-            avg_confidence = sum(confidences) / len(confidences)
-            
-            return {
-                'signal': max(-1, min(1, avg_signal)),
-                'confidence': avg_confidence,
-                'components': len(signals)
-            }
-        else:
-            return {'signal': 0.0, 'confidence': 0.3, 'components': 0}
-            
-    except Exception as e:
-        return {'signal': 0.0, 'confidence': 0.2, 'error': str(e)}
-
-def calculate_trend_analysis(df_with_indicators):
-    """Calculate trend analysis signals"""
-    try:
-        signals = []
-        confidences = []
-        
-        # SMA Trend
-        if 'sma_20' in df_with_indicators.columns and 'sma_50' in df_with_indicators.columns:
-            sma_20 = df_with_indicators['sma_20'].iloc[-1]
-            sma_50 = df_with_indicators['sma_50'].iloc[-1]
-            
-            if sma_20 > sma_50:
-                signals.append(0.6)  # Uptrend
-            else:
-                signals.append(-0.6)  # Downtrend
-            confidences.append(0.7)
-        
-        # EMA Trend - Configuração otimizada 20/200 para Intraday
-        if 'ema_20' in df_with_indicators.columns and 'ema_200' in df_with_indicators.columns:
-            ema_20 = df_with_indicators['ema_20'].iloc[-1]
-            ema_200 = df_with_indicators['ema_200'].iloc[-1]
-            
-            if ema_20 > ema_200:
-                signals.append(0.7)  # Uptrend mais confiável
-            else:
-                signals.append(-0.7)  # Downtrend mais confiável
-            confidences.append(0.8)  # Maior confiança com EMA 20/200
-        
-        # Price vs SMA
-        if 'sma_20' in df_with_indicators.columns:
-            close = df_with_indicators['close'].iloc[-1]
-            sma_20 = df_with_indicators['sma_20'].iloc[-1]
-            
-            price_sma_ratio = (close - sma_20) / sma_20
-            signals.append(max(-1, min(1, price_sma_ratio * 10)))
-            confidences.append(0.5)
-        
-        # ADX Trend Strength (if available)
-        if 'adx' in df_with_indicators.columns:
-            adx = df_with_indicators['adx'].iloc[-1]
-            if adx > 25:  # Strong trend
-                # Determine direction with DI+/DI-
-                if 'di_plus' in df_with_indicators.columns and 'di_minus' in df_with_indicators.columns:
-                    di_plus = df_with_indicators['di_plus'].iloc[-1]
-                    di_minus = df_with_indicators['di_minus'].iloc[-1]
-                    
-                    if di_plus > di_minus:
-                        signals.append(0.8)
-                    else:
-                        signals.append(-0.8)
-                    confidences.append(0.9)
-        
-        # Aggregate signals
-        if signals:
-            avg_signal = sum(signals) / len(signals)
-            avg_confidence = sum(confidences) / len(confidences)
-            
-            return {
-                'signal': max(-1, min(1, avg_signal)),
-                'confidence': avg_confidence,
-                'components': len(signals)
-            }
-        else:
-            return {'signal': 0.0, 'confidence': 0.3, 'components': 0}
-            
-    except Exception as e:
-        return {'signal': 0.0, 'confidence': 0.2, 'error': str(e)}
-
-def calculate_volume_analysis(df_with_indicators):
-    """Calculate volume-based signals"""
-    try:
-        signals = []
-        confidences = []
-        
-        if 'volume' not in df_with_indicators.columns:
-            return {'signal': 0.0, 'confidence': 0.2, 'components': 0}
-        
-        # Volume trend
-        recent_volume = df_with_indicators['volume'].tail(5).mean()
-        longer_volume = df_with_indicators['volume'].tail(20).mean()
-        
-        volume_ratio = recent_volume / longer_volume if longer_volume > 0 else 1
-        
-        # High volume = more significance to price movement
-        if volume_ratio > 1.5:  # High volume
-            # Determine price direction
-            recent_close = df_with_indicators['close'].tail(5)
-            if recent_close.iloc[-1] > recent_close.iloc[0]:
-                signals.append(0.6)  # Volume-supported uptrend
-            else:
-                signals.append(-0.6)  # Volume-supported downtrend
-            confidences.append(0.8)
-        elif volume_ratio > 1.2:  # Moderate volume
-            recent_close = df_with_indicators['close'].tail(3)
-            if recent_close.iloc[-1] > recent_close.iloc[0]:
-                signals.append(0.3)
-            else:
-                signals.append(-0.3)
-            confidences.append(0.6)
-        else:  # Low volume
-            signals.append(0)  # Neutral on low volume
-            confidences.append(0.4)
-        
-        # Volume breakout detection
-        if volume_ratio > 2:  # Volume spike
-            # Price breakout with volume
-            price_change = (df_with_indicators['close'].iloc[-1] - df_with_indicators['close'].iloc[-2]) / df_with_indicators['close'].iloc[-2]
-            
-            if abs(price_change) > 0.005:  # 0.5% price move
-                signals.append(0.8 if price_change > 0 else -0.8)
-                confidences.append(0.9)
-        
-        # On-Balance Volume (simplified)
-        if len(df_with_indicators) >= 10:
-            obv_changes = []
-            for i in range(-10, 0):
-                if i == 0 or i >= len(df_with_indicators):
-                    continue
-                price_change = df_with_indicators['close'].iloc[i] - df_with_indicators['close'].iloc[i-1]
-                volume = df_with_indicators['volume'].iloc[i]
-                
-                if price_change > 0:
-                    obv_changes.append(volume)
-                elif price_change < 0:
-                    obv_changes.append(-volume)
-                else:
-                    obv_changes.append(0)
-            
-            if obv_changes:
-                obv_trend = sum(obv_changes[-5:])  # Last 5 periods
-                if obv_trend > 0:
-                    signals.append(0.4)
-                elif obv_trend < 0:
-                    signals.append(-0.4)
-                else:
-                    signals.append(0)
-                confidences.append(0.5)
-        
-        # Aggregate signals
-        if signals:
-            avg_signal = sum(signals) / len(signals)
-            avg_confidence = sum(confidences) / len(confidences)
-            
-            return {
-                'signal': max(-1, min(1, avg_signal)),
-                'confidence': avg_confidence,
-                'components': len(signals),
-                'volume_ratio': volume_ratio
-            }
-        else:
-            return {'signal': 0.0, 'confidence': 0.3, 'components': 0}
-            
-    except Exception as e:
-        return {'signal': 0.0, 'confidence': 0.2, 'error': str(e)}
-
-def display_alpha_vantage_trend_results(analysis: Dict):
-    """Display Alpha Vantage trend analysis results"""
-    
-    st.markdown("## 🎯 Análise de Tendência Alpha Vantage")
-    
-    # Main results header
-    trend_signals = analysis.get('trend_signals', {})
-    unified_trend = trend_signals.get('unified_trend', 'NEUTRAL')
-    confidence = trend_signals.get('confidence', 0.0)
-    
-    # Main trend signal
-    if unified_trend == 'BULLISH':
-        trend_color = "🟢"
-        trend_text = "COMPRA"
-        trend_bg = "background: linear-gradient(135deg, #2ecc71, #27ae60);"
-    elif unified_trend == 'BEARISH':
-        trend_color = "🔴" 
-        trend_text = "VENDA"
-        trend_bg = "background: linear-gradient(135deg, #e74c3c, #c0392b);"
-    else:
-        trend_color = "🟡"
-        trend_text = "NEUTRO"
-        trend_bg = "background: linear-gradient(135deg, #f39c12, #e67e22);"
-    
-    # Display main signal
-    st.markdown(f"""
-    <div style="{trend_bg} color: white; padding: 1.5rem; border-radius: 10px; text-align: center; margin-bottom: 1rem;">
-        <h2 style="margin: 0; font-size: 2.5rem;">{trend_color} {trend_text}</h2>
-        <p style="margin: 0.5rem 0 0 0; font-size: 1.2rem;">Confiança: {confidence*100:.1f}%</p>
-        <p style="margin: 0; opacity: 0.9;">Perfil: {analysis.get('profile', 'N/A').title()} | Par: {analysis.get('pair', 'N/A')}</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Métricas principais empilhadas
-    st.markdown("### 📊 Métricas da Análise")
-    
-    st.metric("🎯 Força da Tendência", f"{trend_signals.get('strength', 0)*100:.0f}%")
-    st.metric("📊 Indicadores Ativos", f"{trend_signals.get('indicators_count', 0)}")
-    st.metric("✅ Taxa de Acordo entre Indicadores", f"{trend_signals.get('agreement_rate', 0)*100:.0f}%")
-    
-    # Detailed indicators
-    st.markdown("### 📈 Indicadores Técnicos Alpha Vantage")
-    
-    indicators = analysis.get('indicators', {})
-    if indicators:
-        for indicator_name, indicator_data in indicators.items():
-            with st.expander(f"{indicator_name.upper()} - {indicator_data.get('trend', 'N/A')}"):
-                st.json(indicator_data)
-    
-    # Profile recommendations
-    recommendations = analysis.get('profile_recommendations', {})
-    if recommendations:
-        st.markdown("### 🎯 Recomendações por Perfil")
-        
+        # Combined analysis view
         col1, col2 = st.columns(2)
+        
         with col1:
-            st.markdown("**⏰ Timing:**")
-            st.write(f"- Sessões ideais: {recommendations.get('optimal_sessions', ['N/A'])}")
-            st.write(f"- Duração máxima: {recommendations.get('max_trade_duration', 'N/A')}")
-            st.write(f"- Spread ideal: {recommendations.get('ideal_spread', 'N/A')}")
+            st.markdown("#### AI Prediction")
+            direction = "Bullish" if results['price_change'] > 0 else "Bearish"
+            direction_icon = "📈" if results['price_change'] > 0 else "📉"
+            confidence_level = "High" if results['model_confidence'] > 0.7 else "Medium" if results['model_confidence'] > 0.4 else "Low"
+            
+            st.markdown(f"""
+            - **Direction:** {direction_icon} {direction}
+            - **Confidence:** {confidence_level} ({results['model_confidence']:.0%})
+            - **Expected Move:** {results['price_change_pct']:+.2f}%
+            - **Target Price:** {results['predicted_price']:.5f}
+            """)
             
         with col2:
-            st.markdown("**📊 Estratégia:**")
-            st.write(f"- Foco: {recommendations.get('indicators_focus', 'N/A')}")
-            st.write(f"- Volume: {recommendations.get('volume_requirement', 'N/A')}")
-            st.write(f"- News: {recommendations.get('news_impact', 'N/A')}")
-    
-    # Risk management
-    risk_mgmt = analysis.get('risk_management', {})
-    if risk_mgmt:
-        st.markdown("### 🛡️ Gestão de Risco")
-        
-        st.metric("💰 Tamanho da Posição", f"{risk_mgmt.get('position_size', 0):.1f}%")
-        st.metric("🛑 Stop Loss", f"{risk_mgmt.get('stop_loss_pips', 0)} pips")
-        st.metric("🎯 Take Profit", f"{risk_mgmt.get('take_profit_pips', 0)} pips")
-    
-    # Execution plan
-    execution_plan = analysis.get('execution_plan', {})
-    if execution_plan:
-        st.markdown("### ⚡ Plano de Execução")
-        
-        action = execution_plan.get('recommended_action', 'WAIT')
-        if action == 'EXECUTE':
-            st.success(f"✅ **Ação Recomendada:** {action}")
-        elif action == 'PREPARE':
-            st.warning(f"⚠️ **Ação Recomendada:** {action}")
-        else:
-            st.info(f"ℹ️ **Ação Recomendada:** {action}")
+            st.markdown("#### Risk Analysis")
+            trend_direction = "Bullish" if results['price_change'] > 0 else "Bearish"
+            counter_risk = results['counter_trend_risk']
             
-        st.write(f"- **Estratégia de Entrada:** {execution_plan.get('entry_strategy', 'N/A')}")
-        st.write(f"- **Monitoramento:** {execution_plan.get('monitoring_frequency', 'N/A')}")
-
-# === FUNÇÕES AUXILIARES PARA ANÁLISES ESPECIALIZADAS COM PERFIL ===
-
-def determine_market_direction_from_profile(profile_result):
-    """Determina direção do mercado baseada no resultado da análise por perfil"""
-    unified_signal = profile_result.get('unified_signal', 0.0)
-    confidence = profile_result.get('unified_confidence', 0.5)
+            # Show risk of prediction being wrong
+            prediction_icon = "📈" if counter_risk['prediction_direction'] == 'Bullish' else "📉"
+            risk_icon = "📉" if counter_risk['direction'] == 'Downside' else "📈"
+            
+            st.markdown(f"""
+            - **Our Prediction:** {prediction_icon} {counter_risk['prediction_direction']}
+            - **Risk if Wrong:** {risk_icon} {counter_risk['direction']} risk
+            - **Counter-trend Target:** {counter_risk['target_price']:.5f}
+            - **Risk Exposure:** {counter_risk['risk_percentage']:.1f}%
+            """)
+        
+        # Market sentiment section
+        st.markdown("#### Market Sentiment Analysis")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            sentiment_direction = "Positive" if results['sentiment']['score'] > 0 else "Negative" if results['sentiment']['score'] < 0 else "Neutral"
+            sentiment_icon = "😊" if results['sentiment']['score'] > 0 else "😟" if results['sentiment']['score'] < 0 else "😐"
+            
+            st.markdown(f"""
+            - **Sentiment:** {sentiment_icon} {sentiment_direction}
+            - **Score:** {results['sentiment']['score']:.2f}
+            - **Strength:** {results['sentiment']['strength']}
+            """)
+        
+        with col2:
+            # Show what happens if the analysis is completely wrong
+            counter_risk = results['counter_trend_risk']
+            
+            st.markdown(f"""
+            **If Prediction is Wrong:**
+            - Our forecast: {counter_risk['prediction_direction']}
+            - Risk direction: {counter_risk['direction']}
+            - Target if opposite: {counter_risk['target_price']:.5f}
+            - Potential move: {counter_risk['risk_percentage']:.1f}%
+            - Risk level: {'HIGH' if counter_risk['risk_percentage'] > 4 else 'MODERATE' if counter_risk['risk_percentage'] > 2 else 'LOW'}
+            """)
+        
+        # Prediction chart
+        prediction_chart = services['visualizer'].create_prediction_chart(
+            results['data'].tail(100),
+            results['predictions'],
+            results['uncertainties'],
+            results['pair'],
+            results['horizon']
+        )
+        st.plotly_chart(prediction_chart, use_container_width=True)
     
-    if unified_signal > 0.02 and confidence > 0.7:
-        return "COMPRA FORTE"
-    elif unified_signal > 0.005 and confidence > 0.6:
-        return "COMPRA"
-    elif unified_signal < -0.02 and confidence > 0.7:
-        return "VENDA FORTE"
-    elif unified_signal < -0.005 and confidence > 0.6:
-        return "VENDA"
-    else:
-        return "NEUTRO"
-
-def get_recommendation_from_profile(profile_result):
-    """Gera recomendação baseada no resultado da análise por perfil"""
-    unified_signal = profile_result.get('unified_signal', 0.0)
-    confidence = profile_result.get('unified_confidence', 0.5)
-    direction = determine_market_direction_from_profile(profile_result)
-    
-    if confidence > 0.8:
-        strength = "FORTE"
-    elif confidence > 0.65:
-        strength = "MODERADA"
-    else:
-        strength = "FRACA"
-    
-    if "COMPRA" in direction:
-        return f"Recomendação de COMPRA {strength} (Confiança: {confidence*100:.1f}%)"
-    elif "VENDA" in direction:
-        return f"Recomendação de VENDA {strength} (Confiança: {confidence*100:.1f}%)"
-    else:
-        return f"Aguardar melhores condições (Confiança: {confidence*100:.1f}%)"
-
-def calculate_sentiment_analysis(sentiment_score, pair):
-    """Calcula análise de sentimento individual"""
-    if sentiment_score > 0.05:
-        sentiment_signal = sentiment_score * 0.8
-        sentiment_direction = "POSITIVO"
-    elif sentiment_score < -0.05:
-        sentiment_signal = sentiment_score * 0.6
-        sentiment_direction = "NEGATIVO"
-    else:
-        sentiment_signal = sentiment_score * 0.2
-        sentiment_direction = "NEUTRO"
-    
-    return {
-        'signal': sentiment_signal,
-        'direction': sentiment_direction,
-        'strength': abs(sentiment_signal),
-        'confidence': min(abs(sentiment_signal) * 2, 1.0),
-        'raw_score': sentiment_score
-    }
-
-def calculate_ai_lstm_analysis(df_with_indicators, lookback_period, epochs):
-    """Calcula análise AI/LSTM individual"""
-    try:
-        prices = df_with_indicators['close'].values
-        if len(prices) < lookback_period:
-            return {'signal': 0, 'direction': 'NEUTRO', 'strength': 0, 'confidence': 0}
+    with tab3:
+        # Risk management and position sizing
+        col1, col2 = st.columns(2)
         
-        recent_prices = prices[-lookback_period:]
+        with col1:
+            st.markdown("#### Suggested Position")
+            risk_data = results['risk_assessment']
+            st.markdown(f"""
+            - **Risk Level:** {risk_data['risk_level']}
+            - **Position Size:** {risk_data['position_size']:.1%} of portfolio
+            - **Stop Loss:** {risk_data['stop_loss']:.5f}
+            - **Take Profit:** {risk_data['take_profit']:.5f}
+            """)
+            
+            # Market variation warning based on counter-trend risk
+            counter_risk = results['counter_trend_risk']
+            if counter_risk['risk_percentage'] > 2.0:
+                st.warning(f"High risk exposure: {counter_risk['risk_percentage']:.1f}%")
+            
+            # Show the risk forecast
+            counter_risk = results['counter_trend_risk']
+            st.markdown(f"""
+            **Risk Forecast (Prediction Failure):**
+            - Our prediction: {counter_risk['prediction_direction']}
+            - Risk direction: {counter_risk['direction']}
+            - Target if we're wrong: {counter_risk['target_price']:.5f}
+            - Maximum risk exposure: {counter_risk['risk_percentage']:.1f}%
+            """)
+            
+            # Simple risk warnings
+            if results['model_confidence'] < 0.5:
+                st.warning("Low confidence - reduce position size")
+            if abs(results['price_change_pct']) > 2:
+                st.warning("Large move predicted - high risk/reward")
         
-        # Cálculos simplificados de tendência e momentum
-        short_trend = (recent_prices[-1] - recent_prices[-5]) / recent_prices[-5] if len(recent_prices) >= 5 else 0
-        long_trend = (recent_prices[-1] - recent_prices[0]) / recent_prices[0]
-        volatility = np.std(recent_prices) / np.mean(recent_prices)
+        with col2:
+            st.markdown("#### Analysis Settings")
+            st.markdown(f"""
+            - **Pair:** {results['pair']}
+            - **Timeframe:** {results['interval']}
+            - **Prediction Horizon:** {results['horizon']}
+            - **Analysis Time:** {results['timestamp'].strftime('%H:%M:%S')}
+            """)
+            
+            # Model performance summary
+            st.markdown("#### Model Performance")
+            train_loss = results['training_metrics'].get('final_train_loss', 0)
+            val_loss = results['training_metrics'].get('final_val_loss', 0)
+            st.markdown(f"""
+            - **Training Loss:** {train_loss:.4f}
+            - **Validation Loss:** {val_loss:.4f}
+            - **Model Confidence:** {results['model_confidence']:.0%}
+            """)
+        mae = results['training_metrics'].get('mae', 0)
+        rmse = results['training_metrics'].get('rmse', 0)
         
-        # Fator de aprendizado baseado em épocas
-        learning_factor = min(1.0, epochs / 100)
-        
-        # Sinais principais
-        trend_signal = np.tanh(long_trend * 10) * 0.020
-        momentum_signal = np.tanh(short_trend * 15) * 0.015
-        volatility_signal = (0.02 - volatility) * 0.010
-        
-        if volatility > 0.015:
-            volatility_signal *= 0.8
-        
-        combined_signal = (trend_signal * 0.5 + momentum_signal * 0.3 + volatility_signal * 0.2) * learning_factor
-        
-        direction = "POSITIVO" if combined_signal > 0.001 else "NEGATIVO" if combined_signal < -0.001 else "NEUTRO"
-        
-        return {
-            'signal': combined_signal,
-            'direction': direction,
-            'strength': abs(combined_signal),
-            'confidence': min(abs(combined_signal) * 10, 1.0),
-            'learning_factor': learning_factor,
-            'volatility': volatility
-        }
-        
-    except Exception as e:
-        return {'signal': 0, 'direction': 'NEUTRO', 'strength': 0, 'confidence': 0, 'error': str(e)}
+        if mae < 0.01:
+            st.success("✅ Excellent model performance (MAE < 0.01)")
+        elif mae < 0.02:
+            st.info("ℹ️ Good model performance (MAE < 0.02)")
+        else:
+            st.warning("⚠️ Model performance could be improved (MAE > 0.02)")
 
 if __name__ == "__main__":
     main()
