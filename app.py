@@ -2533,7 +2533,6 @@ def display_scalping_strategic_setup(pair, execution, result):
                 </span>
             </div>
             
-            <!-- 🔥 MELHORIA 4: Barra de progresso visual do tempo -->
             <div style="background: #f0f0f0; height: 8px; border-radius: 4px; margin: 0.5rem 0;">
                 <div style="background: {time_color}; height: 100%; width: {time_progress}%; border-radius: 4px; transition: width 0.3s;"></div>
             </div>
