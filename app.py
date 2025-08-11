@@ -1050,13 +1050,13 @@ def main():
         trading_style = "intraday"
         st.session_state['trading_style'] = trading_style
         
-        # SCALPING: Sistema de auto-refresh inteligente para sinais em tempo real
+        # SCALPING: Sistema ULTRA-RÁPIDO de auto-refresh para capturar oportunidades instantâneas
         if trading_style == 'scalping':
             # Criar container para o sistema de auto-refresh
             refresh_container = st.container()
             
             with refresh_container:
-                # Auto-refresh a cada 30 segundos para sinais mais rápidos
+                # MELHORIA: Auto-refresh a cada 15 segundos para scalping ultra-rápido
                 if 'last_scalping_refresh' not in st.session_state:
                     st.session_state.last_scalping_refresh = datetime.now()
                 
@@ -1066,23 +1066,33 @@ def main():
                 # Mostrar status do auto-refresh
                 refresh_col1, refresh_col2 = st.columns([3, 1])
                 with refresh_col1:
-                    next_refresh = max(0, 30 - time_since_refresh)
+                    next_refresh = max(0, 15 - time_since_refresh)  # 15 segundos para scalping
+                    if next_refresh <= 5:
+                        status_color = "#FF4444"  # Vermelho quando próximo do refresh
+                        status_text = f"🚨 REFRESHING EM {next_refresh:.0f}s"
+                    else:
+                        status_color = "#E3F2FD"
+                        status_text = f"🔄 Próximo refresh: {next_refresh:.0f}s"
+                        
                     st.markdown(f"""
-                    <div style="background: #E3F2FD; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0;">
-                        <small>🔄 <strong>Auto-refresh Scalping:</strong> Próximo em {next_refresh:.0f}s | 
-                        Última atualização: {st.session_state.last_scalping_refresh.strftime('%H:%M:%S')}</small>
+                    <div style="background: {status_color}; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0;">
+                        <small><strong>⚡ SCALPING ULTRA-RÁPIDO:</strong> {status_text} | 
+                        Última: {st.session_state.last_scalping_refresh.strftime('%H:%M:%S')}</small>
                     </div>
                     """, unsafe_allow_html=True)
                 
                 with refresh_col2:
-                    if st.button("🚀 Refresh Agora", key="manual_scalping_refresh"):
+                    if st.button("🚨 REFRESH NOW", key="manual_scalping_refresh", type="primary"):
                         st.session_state.last_scalping_refresh = datetime.now()
                         st.rerun()
                 
-                # Auto-refresh quando tempo expira
-                if time_since_refresh > 30:  # 30 segundos
+                # MELHORIA: Auto-refresh a cada 15 segundos (mais rápido que antes)
+                if time_since_refresh > 15:  # 15 segundos ao invés de 30
                     st.session_state.last_scalping_refresh = datetime.now()
-                    st.rerun()  # Auto-refresh para scalping
+                    st.rerun()  # Auto-refresh ultra-rápido para scalping
+                
+                # ALERTA: Sistema ULTRA-RÁPIDO ativo para scalping
+                st.info("⚡ **MODO SCALPING ULTRA-RÁPIDO ATIVO:**\n- Refresh automático a cada 15s\n- Detecção de entrada imediata\n- Tempo de validade reduzido (5-15min)\n- Zonas dinâmicas em tempo real")
         
         # Usar configuração de risco padrão (moderado)
         risk_level_en = "Moderate"
@@ -2022,7 +2032,8 @@ def generate_execution_position(analysis_result, pair, current_price, trading_st
     bank_value = st.session_state.get('bank_value', 10000)  # Default $10,000
     
     if trading_style == 'scalping':
-        # SCALPING ESTRATÉGICO: Calcular níveis técnicos de entrada ao invés de entrada imediata
+        # SCALPING ULTRA-RÁPIDO: Entradas imediatas com micro-zonas dinâmicas
+        # MELHORIA 1: Reduzir tempo de validade de 45min para 5-15min
         return generate_scalping_strategic_levels(
             df, analysis_result, pair, current_price, confidence, signal_strength, sentiment_score, bank_value
         )
@@ -6158,13 +6169,26 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
             
 
         
-        # Calcular tempo de validade baseado na volatilidade
-        if volatility > 0.002:  # Alta volatilidade
-            validity_minutes = 15
-        elif volatility > 0.001:  # Volatilidade média
-            validity_minutes = 30  
+        # MELHORIA CRÍTICA: Tempo ULTRA-REDUZIDO para scalping ágil
+        # Detectar se preço já está próximo da zona de entrada
+        distance_to_entry_pips = abs(current_price - entry_level) * 10000
+        
+        if distance_to_entry_pips <= 3:  # Já na zona ideal (3 pips)
+            validity_minutes = 5
+            zone_status = "🟢 NA ZONA - EXECUTE AGORA"
+            signal_urgency = "🚨 HOT - ENTRADA IMEDIATA"
+        elif distance_to_entry_pips <= 8:  # Próximo da zona (8 pips)
+            validity_minutes = 8
+            zone_status = "🟡 APROXIMANDO - PREPARE-SE"
+            signal_urgency = "🔥 QUENTE - 8min"
+        elif volatility > 0.002:  # Alta volatilidade mas distante
+            validity_minutes = 12
+            zone_status = "🔴 DISTANTE - AGUARDAR"
+            signal_urgency = "⚡ ATIVO - 12min"
         else:  # Baixa volatilidade
-            validity_minutes = 45
+            validity_minutes = 15
+            zone_status = "⚪ AGUARDAR CONFIRMAÇÃO"
+            signal_urgency = "🔄 NORMAL - 15min"
             
         # Tempo de expiração em horário de Brasília
         brasilia_tz = pytz.timezone('America/Sao_Paulo')
@@ -6192,9 +6216,15 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
         # Montar resultado estratégico
         strategic_result = {
             'pair': pair,
-            'setup_type': 'SCALPING ESTRATÉGICO',
+            'setup_type': 'SCALPING ULTRA-RÁPIDO',
             'direction': direction,
             'strength': 'FORTE' if confidence > 0.7 else 'MODERADO',
+            
+            # MELHORIAS: Campos para detecção de entrada imediata
+            'zone_status': zone_status,
+            'signal_urgency': signal_urgency,
+            'distance_to_entry_pips': distance_to_entry_pips,
+            'hot_signal_score': 0.9 if validity_minutes <= 5 else 0.7 if validity_minutes <= 8 else 0.5,
             
             # Setup Principal (Pullback)
             'primary_setup': {
