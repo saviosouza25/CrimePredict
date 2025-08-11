@@ -2509,35 +2509,32 @@ def display_scalping_strategic_setup(pair, execution, result):
     
     with st.expander(f"{signal_urgency} **{pair}** {direction_icon} | {zone_status} (Score: {result['opportunity_score']:.1f})"):
         
-        # 🔥 MELHORIA 6: Header com Hot Signal destacado
-        st.markdown(f"""
-        <div style="background: linear-gradient(90deg, {urgency_color}15, {direction_color}25); 
-                    padding: 1rem; border-radius: 8px; margin-bottom: 1rem; 
-                    border-left: 4px solid {urgency_color}; border-right: 2px solid {direction_color};">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <h4 style="margin: 0; color: {direction_color};">🎯 {execution['direction']} SCALPING</h4>
-                <div style="background: {urgency_color}; color: white; padding: 0.3rem 0.8rem; border-radius: 20px; font-weight: bold;">
-                    {signal_urgency}
-                </div>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 0.5rem 0;">
-                <span style="background: {direction_color}20; color: {direction_color}; padding: 0.3rem; border-radius: 4px; text-align: center; font-weight: bold;">
-                    Preço: {execution['current_price']:.5f}
-                </span>
-                <span style="background: {time_color}20; color: {time_color}; padding: 0.3rem; border-radius: 4px; text-align: center; font-weight: bold;">
-                    {time_icon} {time_remaining} min
-                </span>
-                <span style="background: {direction_color}20; color: {direction_color}; padding: 0.3rem; border-radius: 4px; text-align: center; font-weight: bold;">
-                    Taxa: {execution['expected_success_rate']:.0f}%
-                </span>
-            </div>
-            
-            <div style="background: #f0f0f0; height: 8px; border-radius: 4px; margin: 0.5rem 0;">
-                <div style="background: {time_color}; height: 100%; width: {time_progress}%; border-radius: 4px; transition: width 0.3s;"></div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        # Header com Hot Signal usando componentes Streamlit nativos
+        signal_col1, signal_col2 = st.columns([3, 1])
+        with signal_col1:
+            st.markdown(f"### 🎯 {execution['direction']} SCALPING")
+        with signal_col2:
+            if "🚨 HOT" in signal_urgency:
+                st.error(f"{signal_urgency}")
+            elif "🔥 QUENTE" in signal_urgency:
+                st.warning(f"{signal_urgency}")
+            elif "⚡ ATIVO" in signal_urgency:
+                st.info(f"{signal_urgency}")
+            else:
+                st.success(f"{signal_urgency}")
+        
+        # Métricas principais
+        metric_col1, metric_col2, metric_col3 = st.columns(3)
+        with metric_col1:
+            st.metric("Preço", f"{execution['current_price']:.5f}")
+        with metric_col2:
+            st.metric("Tempo", f"{time_icon} {time_remaining} min")
+        with metric_col3:
+            st.metric("Taxa", f"{execution['expected_success_rate']:.0f}%")
+        
+        # Barra de progresso do tempo usando componente nativo
+        progress_value = time_progress / 100
+        st.progress(progress_value, text=f"Tempo restante: {time_remaining} minutos")
         
         # 🔥 MELHORIA 2: Multi-timeframe Analysis Display
         if timeframe_alignment > 0:
@@ -2546,12 +2543,12 @@ def display_scalping_strategic_setup(pair, execution, result):
             with tf_col1:
                 alignment_score = int(timeframe_alignment * 100)
                 alignment_color = "#00C851" if alignment_score > 50 else "#FF8800" if alignment_score > 30 else "#F44336"
-                st.markdown(f"""
-                <div style="background: {alignment_color}20; padding: 0.5rem; border-radius: 4px; border-left: 3px solid {alignment_color};">
-                    <strong>🎯 Alinhamento: {alignment_score}%</strong><br>
-                    <small>Timeframes 1min e 5min em confluência</small>
-                </div>
-                """, unsafe_allow_html=True)
+                if alignment_score >= 50:
+                    st.success(f"🎯 **Alinhamento: {alignment_score}%**\n\nTimeframes 1min e 5min em confluência")
+                elif alignment_score >= 30:
+                    st.warning(f"🎯 **Alinhamento: {alignment_score}%**\n\nTimeframes 1min e 5min em confluência")
+                else:
+                    st.error(f"🎯 **Alinhamento: {alignment_score}%**\n\nTimeframes 1min e 5min em confluência")
             with tf_col2:
                 if alignment_score >= 50:
                     st.success("✅ Timeframes alinhados - Sinal confirmado")
@@ -2577,13 +2574,12 @@ def display_scalping_strategic_setup(pair, execution, result):
             """)
             
         with zone_col2:
-            zone_color = "#00C851" if "NA ZONA" in zone_status else "#FF8800" if "APROXIMANDO" in zone_status else "#F44336"
-            st.markdown(f"""
-            <div style="background: {zone_color}20; padding: 0.8rem; border-radius: 6px; border-left: 4px solid {zone_color}; text-align: center;">
-                <strong style="color: {zone_color}; font-size: 1.1rem;">{zone_status}</strong><br>
-                <small>Status da zona de entrada</small>
-            </div>
-            """, unsafe_allow_html=True)
+            if "NA ZONA" in zone_status:
+                st.success(f"**{zone_status}**\n\nStatus da zona de entrada")
+            elif "APROXIMANDO" in zone_status:
+                st.warning(f"**{zone_status}**\n\nStatus da zona de entrada")
+            else:
+                st.error(f"**{zone_status}**\n\nStatus da zona de entrada")
         
         # Parâmetros de Entrada Detalhados
         st.markdown("### 📊 Parâmetros Completos")
