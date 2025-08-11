@@ -2695,7 +2695,7 @@ def display_execution_positions(results):
                 
                 with profile_col1:
                     st.info(f"**Perfil:** {execution.get('trading_profile', 'N/A')}")
-                    st.info(f"**Timing:** {execution['market_timing']}")
+                    st.info(f"**Timing:** {execution.get('market_timing', 'Imediato')}")
                     
                 with profile_col2:
                     risk_color = "🟢" if execution['risk_level'] == 'Baixo' else "🟡" if execution['risk_level'] == 'Moderado' else "🔴"
