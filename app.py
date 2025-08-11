@@ -1114,24 +1114,10 @@ def main():
         # Usar configuração de risco padrão (moderado)
         risk_level_en = "Moderate"
         
-        # Seleção do par de moedas
-        market_type = st.session_state.get('market_type_select', 'Forex')
-        if market_type == "Forex":
-            available_pairs = PAIRS
-            pair_label = "💱 Par de Moedas"
-        else:  # Criptomoedas
-            available_pairs = CRYPTO_PAIRS
-            pair_label = "₿ Par Cripto"
+        # Usar par padrão (EUR/USD) sem seleção na interface
+        pair = "EUR/USD"
         
-        pair = st.selectbox(pair_label, available_pairs, key="pair_selectbox")
-        
-        st.markdown("---")
-        
-        # Análise unificada principal
-        unified_analysis = st.button("🧠 Análise Unificada Inteligente", type="primary", use_container_width=True, 
-                                   help="Combina todas as análises para a melhor previsão do mercado", key="unified_analysis_btn")
-        
-        st.markdown("**Análises Individuais:**")
+        st.markdown("**Análises Disponíveis:**")
         
         # Análises empilhadas verticalmente para melhor visualização
         technical_analysis = st.button("📊 Análise Técnica", use_container_width=True, key="technical_btn")
@@ -1306,11 +1292,7 @@ def main():
         # Processamento dos diferentes tipos de análise
         analyze_button = False
         
-        if unified_analysis:
-            st.session_state['analysis_mode'] = 'unified'
-            # Armazenar perfil especializado selecionado para usar na análise
-            analyze_button = True
-        elif technical_analysis:
+        if technical_analysis:
             st.session_state['analysis_mode'] = 'technical'
             analyze_button = True
         elif sentiment_analysis:
