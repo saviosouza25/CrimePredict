@@ -88,13 +88,14 @@ Preferred communication style: Simple, everyday language.
   - **Smart Time Management**: Reduced validity from 45min to 10-20min with visual countdown and progress bars
   - **Hot Signal Classification**: Urgent signal detection with color-coded urgency (🚨 HOT, 🔥 QUENTE, ⚡ ATIVO, 🔄 NORMAL)
 - **Auto-Refresh System**: 30-second automatic updates for scalping with manual refresh option and timing display
-- **Scalping Ultra-Rápido (Aug 2025)**: Sistema completamente otimizado para capturar oportunidades de entrada imediata:
-  - **Auto-refresh 15s**: Refresh automático a cada 15 segundos (reduzido de 30s) para detecção mais rápida
-  - **Entrada Imediata**: Detecta quando preço já está na zona ideal (≤3 pips) com sinal "EXECUTE AGORA"
-  - **Tempo Ultra-Reduzido**: Validade de 5-15 minutos (reduzido de 45min) baseado na proximidade do preço
-  - **Zonas Dinâmicas**: Status em tempo real "NA ZONA", "APROXIMANDO", "DISTANTE" com distância em pips
-  - **Hot Signals Aprimorados**: Classificação baseada na proximidade da entrada e urgência temporal
-  - **Interface Simplificada**: Componentes Streamlit nativos substituindo HTML complexo para melhor performance
+- **Scalping Entrada Imediata (Aug 2025)**: Sistema revolucionário que só exibe sinais quando é o momento EXATO de entrar:
+  - **Entrada no Preço Atual**: Sistema usa preço atual como entrada, não níveis futuros
+  - **Filtro de Proximidade**: Só mostra sinais quando preço está próximo de suporte/resistência (≤5 pips)
+  - **Validação de Momentum**: Confirma direção com análise dos últimos 5 candles
+  - **Stop/Take Realistas**: Stop 8 pips, Take 15 pips baseados no preço atual de entrada
+  - **Validade Ultra-Curta**: 3 minutos de validade para entradas imediatas
+  - **Filtro de Qualidade**: Remove sinais que não atendem critérios de entrada imediata
+  - **Auto-refresh 15s**: Detecção contínua de oportunidades em tempo real
 
 # External Dependencies
 

@@ -1912,18 +1912,21 @@ def run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epoc
                     analysis_result, pair, current_price, trading_style, sentiment_score, opportunity_score
                 )
                 
-                # Store comprehensive result
-                pair_result = {
-                    'pair': pair,
-                    'current_price': current_price,
-                    'opportunity_score': opportunity_score,
-                    'execution_position': execution_position,
-                    'analysis_result': analysis_result,
-                    'sentiment_score': sentiment_score,
-                    'trading_style': trading_style
-                }
-                
-                all_results.append(pair_result)
+                # FILTRO CRÍTICO: Só adicionar se execution_position for válido
+                # Para scalping, só mostra quando há entrada imediata válida
+                if execution_position is not None:
+                    # Store comprehensive result
+                    pair_result = {
+                        'pair': pair,
+                        'current_price': current_price,
+                        'opportunity_score': opportunity_score,
+                        'execution_position': execution_position,
+                        'analysis_result': analysis_result,
+                        'sentiment_score': sentiment_score,
+                        'trading_style': trading_style
+                    }
+                    
+                    all_results.append(pair_result)
                 
             except Exception as e:
                 st.warning(f"Erro ao analisar {pair}: {str(e)}")
@@ -6144,53 +6147,42 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
         direction = analysis_result.get('market_direction', 'NEUTRO')
         is_bullish = 'COMPRA' in str(direction)
         
-        # Calcular níveis estratégicos de entrada
-        if is_bullish:
-            # SETUP DE COMPRA
-            # Entrada estratégica em pullback ao suporte - sempre diferente do preço atual
-            pullback_distance = max(volatility * 1.2, 0.0008)  # Mínimo 8 pips de diferença
-            entry_level = current_price * (1 - pullback_distance)
-            # Garantir que use o suporte se for mais conservador
-            entry_level = max(micro_support, entry_level)
-            # SCALPING REAL: Stops e takes pequenos
-            stop_level = entry_level * (1 - 0.0008)  # Stop 8 pips (0.08%)
-            take_level = entry_level * (1 + 0.0012)  # Take 12 pips (0.12%)
-            
-
-            
-        else:
-            # SETUP DE VENDA  
-            # Entrada estratégica em pullback à resistência - sempre diferente do preço atual
-            pullback_distance = max(volatility * 1.2, 0.0008)  # Mínimo 8 pips de diferença
-            entry_level = current_price * (1 + pullback_distance)
-            # Garantir que use a resistência se for mais conservador
-            entry_level = min(micro_resistance, entry_level)
-            # SCALPING REAL: Stops e takes pequenos
-            stop_level = entry_level * (1 + 0.0008)  # Stop 8 pips (0.08%)
-            take_level = entry_level * (1 - 0.0012)  # Take 12 pips (0.12%)
-            
-
+        # NOVA LÓGICA: ENTRADA IMEDIATA NO PREÇO ATUAL
+        # Só retorna sinal se o preço atual for uma boa entrada baseada em suporte/resistência
         
-        # MELHORIA CRÍTICA: Tempo ULTRA-REDUZIDO para scalping ágil
-        # Detectar se preço já está próximo da zona de entrada
-        distance_to_entry_pips = abs(current_price - entry_level) * 10000
+        # Verificar se preço atual está próximo de níveis técnicos importantes
+        near_support = abs(current_price - micro_support) / current_price < 0.0005  # 5 pips
+        near_resistance = abs(current_price - micro_resistance) / current_price < 0.0005  # 5 pips
         
-        if distance_to_entry_pips <= 3:  # Já na zona ideal (3 pips)
-            validity_minutes = 5
-            zone_status = "🟢 NA ZONA - EXECUTE AGORA"
-            signal_urgency = "🚨 HOT - ENTRADA IMEDIATA"
-        elif distance_to_entry_pips <= 8:  # Próximo da zona (8 pips)
-            validity_minutes = 8
-            zone_status = "🟡 APROXIMANDO - PREPARE-SE"
-            signal_urgency = "🔥 QUENTE - 8min"
-        elif volatility > 0.002:  # Alta volatilidade mas distante
-            validity_minutes = 12
-            zone_status = "🔴 DISTANTE - AGUARDAR"
-            signal_urgency = "⚡ ATIVO - 12min"
-        else:  # Baixa volatilidade
-            validity_minutes = 15
-            zone_status = "⚪ AGUARDAR CONFIRMAÇÃO"
-            signal_urgency = "🔄 NORMAL - 15min"
+        # Verificar momentum recente para confirmar direção
+        last_5_candles = df['close'].tail(5) if len(df) >= 5 else df['close']
+        recent_momentum = (last_5_candles.iloc[-1] - last_5_candles.iloc[0]) / last_5_candles.iloc[0]
+        
+        # Só gerar sinal se estiver em condição ideal
+        valid_entry = False
+        if is_bullish and near_support and recent_momentum > -0.001:  # Compra perto do suporte
+            valid_entry = True
+            entry_level = current_price  # ENTRADA NO PREÇO ATUAL
+            stop_level = current_price * (1 - 0.0008)  # Stop 8 pips abaixo
+            take_level = current_price * (1 + 0.0015)  # Take 15 pips acima
+            zone_status = "🟢 ENTRADA IMEDIATA - PERTO DO SUPORTE"
+            signal_urgency = "🚨 EXECUTE AGORA"
+            
+        elif not is_bullish and near_resistance and recent_momentum < 0.001:  # Venda perto da resistência
+            valid_entry = True
+            entry_level = current_price  # ENTRADA NO PREÇO ATUAL
+            stop_level = current_price * (1 + 0.0008)  # Stop 8 pips acima
+            take_level = current_price * (1 - 0.0015)  # Take 15 pips abaixo
+            zone_status = "🟢 ENTRADA IMEDIATA - PERTO DA RESISTÊNCIA"
+            signal_urgency = "🚨 EXECUTE AGORA"
+        
+        # Se não for uma entrada válida, retornar None (não mostrar no ranking)
+        if not valid_entry:
+            return None
+            
+        # Se chegou aqui, é uma entrada imediata válida
+        validity_minutes = 3  # Entrada imediata tem validade muito curta
+        distance_to_entry_pips = 0  # Entrada é no preço atual
             
         # Tempo de expiração em horário de Brasília
         brasilia_tz = pytz.timezone('America/Sao_Paulo')
