@@ -1275,11 +1275,10 @@ def main():
             
             st.caption("💡 Recomendação: Máximo 2% de risco por operação")
         
-        # Configurações de IA colapsáveis
-        with st.expander("🤖 Configurações Avançadas de IA"):
-            lookback_period = st.slider("Histórico de Dados", 30, 120, LOOKBACK_PERIOD, key="lookback_slider")
-            epochs = st.slider("Épocas de Treinamento", 5, 20, EPOCHS, key="epochs_slider")
-            mc_samples = st.slider("Amostras Monte Carlo", 10, 50, MC_SAMPLES, key="mc_samples_slider")
+        # Usar valores padrão para configurações de IA (removidas da interface)
+        lookback_period = LOOKBACK_PERIOD  # 60
+        epochs = EPOCHS  # 10
+        mc_samples = MC_SAMPLES  # 20
         
         # Cache compacto
         cache_count = len([k for k in st.session_state.keys() if isinstance(st.session_state.get(k), tuple)])
