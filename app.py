@@ -2581,25 +2581,7 @@ def display_scalping_strategic_setup(pair, execution, result):
             else:
                 st.error(f"**{zone_status}**\n\nStatus da zona de entrada")
         
-        # Parâmetros de Entrada Detalhados
-        st.markdown("### 📊 Parâmetros Completos")
-        primary = execution.get('primary_setup', {})
-        
-        param_col1, param_col2 = st.columns(2)
-        with param_col1:
-            st.markdown(f"""
-            **🎯 Entrada:** {execution.get('entry_price', 'N/A'):.5f}
-            **🛑 Stop Loss:** {execution.get('stop_loss', 'N/A'):.5f}
-            **💰 Take Profit:** {execution.get('take_profit', 'N/A'):.5f}
-            """)
-            
-        with param_col2:
-            risk_reward = execution.get('risk_reward_ratio', 1.0)
-            st.markdown(f"""
-            **⚖️ R/R:** 1:{risk_reward:.1f}
-            **📏 Lote:** {execution.get('lot_size', 0.1):.2f}
-            **💵 Risco:** ${execution.get('risk_amount', 0):.2f}
-            """)
+
         
         # 🔥 MELHORIA: Botões de ação com auto-refresh
         st.markdown("### ⚡ Ações Rápidas")
