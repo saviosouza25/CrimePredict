@@ -1116,19 +1116,6 @@ def main():
         
         # Usar par padrão (EUR/USD) sem seleção na interface
         pair = "EUR/USD"
-        
-        st.markdown("**Análises Disponíveis:**")
-        
-        # Análises empilhadas verticalmente para melhor visualização
-        technical_analysis = st.button("📊 Análise Técnica", use_container_width=True, key="technical_btn")
-        trend_analysis = st.button("📉 Análise de Tendência", use_container_width=True, key="trend_btn")
-        sentiment_analysis = st.button("📰 Análise de Sentimento", use_container_width=True, key="sentiment_btn")
-        ai_analysis = st.button("🤖 Análise IA/LSTM", use_container_width=True, key="ai_btn")
-        volume_analysis = st.button("📈 Análise de Volume", use_container_width=True, key="volume_btn")
-        risk_analysis = st.button("⚖️ Análise de Risco", use_container_width=True, key="risk_btn")
-        
-        # Análise rápida
-        quick_analysis = st.button("⚡ Verificação Rápida", use_container_width=True, key="quick_analysis_btn")
 
         
         # Gestão de Banca Simplificada em expander colapsável
@@ -1289,31 +1276,8 @@ def main():
                     st.success("Cache limpo!")
                     st.rerun()
         
-        # Processamento dos diferentes tipos de análise
+        # Usar análise unificada como padrão (sem botões de seleção)
         analyze_button = False
-        
-        if technical_analysis:
-            st.session_state['analysis_mode'] = 'technical'
-            analyze_button = True
-        elif sentiment_analysis:
-            st.session_state['analysis_mode'] = 'sentiment'
-            analyze_button = True
-        elif risk_analysis:
-            st.session_state['analysis_mode'] = 'risk'
-            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
-            analyze_button = True
-        elif ai_analysis:
-            st.session_state['analysis_mode'] = 'ai_lstm'
-            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
-            analyze_button = True
-        elif volume_analysis:
-            st.session_state['analysis_mode'] = 'volume'
-            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
-            analyze_button = True
-        elif trend_analysis:
-            st.session_state['analysis_mode'] = 'trend'
-            st.session_state['specialized_profile'] = st.session_state.get('specialized_profile_select', 'Swing (Todas com Pesos Equilibrados)')
-            analyze_button = True
         
         # Botões auxiliares compactos
         col1, col2 = st.columns(2)
@@ -1328,16 +1292,8 @@ def main():
 
     # Analysis buttons are now in sidebar - this section removed
     
-    # Process analysis requests from sidebar buttons
-    if analyze_button or quick_analysis:
-        run_analysis(
-            pair, interval, horizon, lookback_period, 
-            mc_samples, epochs, quick_analysis
-        )
-    elif multi_pair_analysis:
-        # Get selected analysis type
-        multi_analysis_type = st.session_state.get('multi_analysis_type', 'Swing (Todas com Pesos Equilibrados)')
-        run_multi_pair_analysis(interval, horizon, lookback_period, mc_samples, epochs, multi_analysis_type)
+    # Process analysis requests - removed since no analysis buttons in interface anymore
+    # Analysis can be triggered programmatically or via other interface elements if needed
     
     # Always show main header
     display_main_header()
