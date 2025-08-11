@@ -82,6 +82,12 @@ Preferred communication style: Simple, everyday language.
 - **Fixed Trading Profile Differentiation (Aug 2025)**: Corrected critical bug where all trading profiles were using scalping parameters. Now each profile (Scalping, Intraday, Swing, Position) uses its specific stop/take/timeframe configurations
 - **Dynamic Success Rate Calculation**: Replaced fixed 88% success rate with real-time calculation based on technical indicator confluence (45-95% range)
 - **Profile-Specific Parameter Isolation**: Ensured scalping strategic levels only apply to scalping profile, while other profiles use Alpha Vantage automatic calculations
+- **Scalping Signal Optimization (Aug 2025)**: Implemented 4 major improvements for faster signal timing:
+  - **Multi-timeframe Analysis**: 1min + 5min simultaneous confirmation for reduced signal delay
+  - **Dynamic Zone System**: Real-time entry zones instead of fixed prices with "entering/leaving zone" status
+  - **Smart Time Management**: Reduced validity from 45min to 10-20min with visual countdown and progress bars
+  - **Hot Signal Classification**: Urgent signal detection with color-coded urgency (🚨 HOT, 🔥 QUENTE, ⚡ ATIVO, 🔄 NORMAL)
+- **Auto-Refresh System**: 30-second automatic updates for scalping with manual refresh option and timing display
 
 # External Dependencies
 

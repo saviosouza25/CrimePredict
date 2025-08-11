@@ -1050,6 +1050,40 @@ def main():
         trading_style = "intraday"
         st.session_state['trading_style'] = trading_style
         
+        # SCALPING: Sistema de auto-refresh inteligente para sinais em tempo real
+        if trading_style == 'scalping':
+            # Criar container para o sistema de auto-refresh
+            refresh_container = st.container()
+            
+            with refresh_container:
+                # Auto-refresh a cada 30 segundos para sinais mais rápidos
+                if 'last_scalping_refresh' not in st.session_state:
+                    st.session_state.last_scalping_refresh = datetime.now()
+                
+                # Verificar se deve fazer refresh automático
+                time_since_refresh = (datetime.now() - st.session_state.last_scalping_refresh).total_seconds()
+                
+                # Mostrar status do auto-refresh
+                refresh_col1, refresh_col2 = st.columns([3, 1])
+                with refresh_col1:
+                    next_refresh = max(0, 30 - time_since_refresh)
+                    st.markdown(f"""
+                    <div style="background: #E3F2FD; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0;">
+                        <small>🔄 <strong>Auto-refresh Scalping:</strong> Próximo em {next_refresh:.0f}s | 
+                        Última atualização: {st.session_state.last_scalping_refresh.strftime('%H:%M:%S')}</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with refresh_col2:
+                    if st.button("🚀 Refresh Agora", key="manual_scalping_refresh"):
+                        st.session_state.last_scalping_refresh = datetime.now()
+                        st.rerun()
+                
+                # Auto-refresh quando tempo expira
+                if time_since_refresh > 30:  # 30 segundos
+                    st.session_state.last_scalping_refresh = datetime.now()
+                    st.rerun()  # Auto-refresh para scalping
+        
         # Usar configuração de risco padrão (moderado)
         risk_level_en = "Moderate"
         
@@ -2444,50 +2478,162 @@ def display_opportunity_ranking(results):
         """, unsafe_allow_html=True)
 
 def display_scalping_strategic_setup(pair, execution, result):
-    """Exibe setup estratégico específico para scalping"""
+    """🚀 SCALPING MELHORADO: Multi-timeframe + Zonas Dinâmicas + Hot Signals + Auto-refresh"""
     
     direction_color = "#00C851" if 'COMPRA' in execution['direction'] else "#F44336"
     direction_icon = "📈" if 'COMPRA' in execution['direction'] else "📉"
     
-    with st.expander(f"⚡ **{pair}** - SCALPING ESTRATÉGICO {direction_icon} (Score: {result['opportunity_score']:.1f})"):
+    # 🔥 MELHORIA 6: Hot Signals - Obter dados do sinal
+    hot_signal_score = execution.get('hot_signal_score', 0.5)
+    signal_urgency = execution.get('signal_urgency', '🔄 NORMAL')
+    urgency_color = execution.get('urgency_color', '#4CAF50')
+    zone_status = execution.get('zone_status', '🔄 APROXIMANDO')
+    timeframe_alignment = execution.get('timeframe_alignment', 0)
+    
+    # 🔥 MELHORIA 4: Contador de tempo visual com cores
+    time_remaining = execution.get('time_remaining', execution.get('validity_time', 15))
+    
+    # Definir cor do tempo baseado na urgência
+    if time_remaining <= 5:
+        time_color = "#FF4444"  # Vermelho crítico
+        time_icon = "🚨"
+    elif time_remaining <= 10:
+        time_color = "#FF8800"  # Laranja urgente
+        time_icon = "⚡"
+    else:
+        time_color = "#4CAF50"  # Verde normal
+        time_icon = "⏰"
+    
+    # Barra de progresso visual do tempo
+    time_progress = max(0, min(100, (time_remaining / 15) * 100))  # 15min max
+    
+    with st.expander(f"{signal_urgency} **{pair}** {direction_icon} | {zone_status} (Score: {result['opportunity_score']:.1f})"):
         
-        # Header estratégico com status de setup ativo
-        status_message = execution.get('status_message', '')
-        setup_status = execution.get('status', 'NOVO')
-        time_remaining = execution.get('time_remaining', execution.get('validity_time', 0))
-        
-        # Definir cor e ícone baseado no status
-        if setup_status == 'ATIVO':
-            status_color = "#FF9800"  # Laranja para ativo
-            status_icon = "⏰"
-        else:
-            status_color = direction_color
-            status_icon = "🆕"
-        
+        # 🔥 MELHORIA 6: Header com Hot Signal destacado
         st.markdown(f"""
-        <div style="background: linear-gradient(90deg, {direction_color}15, {direction_color}25); 
-                    padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid {direction_color};">
-            <h4 style="margin: 0; color: {direction_color};">🎯 SETUP ESTRATÉGICO - {execution['direction']}</h4>
-            <div style="display: flex; align-items: center; gap: 1rem; margin: 0.3rem 0 0 0;">
-                <span style="background: {status_color}20; color: {status_color}; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">
-                    {status_icon} {setup_status}
+        <div style="background: linear-gradient(90deg, {urgency_color}15, {direction_color}25); 
+                    padding: 1rem; border-radius: 8px; margin-bottom: 1rem; 
+                    border-left: 4px solid {urgency_color}; border-right: 2px solid {direction_color};">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h4 style="margin: 0; color: {direction_color};">🎯 {execution['direction']} SCALPING</h4>
+                <div style="background: {urgency_color}; color: white; padding: 0.3rem 0.8rem; border-radius: 20px; font-weight: bold;">
+                    {signal_urgency}
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 0.5rem 0;">
+                <span style="background: {direction_color}20; color: {direction_color}; padding: 0.3rem; border-radius: 4px; text-align: center; font-weight: bold;">
+                    Preço: {execution['current_price']:.5f}
                 </span>
-                <span style="color: #666;">
-                    Preço Atual: <strong>{execution['current_price']:.5f}</strong>
+                <span style="background: {time_color}20; color: {time_color}; padding: 0.3rem; border-radius: 4px; text-align: center; font-weight: bold;">
+                    {time_icon} {time_remaining} min
                 </span>
-                <span style="color: #666;">
-                    Tempo: <strong>{time_remaining} min</strong>
-                </span>
-                <span style="color: #666;">
-                    Expira: <strong>{execution['expiry_timestamp']}</strong>
-                </span>
-                <span style="color: #666;">
-                    Taxa: <strong style="color: {direction_color};">{execution['expected_success_rate']:.0f}%</strong>
+                <span style="background: {direction_color}20; color: {direction_color}; padding: 0.3rem; border-radius: 4px; text-align: center; font-weight: bold;">
+                    Taxa: {execution['expected_success_rate']:.0f}%
                 </span>
             </div>
-            {f'<p style="margin: 0.5rem 0 0 0; color: {status_color}; font-weight: bold;">{status_message}</p>' if status_message else ''}
+            
+            <!-- 🔥 MELHORIA 4: Barra de progresso visual do tempo -->
+            <div style="background: #f0f0f0; height: 8px; border-radius: 4px; margin: 0.5rem 0;">
+                <div style="background: {time_color}; height: 100%; width: {time_progress}%; border-radius: 4px; transition: width 0.3s;"></div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
+        
+        # 🔥 MELHORIA 2: Multi-timeframe Analysis Display
+        if timeframe_alignment > 0:
+            st.markdown("### 📊 Análise Multi-Timeframe (1min + 5min)")
+            tf_col1, tf_col2 = st.columns(2)
+            with tf_col1:
+                alignment_score = int(timeframe_alignment * 100)
+                alignment_color = "#00C851" if alignment_score > 50 else "#FF8800" if alignment_score > 30 else "#F44336"
+                st.markdown(f"""
+                <div style="background: {alignment_color}20; padding: 0.5rem; border-radius: 4px; border-left: 3px solid {alignment_color};">
+                    <strong>🎯 Alinhamento: {alignment_score}%</strong><br>
+                    <small>Timeframes 1min e 5min em confluência</small>
+                </div>
+                """, unsafe_allow_html=True)
+            with tf_col2:
+                if alignment_score >= 50:
+                    st.success("✅ Timeframes alinhados - Sinal confirmado")
+                elif alignment_score >= 30:
+                    st.warning("⚠️ Timeframes parcialmente alinhados")
+                else:
+                    st.error("❌ Timeframes divergentes - Aguardar")
+        
+        # 🔥 MELHORIA 3: Zonas Dinâmicas ao invés de preços fixos
+        st.markdown("### 🎯 Zona de Entrada Dinâmica")
+        zone_col1, zone_col2 = st.columns(2)
+        
+        with zone_col1:
+            entry_zone_low = execution.get('entry_zone_low', execution['entry_price'] * 0.999)
+            entry_zone_high = execution.get('entry_zone_high', execution['entry_price'] * 1.001)
+            zone_size_pips = execution.get('zone_size_pips', 5)
+            
+            st.markdown(f"""
+            **📍 Zona de Entrada:**
+            - **Mínimo:** {entry_zone_low:.5f}
+            - **Máximo:** {entry_zone_high:.5f}
+            - **Tamanho:** {zone_size_pips:.1f} pips
+            """)
+            
+        with zone_col2:
+            zone_color = "#00C851" if "NA ZONA" in zone_status else "#FF8800" if "APROXIMANDO" in zone_status else "#F44336"
+            st.markdown(f"""
+            <div style="background: {zone_color}20; padding: 0.8rem; border-radius: 6px; border-left: 4px solid {zone_color}; text-align: center;">
+                <strong style="color: {zone_color}; font-size: 1.1rem;">{zone_status}</strong><br>
+                <small>Status da zona de entrada</small>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Parâmetros de Entrada Detalhados
+        st.markdown("### 📊 Parâmetros Completos")
+        primary = execution.get('primary_setup', {})
+        
+        param_col1, param_col2 = st.columns(2)
+        with param_col1:
+            st.markdown(f"""
+            **🎯 Entrada:** {execution.get('entry_price', 'N/A'):.5f}
+            **🛑 Stop Loss:** {execution.get('stop_loss', 'N/A'):.5f}
+            **💰 Take Profit:** {execution.get('take_profit', 'N/A'):.5f}
+            """)
+            
+        with param_col2:
+            risk_reward = execution.get('risk_reward_ratio', 1.0)
+            st.markdown(f"""
+            **⚖️ R/R:** 1:{risk_reward:.1f}
+            **📏 Lote:** {execution.get('lot_size', 0.1):.2f}
+            **💵 Risco:** ${execution.get('risk_amount', 0):.2f}
+            """)
+        
+        # 🔥 MELHORIA: Botões de ação com auto-refresh
+        st.markdown("### ⚡ Ações Rápidas")
+        action_col1, action_col2, action_col3 = st.columns(3)
+        
+        with action_col1:
+            if st.button(f"🔄 Refresh {pair}", key=f"refresh_{pair}"):
+                # Trigger auto-refresh for this pair
+                st.session_state[f'last_refresh_{pair}'] = datetime.now()
+                st.rerun()
+                
+        with action_col2:
+            if "HOT" in signal_urgency or "QUENTE" in signal_urgency:
+                if st.button(f"🚨 ENTRAR AGORA", key=f"enter_{pair}", type="primary"):
+                    st.success(f"🎯 Sinal {signal_urgency} para {pair} - Execute na sua plataforma!")
+                    
+        with action_col3:
+            if st.button(f"📈 Acompanhar", key=f"track_{pair}"):
+                st.info(f"📊 Acompanhando {pair} - Aguardando zona ideal...")
+        
+        # Hot Signal Alert se aplicável
+        if hot_signal_score >= 0.8:
+            st.markdown(f"""
+            <div style="background: #FF4444; color: white; padding: 1rem; border-radius: 8px; margin: 1rem 0; text-align: center; font-weight: bold; animation: pulse 1s infinite;">
+                🚨 HOT SIGNAL DETECTADO! 🚨<br>
+                <span style="font-size: 1.2rem;">Score: {hot_signal_score*100:.0f}% | {zone_status}</span><br>
+                <small>Janela de oportunidade: {time_remaining} minutos restantes</small>
+            </div>
+            """, unsafe_allow_html=True)
         
         # Parâmetros de Entrada (Setup Único)
         st.markdown("### 🎯 Parâmetros de Entrada")
@@ -2863,7 +3009,7 @@ def run_analysis(pair, interval, horizon, lookback_period, mc_samples, epochs, i
                 
                 # Usar análise unificada com todas as componentes
                 unified_result = run_unified_analysis(
-                    current_price, pair, sentiment_score, df_with_indicators, trading_style
+                    current_price, pair, sentiment_score, df_with_indicators, st.session_state.get('trading_style', 'intraday')
                 )
                 
                 # Atualizar resultados com dados unificados
