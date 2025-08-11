@@ -6147,41 +6147,72 @@ def generate_scalping_strategic_levels(df, analysis_result, pair, current_price,
         direction = analysis_result.get('market_direction', 'NEUTRO')
         is_bullish = 'COMPRA' in str(direction)
         
-        # NOVA LÓGICA: ENTRADA IMEDIATA NO PREÇO ATUAL
-        # Só retorna sinal se o preço atual for uma boa entrada baseada em suporte/resistência
+        # LÓGICA AJUSTADA: ENTRADA IMEDIATA COM CRITÉRIOS MAIS FLEXÍVEIS
+        # Usar preço atual como entrada mas com validação técnica mais permissiva
         
-        # Verificar se preço atual está próximo de níveis técnicos importantes
-        near_support = abs(current_price - micro_support) / current_price < 0.0005  # 5 pips
-        near_resistance = abs(current_price - micro_resistance) / current_price < 0.0005  # 5 pips
+        # Calcular distâncias aos níveis técnicos (mais tolerante)
+        distance_to_support = abs(current_price - micro_support) / current_price
+        distance_to_resistance = abs(current_price - micro_resistance) / current_price
         
-        # Verificar momentum recente para confirmar direção
-        last_5_candles = df['close'].tail(5) if len(df) >= 5 else df['close']
-        recent_momentum = (last_5_candles.iloc[-1] - last_5_candles.iloc[0]) / last_5_candles.iloc[0]
+        # Verificar momentum recente (mais tolerante)
+        last_3_candles = df['close'].tail(3) if len(df) >= 3 else df['close']
+        recent_momentum = (last_3_candles.iloc[-1] - last_3_candles.iloc[0]) / last_3_candles.iloc[0] if len(last_3_candles) > 1 else 0
         
-        # Só gerar sinal se estiver em condição ideal
+        # Lógica mais flexível para detectar boas entradas
         valid_entry = False
-        if is_bullish and near_support and recent_momentum > -0.001:  # Compra perto do suporte
-            valid_entry = True
-            entry_level = current_price  # ENTRADA NO PREÇO ATUAL
-            stop_level = current_price * (1 - 0.0008)  # Stop 8 pips abaixo
-            take_level = current_price * (1 + 0.0015)  # Take 15 pips acima
-            zone_status = "🟢 ENTRADA IMEDIATA - PERTO DO SUPORTE"
-            signal_urgency = "🚨 EXECUTE AGORA"
-            
-        elif not is_bullish and near_resistance and recent_momentum < 0.001:  # Venda perto da resistência
-            valid_entry = True
-            entry_level = current_price  # ENTRADA NO PREÇO ATUAL
-            stop_level = current_price * (1 + 0.0008)  # Stop 8 pips acima
-            take_level = current_price * (1 - 0.0015)  # Take 15 pips abaixo
-            zone_status = "🟢 ENTRADA IMEDIATA - PERTO DA RESISTÊNCIA"
-            signal_urgency = "🚨 EXECUTE AGORA"
+        entry_reason = ""
         
-        # Se não for uma entrada válida, retornar None (não mostrar no ranking)
+        if is_bullish:
+            # COMPRA: Qualquer condição favorável
+            if (distance_to_support < 0.002 or  # Próximo do suporte (20 pips)
+                recent_momentum > 0.0005 or      # Momentum positivo
+                confidence > 0.75):              # Alta confiança do sinal
+                valid_entry = True
+                entry_level = current_price
+                stop_level = current_price * (1 - 0.0008)  # Stop 8 pips
+                take_level = current_price * (1 + 0.0015)  # Take 15 pips
+                
+                if distance_to_support < 0.001:
+                    zone_status = "🟢 ENTRADA IMEDIATA - SUPORTE"
+                    signal_urgency = "🚨 EXECUTE AGORA"
+                elif recent_momentum > 0.001:
+                    zone_status = "🟡 ENTRADA IMEDIATA - MOMENTUM+"
+                    signal_urgency = "🔥 MOMENTO IDEAL"
+                else:
+                    zone_status = "⚡ ENTRADA IMEDIATA - SINAL FORTE"
+                    signal_urgency = "⚡ EXECUTE"
+                    
+        else:  # VENDA
+            if (distance_to_resistance < 0.002 or  # Próximo da resistência
+                recent_momentum < -0.0005 or       # Momentum negativo
+                confidence > 0.75):               # Alta confiança
+                valid_entry = True
+                entry_level = current_price
+                stop_level = current_price * (1 + 0.0008)  # Stop 8 pips
+                take_level = current_price * (1 - 0.0015)  # Take 15 pips
+                
+                if distance_to_resistance < 0.001:
+                    zone_status = "🟢 ENTRADA IMEDIATA - RESISTÊNCIA"
+                    signal_urgency = "🚨 EXECUTE AGORA"
+                elif recent_momentum < -0.001:
+                    zone_status = "🟡 ENTRADA IMEDIATA - MOMENTUM-"
+                    signal_urgency = "🔥 MOMENTO IDEAL"
+                else:
+                    zone_status = "⚡ ENTRADA IMEDIATA - SINAL FORTE"
+                    signal_urgency = "⚡ EXECUTE"
+        
+        # Se não atender nenhum critério, não mostrar
         if not valid_entry:
             return None
             
-        # Se chegou aqui, é uma entrada imediata válida
-        validity_minutes = 3  # Entrada imediata tem validade muito curta
+        # Tempo de validade baseado na urgência do sinal
+        if "🚨" in signal_urgency:
+            validity_minutes = 5  # Muito urgente
+        elif "🔥" in signal_urgency:
+            validity_minutes = 8  # Urgente
+        else:
+            validity_minutes = 10  # Normal
+            
         distance_to_entry_pips = 0  # Entrada é no preço atual
             
         # Tempo de expiração em horário de Brasília
