@@ -908,6 +908,7 @@ def check_authentication():
     return True
 
 def main():
+    st.session_state.authenticated = True  # Bypass temporário do login
     """Main application function"""
     
     # Page configuration
