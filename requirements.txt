@@ -10,4 +10,3 @@ vadersentiment  # para análise de sentimento
 torch  # para modelos de ML
 requests  # para chamadas API
 # Adicione tensorflow ou keras se tiver modelos LSTM
-Adicionando requirements.txt com geopandas
