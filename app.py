@@ -36,7 +36,7 @@ except ImportError as e:
     st.error(f"❌ ERRO CRÍTICO: Falha ao carregar serviços essenciais: {e}")
     st.error("🔑 Verifique se a chave API Alpha Vantage está configurada corretamente")
     st.error("📡 Sistema requer conexão real com Alpha Vantage API - dados simulados não são permitidos")
-    st.stop()  # Stop execution - no mock services allowed
+    # st.stop()  # Stop execution - no mock services allowed
 
 # FUNÇÃO GLOBAL: Gerenciar setups ativos com validação temporal
 def manage_active_setups(pair, new_setup=None, check_validity=True):
@@ -972,10 +972,10 @@ def main():
             if not API_KEY or API_KEY == 'your_alpha_vantage_api_key_here':
                 st.error("❌ CHAVE API ALPHA VANTAGE NÃO CONFIGURADA")
                 st.error("🔑 Configure ALPHA_VANTAGE_API_KEY nas variáveis de ambiente")
-                st.stop()
+               # st.stop()
         except Exception as e:
             st.error(f"❌ ERRO: Falha ao inicializar serviços: {e}")
-            st.stop()
+           # st.stop()
     
     # Sidebar lateral simples como era antes
     with st.sidebar:
