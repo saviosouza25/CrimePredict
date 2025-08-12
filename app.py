@@ -922,8 +922,8 @@ def main():
     apply_theme_css()
     
     # Check authentication first
-    if not check_authentication():
-        return
+    # if not check_authentication():
+    #     return
     
     # Custom CSS for styling
     st.markdown("""
