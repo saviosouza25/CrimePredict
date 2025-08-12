@@ -1,5 +1,6 @@
-streamlit
-pandas
-numpy
-geopandas  # adicione isso!
-# adicione outras do seu app, como tensorflow, scikit-learn, etc., se precisar
+gdal-bin
+libgdal-dev
+libgeos-dev
+libproj-dev
+libspatialindex-dev
+python3-rtree
