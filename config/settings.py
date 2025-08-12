@@ -2,44 +2,34 @@ import os
 
 API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY", "your_alpha_vantage_api_key_here")
 
-# Trading Pairs - User specified list only
-PAIRS: List[str] = [
-    'AUD/CAD', 'AUD/CHF', 'AUD/JPY', 'AUD/NZD', 'AUD/USD',
-    'CAD/CHF', 'CAD/JPY', 'CHF/JPY',
-    'EUR/AUD', 'EUR/CAD', 'EUR/CHF', 'EUR/GBP', 'EUR/JPY', 'EUR/NZD', 'EUR/USD',
-    'GBP/AUD', 'GBP/CAD', 'GBP/CHF', 'GBP/JPY', 'GBP/USD',
-    'NZD/USD', 'USD/CAD', 'USD/CHF', 'USD/JPY'
+# Trading Pairs - User specified list
+PAIRS_LIST = [
+    "AUD/CAD", "AUD/CHF", "AUD/JPY", "AUD/NZD", "AUD/USD",
+    "CAD/CHF", "CAD/JPY", "CHF/JPY", "EUR/AUD", "EUR/CAD",
+    "EUR/CHF", "EUR/GBP", "EUR/JPY", "EUR/NZD", "EUR/USD",
+    "GBP/AUD", "GBP/CAD", "GBP/CHF", "GBP/JPY", "GBP/NZD",
+    "GBP/USD", "NZD/CAD", "NZD/CHF", "NZD/JPY", "NZD/USD",
+    "USD/CAD", "USD/CHF", "USD/JPY"
 ]
 
-# Special handling pairs with limited API support
+# Special handling for pairs with limited API support
 LIMITED_SUPPORT_PAIRS = ['GOLD']  # Gold has limited support in Alpha Vantage
 
 # Cryptocurrency Pairs - Alpha Vantage Compatible
-CRYPTO_PAIRS: List[str] = [
-    # Major Cryptocurrencies
-    'BTC/USD',   # Bitcoin/US Dollar
-    'ETH/USD',   # Ethereum/US Dollar
-    'BNB/USD',   # Binance Coin/US Dollar
-    'ADA/USD',   # Cardano/US Dollar
-    'SOL/USD',   # Solana/US Dollar
-    'XRP/USD',   # Ripple/US Dollar
-    'DOT/USD',   # Polkadot/US Dollar
-    'DOGE/USD',  # Dogecoin/US Dollar
-    'AVAX/USD',  # Avalanche/US Dollar
-    'MATIC/USD', # Polygon/US Dollar
-    'ATOM/USD',  # Cosmos/US Dollar
-    'LINK/USD',  # Chainlink/US Dollar
-    'UNI/USD',   # Uniswap/US Dollar
-    'LTC/USD',   # Litecoin/US Dollar
-    'BCH/USD',   # Bitcoin Cash/US Dollar
-    
-    # Alternative Markets
-    'BTC/EUR',   # Bitcoin/Euro
-    'ETH/EUR',   # Ethereum/Euro
-    'BTC/GBP',   # Bitcoin/British Pound
-    'ETH/GBP',   # Ethereum/British Pound
-    'BTC/JPY',   # Bitcoin/Japanese Yen
-    'ETH/JPY',   # Ethereum/Japanese Yen
+CRYPTO_PAIRS_LIST = [
+    "BTC/USD", "Bitcoin/US Dollar",
+    "ETH/USD", "Ethereum/US Dollar",
+    "BNB/USD", "Binance Coin/US Dollar",
+    "ADA/USD", "Cardano/US Dollar",
+    "SOL/USD", "Solana/US Dollar",
+    "XRP/USD", "Ripple/US Dollar",
+    "DOT/USD", "Polkadot/US Dollar",
+    "DOGE/USD", "Dogecoin/US Dollar",
+    "AVAX/USD", "Avalanche/US Dollar",
+    "MATIC/USD", "Polygon/US Dollar",
+    "ATOM/USD", "Cosmos/US Dollar",
+    "LTC/USD", "Litecoin/US Dollar",
+    "LINK/USD", "Chainlink/US Dollar"
 ]
 
 # Time Intervals
