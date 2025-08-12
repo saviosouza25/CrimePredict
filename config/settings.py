@@ -2,7 +2,7 @@ import os
 from typing import Dict, List
 
 # API Configuration
-API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
+API_KEY = os.getenv('VZ6XL34A1G4VCKP3')
 
 # Trading Pairs - User specified list only
 PAIRS: List[str] = [
