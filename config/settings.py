@@ -1,8 +1,6 @@
 import os
-from typing import Dict, List
 
-# API Configuration
-API_KEY = os.getenv('VZ6XL34A1G4VCKP3')
+API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY", "your_alpha_vantage_api_key_here")
 
 # Trading Pairs - User specified list only
 PAIRS: List[str] = [
