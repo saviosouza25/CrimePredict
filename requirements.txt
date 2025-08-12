@@ -1,0 +1,13 @@
+streamlit
+pandas
+numpy
+geopandas
+plotly
+scikit-learn
+matplotlib
+openai  # se o app usa API da OpenAI
+vadersentiment  # para análise de sentimento
+torch  # para modelos de ML
+requests  # para chamadas API
+# Adicione tensorflow ou keras se tiver modelos LSTM
+Adicionando requirements.txt com geopandas
